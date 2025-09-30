@@ -1,0 +1,18 @@
+<resources>
+    <style name="Theme.MyApplication" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Spotify tone -->
+        <item name="colorPrimary">@color/sp_green</item>
+        <item name="colorOnPrimary">@color/sp_on_dark</item>
+        <item name="colorSurface">@color/sp_black</item>
+        <item name="colorOnSurface">@color/sp_on_dark</item>
+        <item name="colorSecondary">@color/sp_green_dark</item>
+        <item name="colorOutline">@color/sp_gray</item>
+
+        <!-- Nền mặc định cho Activity/Fragment -->
+        <item name="android:windowBackground">@color/sp_black</item>
+
+        <!-- Status bar / Navigation bar (API 21+) -->
+        <item name="android:statusBarColor">@color/sp_black</item>
+        <item name="android:navigationBarColor">@color/sp_black</item>
+    </style>
+</resources>
