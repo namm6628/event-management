@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+
 public class MainActivity extends AppCompatActivity {
     ActivityMainBinding binding;
 
@@ -18,6 +19,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+
 
         setSupportActionBar(binding.toolbar);
 

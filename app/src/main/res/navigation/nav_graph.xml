@@ -22,4 +22,18 @@
         android:id="@+id/profileFragment"
         android:name="com.example.myapplication.attendee.profile.ProfileFragment"
         android:label="Profile" />
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.myapplication.auth.LoginFragment"
+        android:label="Đăng nhập" >
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/registerFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.example.myapplication.auth.RegisterFragment"
+        android:label="Đăng ký" />
+
 </navigation>
