@@ -236,7 +236,7 @@ public class ProfileFragment extends Fragment {
 
     private void showLogoutConfirm(@NonNull View root) {
         final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
-        final int negativeColor = ContextCompat.getColor(requireContext(), android.R.color.darker_gray);
+        final int negativeColor = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0);
 
         AlertDialog dlg = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(colorize("Đăng xuất?", titleColor))
@@ -283,7 +283,7 @@ public class ProfileFragment extends Fragment {
     /* --------- Menu avatar & bottom sheet chọn nguồn ảnh --------- */
 
     private void showAvatarMenu() {
-        final int titleColor = ContextCompat.getColor(requireContext(), android.R.color.black);
+        final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
 
         CharSequence[] items = colorizeAll(
                 new CharSequence[]{"Xem ảnh đại diện", "Chọn ảnh khác"},
@@ -310,6 +310,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private View buildPickSourceContent(BottomSheetDialog sheet) {
+
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
 
         android.widget.LinearLayout ll = new android.widget.LinearLayout(requireContext());
@@ -317,6 +318,7 @@ public class ProfileFragment extends Fragment {
         ll.setPadding(pad, pad, pad, pad);
 
         ll.addView(makeActionRow(
+
                 android.R.drawable.ic_menu_camera,
                 "Chụp ảnh mới",
                 v -> { sheet.dismiss(); ensureCameraThenOpen(); }
@@ -335,6 +337,10 @@ public class ProfileFragment extends Fragment {
 
     private View makeActionRow(int icon, String text, View.OnClickListener onClick) {
         int pad = dp(12);
+        int onSurface         = com.google.android.material.color.MaterialColors
+                .getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
+        int onSurfaceVariant  = com.google.android.material.color.MaterialColors
+                .getColor(requireContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0);
 
         android.widget.LinearLayout row = new android.widget.LinearLayout(requireContext());
         row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
@@ -349,6 +355,7 @@ public class ProfileFragment extends Fragment {
 
         android.widget.ImageView iv = new android.widget.ImageView(requireContext());
         iv.setImageResource(icon);
+        iv.setImageTintList(android.content.res.ColorStateList.valueOf(onSurfaceVariant));
         android.widget.LinearLayout.LayoutParams ip =
                 new android.widget.LinearLayout.LayoutParams(dp(24), dp(24));
         ip.rightMargin = pad;
@@ -357,9 +364,7 @@ public class ProfileFragment extends Fragment {
         android.widget.TextView label = new android.widget.TextView(requireContext());
         label.setText(text);
         label.setTextSize(16);
-        label.setTextColor(
-                ContextCompat.getColor(requireContext(), android.R.color.black)
-        );
+        label.setTextColor(onSurface);
         row.addView(label,
                 new android.widget.LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -424,7 +429,8 @@ public class ProfileFragment extends Fragment {
     }
 
     private void showAvatarPreview() {
-        final int titleColor = ContextCompat.getColor(requireContext(), android.R.color.black);
+        final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
+        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
 
         ImageView img = new ImageView(requireContext());
         img.setAdjustViewBounds(true);
@@ -444,11 +450,19 @@ public class ProfileFragment extends Fragment {
             }
         }
 
-        new MaterialAlertDialogBuilder(requireContext())
+        // Tạo trước, rồi tô màu trong onShow
+        AlertDialog dlg = new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle(colorize("Ảnh đại diện", titleColor))
                 .setView(img)
                 .setPositiveButton("Đóng", null)
-                .show();
+                .create();
+
+        dlg.setOnShowListener(di -> {
+            android.widget.Button pos = dlg.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) pos.setTextColor(positiveColor);
+        });
+
+        dlg.show();
     }
 
     // ---------------- helpers ----------------
