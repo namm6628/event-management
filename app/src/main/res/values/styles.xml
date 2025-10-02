@@ -12,4 +12,5 @@
         <item name="android:textColor">@color/selector_chip_text</item>
 
     </style>
+
 </resources>

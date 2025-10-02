@@ -24,7 +24,7 @@
             android:id="@+id/searchView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/sp_gray"
+            android:background="?attr/colorSurfaceVariant"
             android:queryHint="Tìm sự kiện, nghệ sĩ, địa điểm..."
             app:iconifiedByDefault="false"
             app:queryBackground="@android:color/transparent"
@@ -35,6 +35,10 @@
     <!-- Nhóm chip lọc nhanh -->
     <!-- ... phía trên SearchView ... -->
 
+    <!-- ... phía dưới RecyclerView ... -->
+
+
+    <!-- Danh sách sự kiện -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -56,42 +60,44 @@
                 android:layout_height="wrap_content"
                 android:checkable="true"
                 android:checked="true"
-                android:text="Tất cả" />
+                android:text="Tất cả"
+                app:chipStrokeColor="#00FFFFFF" />
+
+            <com.google.android.material.chip.Chip
+                style="@style/App.FilterChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@color/sp_on_dark_60"
+                android:checkable="true"
+                android:text="Âm nhạc"
+                app:chipStrokeColor="#00FFFFFF" />
 
             <com.google.android.material.chip.Chip
                 style="@style/App.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
-                android:text="Âm nhạc" />
+                android:text="Hội thảo"
+                app:chipStrokeColor="#00FFFFFF" />
 
             <com.google.android.material.chip.Chip
                 style="@style/App.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
-                android:text="Hội thảo" />
+                android:text="Sân khấu"
+                app:chipStrokeColor="#00FFFFFF" />
 
             <com.google.android.material.chip.Chip
                 style="@style/App.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
-                android:text="Sân khấu" />
-
-            <com.google.android.material.chip.Chip
-                style="@style/App.FilterChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="Thể thao" />
+                android:text="Thể thao"
+                app:chipStrokeColor="#00FFFFFF" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
-    <!-- ... phía dưới RecyclerView ... -->
-
-
-    <!-- Danh sách sự kiện -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvEvents"
         android:layout_width="match_parent"

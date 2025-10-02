@@ -6,66 +6,69 @@
     android:layout_marginBottom="12dp"
     app:cardCornerRadius="16dp"
     app:cardUseCompatPadding="true"
-    app:cardBackgroundColor="@color/card_bg"
-    app:strokeColor="@color/md_outline"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:strokeColor="?attr/colorOutline"
     app:strokeWidth="1dp"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground">
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+<LinearLayout
+android:orientation="vertical"
+android:padding="12dp"
+android:layout_width="match_parent"
+android:layout_height="wrap_content">
 
-        <ImageView
-            android:id="@+id/imgCover"
-            android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:scaleType="centerCrop"
-            android:contentDescription="@string/app_name"/>
+<ImageView
+    android:id="@+id/imgCover"
+    android:layout_width="match_parent"
+    android:layout_height="180dp"
+    android:scaleType="centerCrop"
+    android:contentDescription="@string/app_name"/>
 
-        <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:paddingTop="8dp"
-            android:textColor="@color/on_surface"/>
+<TextView
+    android:id="@+id/tvTitle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textStyle="bold"
+    android:textSize="16sp"
+    android:paddingTop="8dp"
+    android:textColor="?attr/colorOnSurface"/> <!-- 👈 auto đổi sáng/tối -->
 
-        <TextView
-            android:id="@+id/tvMeta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="24 Nov • QK7 Stadium • từ 299k"
-            android:textSize="13sp"
-            android:paddingTop="2dp"/>
+<TextView
+    android:id="@+id/tvMeta"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="24 Nov • QK7 Stadium • từ 299k"
+    android:textSize="13sp"
+    android:paddingTop="2dp"
+    android:textColor="?attr/colorOnSurfaceVariant"/> <!-- 👈 phụ -->
 
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:paddingTop="8dp">
+<LinearLayout
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:paddingTop="8dp">
 
-            <TextView
-                android:id="@+id/tvTag"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Âm nhạc"
-                android:textSize="12sp"
-                android:background="@drawable/tag_bg"
-                android:padding="6dp"/>
+    <TextView
+        android:id="@+id/tvTag"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:backgroundTint="@color/sp_on_dark_60"
+        android:padding="6dp"
+        android:text="Âm nhạc"
+        android:textColor="@color/chip_bg"
+        android:textSize="12sp" /> <!-- 👈 tag text -->
 
-            <TextView
-                android:id="@+id/tvPrice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="from 299k"
-                android:textStyle="bold"/>
-        </LinearLayout>
-    </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+    <TextView
+        android:id="@+id/tvPrice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="from 299k"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface"/> <!-- 👈 giá -->
+</LinearLayout>
+</LinearLayout>
+    </com.google.android.material.card.MaterialCardView>

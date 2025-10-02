@@ -32,6 +32,8 @@ dependencies {
     implementation("androidx.navigation:navigation-ui:2.7.7")
 
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation(libs.navigation.fragment)
+    implementation(libs.navigation.ui)
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
     testImplementation("junit:junit:4.13.2")

@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:type="linear"
-        android:angle="180"
-        android:startColor="#182023"
-        android:endColor="#121314"/>   <!-- tiệp nền tối -->
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Lớp nền: xanh theo theme -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorPrimary"/>
+        </shape>
+    </item>
+
+    <!-- Lớp phủ highlight rất nhẹ (từ trong suốt -> 5% trắng) -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="90"
+                android:startColor="#00000000"
+                android:endColor="#0DFFFFFF"/>  <!-- 5% white -->
+        </shape>
+    </item>
+</layer-list>

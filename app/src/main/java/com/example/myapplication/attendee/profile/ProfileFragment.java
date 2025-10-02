@@ -1,6 +1,8 @@
 package com.example.myapplication.attendee.profile;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -18,6 +20,7 @@ import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
@@ -32,11 +35,13 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.shape.RelativeCornerSize;
 
 import java.io.File;
 
 public class ProfileFragment extends Fragment {
+
 
     // --- Pick ảnh / chụp ảnh & xin quyền ---
     private ActivityResultLauncher<String> pickImage;          // chọn từ thư viện
@@ -44,6 +49,7 @@ public class ProfileFragment extends Fragment {
     private ActivityResultLauncher<String> requestReadPerm;    // READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE
     private ActivityResultLauncher<String> requestCameraPerm;  // CAMERA
     private Uri cameraUri;                                     // nơi lưu ảnh vừa chụp
+    private MaterialSwitch switchDarkMode;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -97,6 +103,31 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle b) {
         super.onViewCreated(v, b);
+
+        switchDarkMode = v.findViewById(R.id.switchDarkMode);
+
+        SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
+        boolean isDark = prefs.getBoolean("dark_mode", false);
+
+        // Set trạng thái cho switch
+        switchDarkMode.setChecked(isDark);
+
+        // Apply theme cho toàn app
+        AppCompatDelegate.setDefaultNightMode(
+                isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
+        );
+
+        switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean("dark_mode", isChecked).apply();
+
+            if (isChecked) {
+                // Bật Dark Mode
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            } else {
+                // Quay lại Light Mode
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            }
+        });
 
         ShapeableImageView av = v.findViewById(R.id.imgAvatar);
         if (av != null) {
@@ -204,8 +235,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void showLogoutConfirm(@NonNull View root) {
-        final int titleColor = ContextCompat.getColor(requireContext(), android.R.color.black);
-        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
+        final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
         final int negativeColor = ContextCompat.getColor(requireContext(), android.R.color.darker_gray);
 
         AlertDialog dlg = new MaterialAlertDialogBuilder(requireContext())
