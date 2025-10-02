@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,15 +34,17 @@ import com.example.myapplication.R;
 import com.example.myapplication.auth.AuthManager;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.shape.RelativeCornerSize;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class ProfileFragment extends Fragment {
-
 
     // --- Pick ảnh / chụp ảnh & xin quyền ---
     private ActivityResultLauncher<String> pickImage;          // chọn từ thư viện
@@ -55,21 +58,32 @@ public class ProfileFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Chọn ảnh từ thư viện
-        pickImage = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-            if (uri != null && getView() != null) {
-                ImageView av = getView().findViewById(R.id.imgAvatar);
-                av.setImageURI(uri);
-                AuthManager.setAvatarUri(requireContext(), uri.toString());
+        // Chọn ảnh từ thư viện: COPY về storage riêng của app rồi lưu URI FileProvider
+        pickImage = registerForActivityResult(new ActivityResultContracts.GetContent(), src -> {
+            if (!isAdded()) return;
+            View root = getView();
+            if (src != null && root != null) {
+                Uri local = copyToAppStorage(src);
+                ImageView av = root.findViewById(R.id.imgAvatar);
+                if (local != null) {
+                    av.setImageURI(local);
+                    Context ctx = getContext();
+                    if (ctx != null) AuthManager.setAvatarUri(ctx, local.toString());
+                } else {
+                    toast("Không lưu được ảnh đã chọn");
+                }
             }
         });
 
-        // Chụp ảnh mới
+        // Chụp ảnh mới (đã dùng FileProvider sẵn)
         takePhoto = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
-            if (success && cameraUri != null && getView() != null) {
-                ImageView av = getView().findViewById(R.id.imgAvatar);
+            if (!isAdded()) return;
+            View root = getView();
+            if (success && cameraUri != null && root != null) {
+                ImageView av = root.findViewById(R.id.imgAvatar);
                 av.setImageURI(cameraUri);
-                AuthManager.setAvatarUri(requireContext(), cameraUri.toString());
+                Context ctx = getContext();
+                if (ctx != null) AuthManager.setAvatarUri(ctx, cameraUri.toString());
             }
         });
 
@@ -77,6 +91,7 @@ public class ProfileFragment extends Fragment {
         requestReadPerm = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 granted -> {
+                    if (!isAdded()) return;
                     if (granted) pickImage.launch("image/*");
                     else toast("Cần quyền để chọn ảnh");
                 }
@@ -86,6 +101,7 @@ public class ProfileFragment extends Fragment {
         requestCameraPerm = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 granted -> {
+                    if (!isAdded()) return;
                     if (granted) openCamera();
                     else toast("Cần quyền camera để chụp ảnh");
                 }
@@ -107,27 +123,33 @@ public class ProfileFragment extends Fragment {
         switchDarkMode = v.findViewById(R.id.switchDarkMode);
 
         SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
-        boolean isDark = prefs.getBoolean("dark_mode", false);
 
-        // Set trạng thái cho switch
-        switchDarkMode.setChecked(isDark);
+// Lấy trạng thái NIGHT hiện tại của app (đang áp dụng thật sự)
+        boolean currentlyDark =
+                (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                        == Configuration.UI_MODE_NIGHT_YES;
 
-        // Apply theme cho toàn app
-        AppCompatDelegate.setDefaultNightMode(
-                isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
-        );
+// Tránh callback bị gọi khi setChecked programmatically
+        if (switchDarkMode != null) {
+            switchDarkMode.setOnCheckedChangeListener(null);
+            switchDarkMode.setChecked(currentlyDark);
 
-        switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            prefs.edit().putBoolean("dark_mode", isChecked).apply();
+            switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                // Lưu lại lựa chọn
+                prefs.edit().putBoolean("dark_mode", isChecked).apply();
 
-            if (isChecked) {
-                // Bật Dark Mode
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            } else {
-                // Quay lại Light Mode
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            }
-        });
+                // Chỉ đổi nếu khác trạng thái hiện tại (tránh recreate thừa)
+                boolean darkNow =
+                        (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                                == Configuration.UI_MODE_NIGHT_YES;
+                if (isChecked != darkNow) {
+                    AppCompatDelegate.setDefaultNightMode(
+                            isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
+                    );
+                }
+            });
+        }
+
 
         ShapeableImageView av = v.findViewById(R.id.imgAvatar);
         if (av != null) {
@@ -192,7 +214,14 @@ public class ProfileFragment extends Fragment {
             if (logged) {
                 String savedUri = AuthManager.getAvatarUri(requireContext());
                 if (savedUri != null) {
-                    avatar.setImageURI(Uri.parse(savedUri));
+                    try {
+                        avatar.setImageURI(Uri.parse(savedUri));
+                    } catch (RuntimeException e) {
+                        // URI cũ (Photo Picker) hết quyền → fallback + xoá
+                        avatar.setImageResource(android.R.drawable.sym_def_app_icon);
+                        try { AuthManager.setAvatarUri(requireContext(), null); } catch (Exception ignore) {}
+                        toast("Ảnh cũ không còn quyền truy cập, vui lòng chọn lại.");
+                    }
                 } else {
                     avatar.setImageResource(android.R.drawable.sym_def_app_icon);
                 }
@@ -235,8 +264,8 @@ public class ProfileFragment extends Fragment {
     }
 
     private void showLogoutConfirm(@NonNull View root) {
-        final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
-        final int negativeColor = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0);
+        final int titleColor = MaterialColors.getColor(
+                requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
 
         AlertDialog dlg = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(colorize("Đăng xuất?", titleColor))
@@ -250,7 +279,6 @@ public class ProfileFragment extends Fragment {
                 .setNegativeButton("Huỷ", null)
                 .create();
 
-        dlg.setOnShowListener(di -> tintDialogButtons(dlg, positiveColor, negativeColor));
         dlg.show();
     }
 
@@ -283,7 +311,8 @@ public class ProfileFragment extends Fragment {
     /* --------- Menu avatar & bottom sheet chọn nguồn ảnh --------- */
 
     private void showAvatarMenu() {
-        final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
+        final int titleColor = MaterialColors.getColor(
+                requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
 
         CharSequence[] items = colorizeAll(
                 new CharSequence[]{"Xem ảnh đại diện", "Chọn ảnh khác"},
@@ -294,7 +323,7 @@ public class ProfileFragment extends Fragment {
                 .setTitle(colorize("Ảnh đại diện", titleColor))
                 .setItems(items, (d, which) -> {
                     if (which == 0) showAvatarPreview();
-                    else if (which == 1) showPickSourceSheet(); // <— bottom sheet "xịn"
+                    else if (which == 1) showPickSourceSheet();
                 })
                 .create();
         dlg.show();
@@ -302,15 +331,11 @@ public class ProfileFragment extends Fragment {
 
     private void showPickSourceSheet() {
         BottomSheetDialog sheet = new BottomSheetDialog(requireContext());
-
-        // Tạo 2 hàng action thuần code (không cần XML)
-        View root = new View(requireContext()); // placeholder để apply theme insets
         sheet.setContentView(buildPickSourceContent(sheet));
         sheet.show();
     }
 
     private View buildPickSourceContent(BottomSheetDialog sheet) {
-
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
 
         android.widget.LinearLayout ll = new android.widget.LinearLayout(requireContext());
@@ -318,7 +343,6 @@ public class ProfileFragment extends Fragment {
         ll.setPadding(pad, pad, pad, pad);
 
         ll.addView(makeActionRow(
-
                 android.R.drawable.ic_menu_camera,
                 "Chụp ảnh mới",
                 v -> { sheet.dismiss(); ensureCameraThenOpen(); }
@@ -337,10 +361,10 @@ public class ProfileFragment extends Fragment {
 
     private View makeActionRow(int icon, String text, View.OnClickListener onClick) {
         int pad = dp(12);
-        int onSurface         = com.google.android.material.color.MaterialColors
-                .getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
-        int onSurfaceVariant  = com.google.android.material.color.MaterialColors
-                .getColor(requireContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0);
+        int onSurface         = MaterialColors.getColor(
+                requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
+        int onSurfaceVariant  = MaterialColors.getColor(
+                requireContext(), com.google.android.material.R.attr.colorOnSurfaceVariant, 0);
 
         android.widget.LinearLayout row = new android.widget.LinearLayout(requireContext());
         row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
@@ -381,7 +405,9 @@ public class ProfileFragment extends Fragment {
         View v = new View(requireContext());
         int h = (int) (1 * getResources().getDisplayMetrics().density);
         v.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h));
-        v.setBackgroundColor(0x33FFFFFF);
+        int outline = MaterialColors.getColor(
+                requireContext(), com.google.android.material.R.attr.colorOutline, 0);
+        v.setBackgroundColor(outline);
         return v;
     }
 
@@ -390,7 +416,10 @@ public class ProfileFragment extends Fragment {
                 ? Manifest.permission.READ_MEDIA_IMAGES
                 : Manifest.permission.READ_EXTERNAL_STORAGE;
 
-        if (ContextCompat.checkSelfPermission(requireContext(), perm)
+        Context ctx = getContext();
+        if (ctx == null) return;
+
+        if (ContextCompat.checkSelfPermission(ctx, perm)
                 == PackageManager.PERMISSION_GRANTED) {
             pickImage.launch("image/*");
         } else {
@@ -400,7 +429,10 @@ public class ProfileFragment extends Fragment {
 
     private void ensureCameraThenOpen() {
         String perm = Manifest.permission.CAMERA;
-        if (ContextCompat.checkSelfPermission(requireContext(), perm)
+        Context ctx = getContext();
+        if (ctx == null) return;
+
+        if (ContextCompat.checkSelfPermission(ctx, perm)
                 == PackageManager.PERMISSION_GRANTED) {
             openCamera();
         } else {
@@ -418,19 +450,21 @@ public class ProfileFragment extends Fragment {
     }
 
     private Uri createImageUri() {
-        File dir = requireContext().getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+        Context ctx = getContext();
+        if (ctx == null) return null;
+        File dir = ctx.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
         if (dir == null) return null;
         File file = new File(dir, "avatar_" + System.currentTimeMillis() + ".jpg");
         return FileProvider.getUriForFile(
-                requireContext(),
-                requireContext().getPackageName() + ".fileprovider",
+                ctx,
+                ctx.getPackageName() + ".fileprovider",
                 file
         );
     }
 
     private void showAvatarPreview() {
-        final int titleColor    = com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
-        final int positiveColor = ContextCompat.getColor(requireContext(), R.color.md_primary);
+        final int titleColor = MaterialColors.getColor(
+                requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
 
         ImageView img = new ImageView(requireContext());
         img.setAdjustViewBounds(true);
@@ -440,7 +474,11 @@ public class ProfileFragment extends Fragment {
 
         String saved = AuthManager.getAvatarUri(requireContext());
         if (saved != null) {
-            img.setImageURI(Uri.parse(saved));
+            try {
+                img.setImageURI(Uri.parse(saved));
+            } catch (RuntimeException e) {
+                img.setImageResource(android.R.drawable.sym_def_app_icon);
+            }
         } else {
             ImageView current = getView() != null ? getView().findViewById(R.id.imgAvatar) : null;
             if (current != null && current.getDrawable() != null) {
@@ -450,23 +488,18 @@ public class ProfileFragment extends Fragment {
             }
         }
 
-        // Tạo trước, rồi tô màu trong onShow
-        AlertDialog dlg = new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(colorize("Ảnh đại diện", titleColor))
                 .setView(img)
                 .setPositiveButton("Đóng", null)
-                .create();
-
-        dlg.setOnShowListener(di -> {
-            android.widget.Button pos = dlg.getButton(AlertDialog.BUTTON_POSITIVE);
-            if (pos != null) pos.setTextColor(positiveColor);
-        });
-
-        dlg.show();
+                .show();
     }
 
     // ---------------- helpers ----------------
-    private void toast(String m) { Toast.makeText(requireContext(), m, Toast.LENGTH_SHORT).show(); }
+    private void toast(String m) {
+        Context c = getContext();
+        if (c != null) Toast.makeText(c, m, Toast.LENGTH_SHORT).show();
+    }
 
     private CharSequence colorize(CharSequence text, int color) {
         android.text.SpannableString s = new android.text.SpannableString(text);
@@ -481,10 +514,33 @@ public class ProfileFragment extends Fragment {
         return out;
     }
 
-    private void tintDialogButtons(AlertDialog dlg, int positiveColor, int negativeColor) {
-        android.widget.Button pos = dlg.getButton(AlertDialog.BUTTON_POSITIVE);
-        android.widget.Button neg = dlg.getButton(AlertDialog.BUTTON_NEGATIVE);
-        if (pos != null) pos.setTextColor(positiveColor);
-        if (neg != null) neg.setTextColor(negativeColor);
+    private Uri copyToAppStorage(@NonNull Uri src) {
+        Context ctx = getContext();
+        if (ctx == null) return null;
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            File dir = ctx.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+            if (dir == null) return null;
+            File dst = new File(dir, "avatar_" + System.currentTimeMillis() + ".jpg");
+
+            in = ctx.getContentResolver().openInputStream(src);
+            if (in == null) return null;
+            out = new java.io.FileOutputStream(dst);
+
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            out.flush();
+
+            return FileProvider.getUriForFile(
+                    ctx, ctx.getPackageName() + ".fileprovider", dst
+            );
+        } catch (Exception ignore) {
+            return null;
+        } finally {
+            try { if (in  != null) in.close();  } catch (Exception ignore) {}
+            try { if (out != null) out.close(); } catch (Exception ignore) {}
+        }
     }
 }
