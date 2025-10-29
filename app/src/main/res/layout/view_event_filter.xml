@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <!-- Thành phố -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Thành phố">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edtCity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapWords" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Thể loại -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Thể loại">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/autoCategory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:simpleItems="@array/categories" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Ngày bắt đầu -->
+    <Button
+        android:id="@+id/btnFrom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Từ ngày"
+        android:layout_marginTop="12dp" />
+
+    <!-- Ngày kết thúc -->
+    <Button
+        android:id="@+id/btnTo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Đến ngày"
+        android:layout_marginTop="8dp" />
+
+    <!-- Nút áp dụng -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnApply"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Áp dụng"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_marginTop="16dp" />
+</LinearLayout>
+

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="categories">
+        <item>Tất cả</item>
+        <item>Âm nhạc</item>
+        <item>Thể thao</item>
+        <item>Sân khấu</item>
+        <item>Hội thảo</item>
+    </string-array>
+
+</resources>

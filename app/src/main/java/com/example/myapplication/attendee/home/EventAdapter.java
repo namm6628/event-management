@@ -5,77 +5,120 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
-import java.util.ArrayList;
+
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 
-public class EventAdapter extends RecyclerView.Adapter<EventAdapter.VH> {
+public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
 
-    public interface OnClick { void onEventClick(Event e); }
-
-    private final List<Event> origin;
-    private final List<Event> shown;
-    private final OnClick onClick;
-
-    public EventAdapter(List<Event> data, OnClick onClick) {
-        this.origin = new ArrayList<>(data);
-        this.shown  = new ArrayList<>(data);
-        this.onClick = onClick;
+    public interface Listener {
+        void onClick(Event e);
     }
 
-    public void submitFilter(String query, String category) {
-        shown.clear();
-        String q = query == null ? "" : query.trim().toLowerCase();
-        String cat = category == null ? "" : category;
+    private final Listener listener;
 
-        for (Event e : origin) {
-            boolean matchCat = (cat.isEmpty() || cat.equals("Tất cả") || cat.equals(e.category));
-            boolean matchText = q.isEmpty()
-                    || e.title.toLowerCase().contains(q)
-                    || e.venue.toLowerCase().contains(q);
-            if (matchCat && matchText) shown.add(e);
+    // Constructor cho Explore
+    public EventAdapter(Listener l) {
+        super(DIFF);
+        this.listener = l;
+    }
+
+    // Constructor overload cho Home
+    public EventAdapter(List<Event> initialData, Listener listener) {
+        this(listener);
+        submitList(initialData);
+    }
+
+    private static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
+            return a.id.equals(b.id);
         }
-        notifyDataSetChanged();
-    }
 
-    @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int v) {
-        return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_event, p, false));
-    }
-    @Override public void onBindViewHolder(@NonNull VH h, int i) {
-        Event e = shown.get(i);
-        Glide.with(h.img.getContext()).load(e.coverUrl).into(h.img);
-        h.title.setText(e.title);
-        h.meta.setText(e.date + " • " + e.venue);
-        h.tag.setText(e.category);
-        h.price.setText(e.price);
-        h.itemView.setOnTouchListener((v, ev) -> {
-            switch (ev.getAction()) {
-                case android.view.MotionEvent.ACTION_DOWN:
-                    v.animate().scaleX(0.98f).scaleY(0.98f).setDuration(80).start(); break;
-                case android.view.MotionEvent.ACTION_UP:
-                case android.view.MotionEvent.ACTION_CANCEL:
-                    v.animate().scaleX(1f).scaleY(1f).setDuration(80).start(); break;
-            }
-            return false;
-        });
-
-        h.itemView.setOnClickListener(v -> onClick.onEventClick(e));
-    }
-    @Override public int getItemCount() { return shown.size(); }
+        @Override
+        public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
+            return a.equals(b);
+        }
+    };
 
     static class VH extends RecyclerView.ViewHolder {
-        ImageView img; TextView title, meta, tag, price;
-        VH(@NonNull View v){
+        ImageView imgCover;
+        TextView tvTitle;
+        @Nullable TextView tvMetaLine1;
+        @Nullable TextView tvMetaLine2;
+
+        VH(@NonNull View v) {
             super(v);
-            img = v.findViewById(R.id.imgCover);
-            title = v.findViewById(R.id.tvTitle);
-            meta = v.findViewById(R.id.tvMeta);
-            tag = v.findViewById(R.id.tvTag);
-            price = v.findViewById(R.id.tvPrice);
+            imgCover = v.findViewById(R.id.imgCover);
+            tvTitle = v.findViewById(R.id.tvTitle);
+            tvMetaLine1 = v.findViewById(R.id.tvMetaLine1);
+            tvMetaLine2 = v.findViewById(R.id.tvMetaLine2);
         }
     }
+
+    @NonNull
+    @Override
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_event, parent, false);
+        return new VH(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull VH h, int pos) {
+        Event e = getItem(pos);
+
+        if (h.tvTitle != null) h.tvTitle.setText(e.title);
+
+        if (h.imgCover != null) {
+            Glide.with(h.imgCover.getContext())
+                    .load(e.coverUrl)
+                    .placeholder(R.drawable.ic_launcher_foreground)
+                    .into(h.imgCover);
+        }
+
+        String dateStr = e.date; // vì date là String
+
+        String venueStr = e.venue;
+
+        setTextOrHide(h.tvMetaLine1, dateStr);
+        setTextOrHide(h.tvMetaLine2, venueStr);
+
+        h.itemView.setOnClickListener(v -> listener.onClick(e));
+    }
+
+    private void setTextOrHide(@Nullable TextView tv, @Nullable String text) {
+        if (tv == null) return;
+        if (text == null || text.trim().isEmpty()) {
+            tv.setVisibility(View.GONE);
+        } else {
+            tv.setVisibility(View.VISIBLE);
+            tv.setText(text);
+        }
+    }
+
+    // Giữ tương thích với HomeFragment cũ
+    public void submitFilter(String currentQuery, String currentCategory) {
+        if (getCurrentList() == null) return;
+        java.util.List<Event> filtered = new java.util.ArrayList<>();
+        for (Event e : getCurrentList()) {
+            boolean ok = (currentQuery == null || e.title.toLowerCase().contains(currentQuery.toLowerCase()))
+                    && (currentCategory == null || e.category.equalsIgnoreCase(currentCategory));
+            if (ok) filtered.add(e);
+        }
+        submitList(filtered);
+    }
+
+
 }

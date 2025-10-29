@@ -9,4 +9,9 @@ public class Event implements Serializable {
         this.id = id; this.title = title; this.date = date; this.venue = venue;
         this.coverUrl = coverUrl; this.price = price; this.category = category;
     }
+
+    public transient int matchScore = 0; // không ảnh hưởng Serializable, chỉ dùng runtime
+    public transient long whenMillis = Long.MAX_VALUE;
+
+
 }

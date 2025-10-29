@@ -31,14 +31,6 @@
             app:submitBackground="@color/sp_green_dark" />
     </com.google.android.material.card.MaterialCardView>
 
-
-    <!-- Nhóm chip lọc nhanh -->
-    <!-- ... phía trên SearchView ... -->
-
-    <!-- ... phía dưới RecyclerView ... -->
-
-
-    <!-- Danh sách sự kiện -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

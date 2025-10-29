@@ -69,6 +69,29 @@ android:layout_height="wrap_content">
         android:text="from 299k"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurface"/> <!-- 👈 giá -->
+
+    <TextView
+        android:id="@+id/tvMetaLine1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="" />
+
+    <TextView
+        android:id="@+id/tvMetaLine2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="" />
+
 </LinearLayout>
 </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
