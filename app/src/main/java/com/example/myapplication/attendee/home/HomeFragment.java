@@ -64,4 +64,6 @@ public class HomeFragment extends Fragment {
     private void onItemClick(Event e){
         Toast.makeText(getContext(), "Mở chi tiết: " + e.title, Toast.LENGTH_SHORT).show();
     }
+
 }
+
