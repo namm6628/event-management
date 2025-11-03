@@ -64,24 +64,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d(TAG, "onCreate: app started");   // mốc nhìn trên Logcat
-        testFirestore();
+
 
     }
 
-    private void testFirestore() {
-        Log.d(TAG, "testFirestore: begin");
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        db.collection("events").get(Source.SERVER)   // <-- ép server
-                .addOnSuccessListener(snap -> {
-                    Log.d(TAG, "read OK (SERVER), size=" + snap.size()
-                            + ", fromCache=" + snap.getMetadata().isFromCache());
-                    for (QueryDocumentSnapshot doc : snap) {
-                        Log.d(TAG, "event: " + doc.getId() + " | " + doc.getString("title"));
-                    }
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "read FAIL", e));
-    }
 
 
 

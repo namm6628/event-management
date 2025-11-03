@@ -15,97 +15,80 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
-import com.google.android.material.button.MaterialButton;
+import com.example.myapplication.common.ServiceLocator;
+import com.example.myapplication.data.repo.EventRepository;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 
 public class ExploreFragment extends Fragment {
 
-    private EventAdapter adapter;
     private ExploreViewModel vm;
-
+    private EventAdapter adapter;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater i, @Nullable ViewGroup c, @Nullable Bundle b) {
-        View v = i.inflate(R.layout.fragment_explore, c, false);
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_explore, container, false);
+    }
 
-        // 1️⃣ RecyclerView
+    @Override
+    public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
+        super.onViewCreated(v, s);
+
+        // 1) RecyclerView
         RecyclerView rv = v.findViewById(R.id.recyclerEvents);
         rv.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new EventAdapter(event -> {});
+        adapter = new EventAdapter(/* onItemClick = */ null);
         rv.setAdapter(adapter);
 
-        // 2️⃣ ViewModel
-        vm = new ViewModelProvider(this).get(ExploreViewModel.class);
+        // 2) VM + Repo
+        EventRepository repo = ServiceLocator.eventRepo(requireContext());
+        vm = new ViewModelProvider(this, new ExploreVMFactory(repo)).get(ExploreViewModel.class);
 
-        vm.getEvents().observe(getViewLifecycleOwner(), list -> {
-            adapter.submitList(list);
-            rv.smoothScrollToPosition(0); // mượt hơn scrollToPosition
-        });
-
-        vm.initIfNeeded();
-
-
-        // 3️⃣ Search
-        TextInputEditText searchBar = v.findViewById(R.id.searchBar);
-        if (searchBar != null) {
-            searchBar.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    vm.setQuery(s.toString());
-                }
-                @Override public void afterTextChanged(Editable s) {}
-            });
-        }
-
-        // 4️⃣ ChipGroup
-        ChipGroup chipGroup = v.findViewById(R.id.chipGroup);
-
-// Chỉ add một lần để tránh chồng chip
-        if (chipGroup.getChildCount() == 0) {
-            for (String cat : getResources().getStringArray(R.array.categories)) {
-                Chip chip = new Chip(getContext(), null,
-                        com.google.android.material.R.style.Widget_Material3_Chip_Filter);
-                chip.setId(View.generateViewId());
-                chip.setText(cat);           // "Âm nhạc", "Sân khấu", "Thể thao", "Hội thảo"
-                chip.setCheckable(true);
-                chip.setClickable(true);                            // ✅ đảm bảo nhận click
-                chip.setEnsureMinTouchTargetSize(true);
-                chipGroup.addView(chip);
+        // 3) Search
+        TextInputEditText search = v.findViewById(R.id.searchBar);
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                vm.setQuery(s == null ? "" : s.toString());
             }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        // 4) Chip group (nếu bạn đang tạo chip động, giữ nguyên; ở đây demo vài chip phổ biến)
+        ChipGroup chips = v.findViewById(R.id.chipGroup);
+        if (chips.getChildCount() == 0) {
+            addChip(chips, "Tất cả", true);
+            addChip(chips, "Âm nhạc", false);
+            addChip(chips, "Hội thảo", false);
+            addChip(chips, "Sân khấu", false);
+            addChip(chips, "Thể thao", false);
         }
-
-// Bật single selection & listener ở group (ổn định hơn)
-        // === CHIP LISTENER (TV, có "Tất cả") ===
-        chipGroup.setSingleSelection(true);
-        chipGroup.setSelectionRequired(false);
-
-        // Đảm bảo ChipGroup không bị view khác chồng lên
-        chipGroup.bringToFront();
-
-        chipGroup.setOnCheckedStateChangeListener((group, ids) -> {
-            if (ids.isEmpty()) { vm.setCategory(""); return; }
-            Chip selected = group.findViewById(ids.get(0));
-            if (selected == null) { vm.setCategory(""); return; }
-            String cat = selected.getText().toString().trim();
-            vm.setCategory(cat.equalsIgnoreCase("Tất cả") ? "" : cat);
-            if (searchBar != null && searchBar.length() > 0) searchBar.setText("");
+        chips.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            String cat = "Tất cả";
+            if (!checkedIds.isEmpty()) {
+                Chip c = group.findViewById(checkedIds.get(0));
+                if (c != null) cat = String.valueOf(c.getText());
+            }
+            vm.setCategory(cat);
         });
 
+        // 5) Observe danh sách đã lọc
+        vm.events().observe(getViewLifecycleOwner(), adapter::submitList);
 
-        // 5️⃣ Nút Bộ lọc nâng cao
-        MaterialButton btnFilter = v.findViewById(R.id.btnFilter);
-        btnFilter.setOnClickListener(_v -> {
-            new EventFilterSheet()
-                    .setOnApply((city, cat, from, to) -> {
-                        vm.setCity(city);
-                        if (cat != null && !cat.isEmpty()) vm.setCategory(cat);
-                    })
-                    .show(getParentFragmentManager(), "filter");
-        });
+        // 6) Lần đầu tải
+        vm.refresh();
+    }
 
-        return v;
+    private void addChip(ChipGroup g, String text, boolean checked){
+        Chip c = (Chip) getLayoutInflater().inflate(R.layout.item_chip_choice, g, false);
+
+        c.setText(text);
+        c.setCheckable(true);
+        c.setChecked(checked);
+        g.addView(c);
     }
 }

@@ -1,139 +1,80 @@
 package com.example.myapplication.attendee.home;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.SavedStateHandle;
+import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
 
-import com.example.myapplication.common.DummyData;
 import com.example.myapplication.common.model.Event;
+import com.example.myapplication.data.repo.EventRepository;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import java.util.Collections;
-import java.util.Comparator;
-
+import java.util.Locale;
 
 public class ExploreViewModel extends ViewModel {
-    private final SavedStateHandle state;
-    private final MutableLiveData<List<Event>> events = new MutableLiveData<>();
-    private List<Event> source = new ArrayList<>();
 
-    // Keys lưu trạng thái
-    private static final String K_Q = "query";
-    private static final String K_CAT = "category";
-    private static final String K_CITY = "city";
+    private final EventRepository repo;
 
-    public ExploreViewModel(SavedStateHandle handle) {
-        this.state = handle;
-        if (!state.contains(K_Q)) state.set(K_Q, "");
-        if (!state.contains(K_CAT)) state.set(K_CAT, "");
-        if (!state.contains(K_CITY)) state.set(K_CITY, "");
+    // Inputs
+    private final MutableLiveData<String> query = new MutableLiveData<>("");
+    private final MutableLiveData<String> category = new MutableLiveData<>("Tất cả");
+
+    // Source từ Room
+    private final LiveData<List<Event>> source;
+
+    // Output đã lọc
+    private final MediatorLiveData<List<Event>> filtered = new MediatorLiveData<>();
+
+    public ExploreViewModel(EventRepository repo) {
+        this.repo = repo;
+        this.source = repo.observe();
+
+        filtered.addSource(source, list -> applyFilter());
+        filtered.addSource(query, s -> applyFilter());
+        filtered.addSource(category, c -> applyFilter());
     }
 
-    public LiveData<List<Event>> getEvents() { return events; }
-
-    public void initIfNeeded() {
-        if (source.isEmpty()) source = DummyData.getEvents();
-        applyAll();
-    }
+    public LiveData<List<Event>> events() { return filtered; }
 
     public void setQuery(String q) {
-        state.set(K_Q, q == null ? "" : q.trim());
-        applyAll();
+        if (q == null) q = "";
+        query.setValue(q);
     }
 
     public void setCategory(String c) {
-        state.set(K_CAT, c == null ? "" : c.trim());
-        applyAll();
+        if (c == null || c.trim().isEmpty()) c = "Tất cả";
+        category.setValue(c);
     }
 
-    public void setCity(String city) {
-        state.set(K_CITY, city == null ? "" : city.trim());
-        applyAll();
+    public void refresh() {
+        repo.refresh(null);
     }
 
-    public String getQuery() { return state.get(K_Q); }
-    public String getCategory() { return state.get(K_CAT); }
-    public String getCity() { return state.get(K_CITY); }
-
-    private static String norm(String s){
-        if (s == null) return "";
-        // chuẩn hoá: lower + bỏ khoảng trắng dư + bỏ dấu tiếng Việt
-        String base = java.text.Normalizer.normalize(s.trim().toLowerCase(), java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+","")       // bỏ diacritics
-                .replace('đ','d').replace('Đ','d');
-        return base;
-    }
-
-    private static int score(Event e, String q){ // q đã norm
-        if (q.isEmpty()) return 0;
-        String title = norm(e.title);
-        String cat   = norm(e.category);
-        int s = 0;
-        if (title.startsWith(q))  s += 3;
-        else if (title.contains(q)) s += 2;
-        if (cat.contains(q))      s += 1;
-        return s;
-    }
-
-    // parse dd/MM/yyyy [HH:mm], fallback nếu thiếu giờ/phút
-    private static long parseMillis(String date){
-        if (date == null) return Long.MAX_VALUE;
-        String[] fmts = {"dd/MM/yyyy HH:mm","dd/MM/yyyy"};
-        for (String f: fmts){
-            try {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(f, java.util.Locale.getDefault());
-                sdf.setLenient(false);
-                return sdf.parse(date).getTime();
-            } catch (Exception ignore){}
-        }
-        return Long.MAX_VALUE;
-    }
-
-    private void applyAll() {
-        String qNorm    = norm(getQuery());
-        String catNorm  = norm(getCategory());   // "" khi “Tất cả”
-        String cityNorm = norm(getCity());
-
-        java.util.List<Event> out = new java.util.ArrayList<>();
-        for (Event e : source) {
-            boolean ok = true;
-            if (!catNorm.isEmpty())  ok &= norm(e.category).equals(catNorm);
-            if (!cityNorm.isEmpty()) ok &= norm(e.venue).contains(cityNorm);
-            if (!ok) continue;
-
-            // nếu có query: chỉ giữ item match (score>0). Nếu không có query: giữ hết
-            int s = score(e, qNorm);
-            if (qNorm.isEmpty() || s > 0) {
-                // tạm nhúng điểm & millis bằng transient fields (không cần setter)
-                e.matchScore = s;               // thêm: public transient int matchScore;
-                e.whenMillis = parseMillis(e.date); // thêm: public transient long whenMillis;
-                out.add(e);
-            }
+    private void applyFilter() {
+        List<Event> src = source.getValue();
+        if (src == null) {
+            filtered.setValue(new ArrayList<>());
+            return;
         }
 
-        // Sắp xếp:
-        // - Nếu có query: theo score desc, tie-break theo ngày gần nhất asc, rồi title asc
-        // - Nếu KHÔNG query (ví dụ chip hoặc “Tất cả”): theo ngày gần nhất asc, rồi title asc
-        out.sort((a,b) -> {
-            if (!qNorm.isEmpty()){
-                int cmp = Integer.compare(b.matchScore, a.matchScore);
-                if (cmp != 0) return cmp;
-            }
-            int t = java.lang.Long.compare(a.whenMillis, b.whenMillis);
-            if (t != 0) return t;
-            return a.title.compareToIgnoreCase(b.title);
-        });
+        String q = query.getValue() == null ? "" : query.getValue().toLowerCase(Locale.ROOT);
+        String cat = category.getValue() == null ? "Tất cả" : category.getValue();
 
-        // phát bản sao mới để DiffUtil/adapter nhận thay đổi chắc chắn
-        events.setValue(new java.util.ArrayList<>(out));
+        List<Event> out = new ArrayList<>();
+        for (Event e : src) {
+            boolean matchCat = "Tất cả".equals(cat) ||
+                    (e.getCategory() != null && e.getCategory().equalsIgnoreCase(cat));
+            boolean matchQuery = q.isEmpty()
+                    || safe(e.getTitle()).contains(q)
+                    || safe(e.getLocation()).contains(q);
+            if (matchCat && matchQuery) out.add(e);
+        }
+        filtered.setValue(out);
     }
 
-
-
-
-    private String safeLower(String s) { return s == null ? "" : s.toLowerCase(); }
-
+    private static String safe(String s) {
+        return s == null ? "" : s.toLowerCase(Locale.ROOT);
+    }
 }

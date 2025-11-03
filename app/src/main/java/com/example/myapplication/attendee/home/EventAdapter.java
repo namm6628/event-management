@@ -3,122 +3,88 @@ package com.example.myapplication.attendee.home;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
 
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.List;
+import java.text.NumberFormat;
+import java.util.Locale;
 
+/**
+ * ListAdapter + DiffUtil để cập nhật mượt.
+ * onItemClick: truyền lambda nếu muốn xử lý click item (có thể null).
+ */
 public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
 
-    public interface Listener {
-        void onClick(Event e);
-    }
+    public interface OnItemClick { void onClick(@NonNull Event e); }
 
-    private final Listener listener;
+    private final OnItemClick onItemClick;
 
-    // Constructor cho Explore
-    public EventAdapter(Listener l) {
+    public EventAdapter(OnItemClick onItemClick) {
         super(DIFF);
-        this.listener = l;
+        this.onItemClick = onItemClick;
     }
 
-    // Constructor overload cho Home
-    public EventAdapter(List<Event> initialData, Listener listener) {
-        this(listener);
-        submitList(initialData);
-    }
-
-    private static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
-        @Override
-        public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
-            return a.id.equals(b.id);
+    static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
+        @Override public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
+            String ai = a.getId(), bi = b.getId();
+            return ai != null && bi != null && ai.equals(bi);
         }
-
-        @Override
-        public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
-            return a.equals(b);
+        @Override public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
+            // nếu Event chưa có equals(), so sánh các field cơ bản
+            return safe(a.getTitle()).equals(safe(b.getTitle()))
+                    && safe(a.getLocation()).equals(safe(b.getLocation()))
+                    && safe(a.getCategory()).equals(safe(b.getCategory()))
+                    && val(a.getPrice()) == val(b.getPrice())
+                    && val(a.getStartTime()) == val(b.getStartTime())
+                    && val(a.getAvailableSeats()) == val(b.getAvailableSeats())
+                    && val(a.getTotalSeats()) == val(b.getTotalSeats())
+                    && safe(a.getThumbnail()).equals(safe(b.getThumbnail()));
         }
+        private String safe(String s){ return s==null? "": s; }
+        private long val(Integer i){ return i==null? -1L : i; }
+        private long val(Long l){ return l==null? -1L : l; }
     };
 
-    static class VH extends RecyclerView.ViewHolder {
-        ImageView imgCover;
-        TextView tvTitle;
-        @Nullable TextView tvMetaLine1;
-        @Nullable TextView tvMetaLine2;
-
-        VH(@NonNull View v) {
-            super(v);
-            imgCover = v.findViewById(R.id.imgCover);
-            tvTitle = v.findViewById(R.id.tvTitle);
-            tvMetaLine1 = v.findViewById(R.id.tvMetaLine1);
-            tvMetaLine2 = v.findViewById(R.id.tvMetaLine2);
-        }
-    }
-
-    @NonNull
-    @Override
+    @NonNull @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
+        View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_event, parent, false);
-        return new VH(view);
+        return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH h, int pos) {
-        Event e = getItem(pos);
+    public void onBindViewHolder(@NonNull VH h, int position) {
+        Event e = getItem(position);
+        h.tvTitle.setText(nz(e.getTitle(), "—"));
+        h.tvLocation.setText(nz(e.getLocation(), "—"));
 
-        if (h.tvTitle != null) h.tvTitle.setText(e.title);
-
-        if (h.imgCover != null) {
-            Glide.with(h.imgCover.getContext())
-                    .load(e.coverUrl)
-                    .placeholder(R.drawable.ic_launcher_foreground)
-                    .into(h.imgCover);
+        String priceText = "—";
+        if (e.getPrice() != null) {
+            priceText = NumberFormat.getCurrencyInstance(new Locale("vi","VN"))
+                    .format(e.getPrice());
         }
+        h.tvPrice.setText(h.itemView.getContext().getString(R.string.price_format, priceText));
 
-        String dateStr = e.date; // vì date là String
-
-        String venueStr = e.venue;
-
-        setTextOrHide(h.tvMetaLine1, dateStr);
-        setTextOrHide(h.tvMetaLine2, venueStr);
-
-        h.itemView.setOnClickListener(v -> listener.onClick(e));
+        h.itemView.setOnClickListener(v -> {
+            if (onItemClick != null) onItemClick.onClick(e);
+        });
     }
 
-    private void setTextOrHide(@Nullable TextView tv, @Nullable String text) {
-        if (tv == null) return;
-        if (text == null || text.trim().isEmpty()) {
-            tv.setVisibility(View.GONE);
-        } else {
-            tv.setVisibility(View.VISIBLE);
-            tv.setText(text);
+    static class VH extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
+        final TextView tvTitle, tvLocation, tvPrice;
+        VH(@NonNull View itemView) {
+            super(itemView);
+            tvTitle = itemView.findViewById(R.id.tvTitle);
+            tvLocation = itemView.findViewById(R.id.tvLocation);
+            tvPrice = itemView.findViewById(R.id.tvPrice);
         }
     }
 
-    // Giữ tương thích với HomeFragment cũ
-    public void submitFilter(String currentQuery, String currentCategory) {
-        if (getCurrentList() == null) return;
-        java.util.List<Event> filtered = new java.util.ArrayList<>();
-        for (Event e : getCurrentList()) {
-            boolean ok = (currentQuery == null || e.title.toLowerCase().contains(currentQuery.toLowerCase()))
-                    && (currentCategory == null || e.category.equalsIgnoreCase(currentCategory));
-            if (ok) filtered.add(e);
-        }
-        submitList(filtered);
-    }
-
-
+    private static String nz(String s, String d){ return s==null? d: s; }
 }
