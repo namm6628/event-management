@@ -1,43 +1,106 @@
 package com.example.myapplication.data.repo;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.Transformations;
 
-import com.example.myapplication.common.Mapper;
-import com.example.myapplication.common.model.Event;
 import com.example.myapplication.data.local.EventDao;
 import com.example.myapplication.data.local.EventEntity;
 import com.example.myapplication.data.remote.EventRemoteDataSource;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Consumer;
 
+/**
+ * EventRepository (phiên bản khớp EventDao của bạn)
+ * -------------------------------------------------
+ * - Local: Room (EventDao, EventEntity)
+ * - Remote: Firestore (EventRemoteDataSource)
+ * - Dùng executor để tránh block UI khi ghi local.
+ *
+ * 👉 ExploreViewModel có thể gọi repo để tải & đồng bộ dữ liệu.
+ */
 public class EventRepository {
-    private final EventDao dao;
+
+    @Nullable
+    private final EventDao local;
+    @NonNull
     private final EventRemoteDataSource remote;
 
-    public EventRepository(EventDao dao, EventRemoteDataSource remote) {
-        this.dao = dao;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    // --- Constructors ---
+    public EventRepository(@Nullable EventDao local, @NonNull EventRemoteDataSource remote) {
+        this.local = local;
         this.remote = remote;
     }
 
-    // UI quan sát Room
-    public LiveData<List<Event>> observe() {
-        return Transformations.map(dao.getAll(), list -> {
-            List<Event> out = new ArrayList<>();
-            for (EventEntity x : list) out.add(Mapper.fromEntity(x));
-            return out;
-        });
+    public EventRepository(@NonNull EventRemoteDataSource remote) {
+        this(null, remote);
     }
 
-    // Kéo Firestore → Room
-    public void refresh(Consumer<Exception> onError) {
-        remote.fetchAll(events -> Executors.newSingleThreadExecutor().execute(() -> {
-            List<EventEntity> xs = new ArrayList<>();
-            for (Event e : events) xs.add(Mapper.toEntity(e));
-            dao.upsertAll(xs);
-        }), e -> { if (onError != null) onError.accept(e); });
+    // --- Local: LiveData đọc từ DB ---
+    public LiveData<List<EventEntity>> getAllLocal() {
+        if (local == null) return null;
+        return local.getAll();
+    }
+
+    // --- Đồng bộ dữ liệu từ Firestore về local ---
+    public void refreshAll(@NonNull Runnable onDone,
+                           @NonNull EventRemoteDataSource.Failure onError) {
+        remote.fetchAll(events -> executor.execute(() -> {
+            if (local != null) {
+                java.util.List<EventEntity> list = new java.util.ArrayList<>();
+                for (com.example.myapplication.common.model.Event e : events) {
+                    EventEntity entity = new EventEntity();
+
+                    if (e.getId() != null) entity.setId(e.getId());
+                    else entity.setId(java.util.UUID.randomUUID().toString());
+
+                    entity.setTitle(e.getTitle());
+                    entity.setLocation(e.getLocation());
+                    entity.setCategory(e.getCategory());
+                    entity.setThumbnail(e.getThumbnail());
+
+                    // ... trong refreshAll(...)
+                    Long millis = null;
+                    if (e.getStartTime() != null && e.getStartTime().toDate() != null) {
+                        millis = e.getStartTime().toDate().getTime();   // ✅ startTime là Timestamp
+                    }
+                    entity.setStartTime(millis);
+
+
+                    entity.setPrice(e.getPrice() == null ? 0.0 : e.getPrice());
+                    entity.setAvailableSeats(e.getAvailableSeats() == null ? 0 : e.getAvailableSeats());
+                    entity.setTotalSeats(e.getTotalSeats() == null ? 0 : e.getTotalSeats());
+
+                    list.add(entity);
+                }
+                local.clear();
+                local.upsertAll(list);
+            }
+            onDone.run();
+        }), onError);
+
+
+    }
+
+    // --- Remote: phân trang ---
+    public Task<QuerySnapshot> loadFirstPage(String category, int limit) {
+        return remote.loadFirstPage(category, limit);
+    }
+
+    public Task<QuerySnapshot> loadNextPage(String category, int limit, DocumentSnapshot lastVisible) {
+        return remote.loadNextPage(category, limit, lastVisible);
+    }
+
+    // --- Local utility ---
+    public void clearLocal() {
+        if (local != null) executor.execute(local::clear);
     }
 }

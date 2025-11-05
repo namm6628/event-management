@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.ListAdapter;
 
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
+import com.google.firebase.Timestamp;  // ✅ dùng để xử lý startTime
 
 import java.text.NumberFormat;
 import java.util.Locale;
@@ -31,24 +32,32 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
     }
 
     static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
-        @Override public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
+        @Override
+        public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
             String ai = a.getId(), bi = b.getId();
             return ai != null && bi != null && ai.equals(bi);
         }
-        @Override public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
             // nếu Event chưa có equals(), so sánh các field cơ bản
             return safe(a.getTitle()).equals(safe(b.getTitle()))
                     && safe(a.getLocation()).equals(safe(b.getLocation()))
                     && safe(a.getCategory()).equals(safe(b.getCategory()))
-                    && val(a.getPrice()) == val(b.getPrice())
-                    && val(a.getStartTime()) == val(b.getStartTime())
-                    && val(a.getAvailableSeats()) == val(b.getAvailableSeats())
-                    && val(a.getTotalSeats()) == val(b.getTotalSeats())
+                    && val(a.getPrice()) == val(b.getPrice())                         // Double
+                    && val(a.getStartTime()) == val(b.getStartTime())                 // ✅ Timestamp → millis
+                    && val(a.getAvailableSeats()) == val(b.getAvailableSeats())       // Integer
+                    && val(a.getTotalSeats()) == val(b.getTotalSeats())               // Integer
                     && safe(a.getThumbnail()).equals(safe(b.getThumbnail()));
         }
-        private String safe(String s){ return s==null? "": s; }
-        private long val(Integer i){ return i==null? -1L : i; }
-        private long val(Long l){ return l==null? -1L : l; }
+
+        private String safe(String s){ return s == null ? "" : s; }
+        private long val(Integer i){ return i == null ? -1L : i.longValue(); }
+        private long val(Long l){ return l == null ? -1L : l; }
+        private double val(Double d) { return d == null ? 0.0 : d; }
+
+        // ✅ helper cho Firestore Timestamp
+        private long val(Timestamp t) { return t == null ? 0L : t.toDate().getTime(); }
     };
 
     @NonNull @Override
@@ -86,5 +95,5 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         }
     }
 
-    private static String nz(String s, String d){ return s==null? d: s; }
+    private static String nz(String s, String d){ return s == null ? d : s; }
 }
