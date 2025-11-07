@@ -6,94 +6,105 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <!-- Ô tìm kiếm -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp"
-        app:cardBackgroundColor="@color/chip_bg"
-        app:cardCornerRadius="100dp"
-        app:cardElevation="0dp"
-        app:cardUseCompatPadding="false"
-        app:rippleColor="@android:color/transparent"
-        app:strokeColor="@android:color/transparent"
-        app:strokeWidth="0dp">
-
-        <androidx.appcompat.widget.SearchView
-            android:id="@+id/searchView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="?attr/colorSurfaceVariant"
-            android:queryHint="Tìm sự kiện, nghệ sĩ, địa điểm..."
-            app:iconifiedByDefault="false"
-            app:queryBackground="@android:color/transparent"
-            app:submitBackground="@color/sp_green_dark" />
-    </com.google.android.material.card.MaterialCardView>
-
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:overScrollMode="never"
-        android:scrollbars="none">
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingEnd="4dp"
-            app:selectionRequired="false"
-            app:singleSelection="true">
-
-            <com.google.android.material.chip.Chip
-                style="@style/App.FilterChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:checked="true"
-                android:text="Tất cả"
-                app:chipStrokeColor="#00FFFFFF" />
-
-            <com.google.android.material.chip.Chip
-                style="@style/App.FilterChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@color/sp_on_dark_60"
-                android:checkable="true"
-                android:text="Âm nhạc"
-                app:chipStrokeColor="#00FFFFFF" />
-
-            <com.google.android.material.chip.Chip
-                style="@style/App.FilterChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="Hội thảo"
-                app:chipStrokeColor="#00FFFFFF" />
-
-            <com.google.android.material.chip.Chip
-                style="@style/App.FilterChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="Sân khấu"
-                app:chipStrokeColor="#00FFFFFF" />
-
-            <com.google.android.material.chip.Chip
-                style="@style/App.FilterChip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="Thể thao"
-                app:chipStrokeColor="#00FFFFFF" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvEvents"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvTitleSpecial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Danh sách sự kiện
+"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvSpecialEvents"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:clipToPadding="false"
+                android:paddingEnd="12dp"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:id="@+id/exploreCategoriesContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvTitleTrending"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sự kiện xu hướng"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvTrendingEvents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:clipToPadding="false"
+                    android:paddingEnd="12dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    android:id="@+id/tvTitleForYou"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dành cho bạn"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvForYouEvents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:clipToPadding="false"
+                    android:paddingEnd="12dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    android:id="@+id/tvTitleWeekend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sự kiện cuối tuần"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvWeekendEvents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:clipToPadding="false"
+                    android:paddingEnd="12dp"
+                    android:orientation="horizontal" />
+
+                <LinearLayout
+                    android:id="@+id/dynamicCategoriesLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>
