@@ -10,7 +10,8 @@ public final class ServiceLocator {
     private static AppDatabase db;
 
     public static synchronized EventRepository eventRepo(Context ctx){
-        if (db == null) db = AppDatabase.create(ctx.getApplicationContext());
+        if (db == null) db = AppDatabase.getInstance(ctx.getApplicationContext());
+
         return new EventRepository(db.eventDao(), new EventRemoteDataSource());
     }
 }

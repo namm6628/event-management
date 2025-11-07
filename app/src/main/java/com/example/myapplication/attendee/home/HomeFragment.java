@@ -4,131 +4,139 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import androidx.appcompat.widget.SearchView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
+import com.example.myapplication.data.local.AppDatabase;
+import com.example.myapplication.data.local.EventDao;
+import com.example.myapplication.data.remote.EventRemoteDataSource;
+import com.example.myapplication.data.repo.EventRepository;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
-import com.google.firebase.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.Locale;
 
 public class HomeFragment extends Fragment {
 
     private ExploreViewModel vm;
-    private EventsAdapter adapter;
+    private RecyclerView recycler;
+    private EventAdapter adapter; // dùng adapter thật bạn đã up
+    private SearchView searchView;
+    private ChipGroup chipGroup;
 
     @Nullable @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_home, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
-        super.onViewCreated(v, s);
+    public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(v, savedInstanceState);
 
-        RecyclerView rv = v.findViewById(R.id.rvEvents);
-        rv.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new EventsAdapter();
-        rv.setAdapter(adapter);
+        // --- Repo: Room + Firestore ---
+        EventDao dao = AppDatabase.getInstance(requireContext()).eventDao();
+        EventRemoteDataSource remote = new EventRemoteDataSource(); // ctor mặc định
+        EventRepository repo = new EventRepository(dao, remote);
 
-        // share state với Explore (dùng requireActivity); nếu muốn tách, đổi thành `this`
-        vm = new ViewModelProvider(requireActivity(), new ExploreVMFactory())
-                .get(ExploreViewModel.class);
+        // Share ViewModel theo Activity để ExploreFragment dùng chung
+        ExploreVMFactory factory = new ExploreVMFactory(repo);
+        vm = new ViewModelProvider(requireActivity(), factory).get(ExploreViewModel.class);
 
-        vm.getEvents().observe(getViewLifecycleOwner(), adapter::submitList);
-        vm.refresh();
+        // --- View binding ---
+        recycler   = v.findViewById(R.id.rvEvents);
+        searchView = v.findViewById(R.id.searchView);
+        chipGroup  = v.findViewById(R.id.chipGroup);
 
-        // SearchView
-        SearchView searchView = v.findViewById(R.id.searchView);
-        if (searchView != null) {
-            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-                @Override public boolean onQueryTextSubmit(String q) {
-                    vm.setQuery(q);
-                    return true;
-                }
-                @Override public boolean onQueryTextChange(String q) {
-                    vm.setQuery(q);
-                    return true;
-                }
-            });
-        }
+        recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
+        recycler.setHasFixedSize(true);
 
+        // Bằng dòng này: truyền callback OnItemClick
+        adapter = new EventAdapter(event -> {
+            // TODO: xử lý khi click vào một Event
+            // ví dụ: mở màn hình chi tiết hoặc toast
+            // Toast.makeText(requireContext(), "Chọn: " + event.getTitle(), Toast.LENGTH_SHORT).show();
+        });
+        recycler.setAdapter(adapter);
 
-        // ChipGroup: gắn click cho từng Chip con có sẵn trong layout
-        ChipGroup chipGroup = v.findViewById(R.id.chipGroup);
-        if (chipGroup != null) {
-            for (int i = 0; i < chipGroup.getChildCount(); i++) {
-                View child = chipGroup.getChildAt(i);
-                if (child instanceof Chip) {
-                    Chip chip = (Chip) child; // Java 8 compatible
-                    chip.setOnClickListener(v1 -> vm.setCategory(chip.getText().toString()));
-                }
+        // Quan sát dữ liệu hiển thị sau filter/search
+        vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> {
+            // Nếu EventAdapter của bạn có submitList(List<Event>) thì dùng:
+            adapter.submitList(list);
+            // Nếu adapter của bạn dùng setData(...) thì đổi sang:
+            // adapter.setData(list); adapter.notifyDataSetChanged();
+        });
+
+        // SearchView: cập nhật khi text thay đổi hoặc submit
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override public boolean onQueryTextSubmit(String query) {
+                vm.setSearchQuery(query);
+                searchView.clearFocus();
+                return true;
             }
-        }
+            @Override public boolean onQueryTextChange(String newText) {
+                vm.setSearchQuery(newText);
+                return true;
+            }
+        });
 
-        // Load-more
-        rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                LinearLayoutManager lm = (LinearLayoutManager) recyclerView.getLayoutManager();
-                if (lm == null) return;
-                int total = lm.getItemCount();
-                int last = lm.findLastVisibleItemPosition();
+        // Chip filter: đọc text chip -> map về category chuẩn
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds == null || checkedIds.isEmpty()) {
+                vm.setCategoryFilter(null); // Tất cả
+                return;
+            }
+            int id = checkedIds.get(0);
+            Chip chip = group.findViewById(id);
+            if (chip != null) {
+                String label = chip.getText() != null ? chip.getText().toString() : "";
+                vm.setCategoryFilter(mapChipLabelToCategory(label));
+                // setCategoryFilter sẽ tự refresh() theo category mới
+            }
+        });
+
+        // Infinite scroll: gần cuối thì nạp tiếp
+        recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                if (dy <= 0) return;
+                RecyclerView.LayoutManager lm = rv.getLayoutManager();
+                if (!(lm instanceof LinearLayoutManager)) return;
+                int last = ((LinearLayoutManager) lm).findLastVisibleItemPosition();
+                int total = adapter.getItemCount();
                 if (total > 0 && last >= total - 4) vm.loadMore();
             }
         });
+
+        // Lần đầu vào màn hình → tải trang đầu
+        if (savedInstanceState == null) vm.refresh();
     }
 
-    // Adapter gọn (thay bằng card thật sau)
-    static class EventsAdapter extends ListAdapter<Event, EventsAdapter.VH> {
-        protected EventsAdapter() { super(DIFF); }
-        static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
-            @Override public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
-                String ta = a.getTitle() == null ? "" : a.getTitle();
-                String tb = b.getTitle() == null ? "" : b.getTitle();
-                return ta.equals(tb);
-            }
-            @Override public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
-                return a.equals(b);
-            }
-        };
-        static class VH extends RecyclerView.ViewHolder {
-            final android.widget.TextView title, subtitle;
-            VH(@NonNull View itemView) {
-                super(itemView);
-                title = itemView.findViewById(android.R.id.text1);
-                subtitle = itemView.findViewById(android.R.id.text2);
-            }
+    /** Map label chip (layout Home) về category chuẩn trong Firestore/ViewModel */
+    private String mapChipLabelToCategory(String label) {
+        if (label == null) return null;
+        switch (label.trim()) {
+            case "Tất cả":      return null;
+            case "Âm nhạc":     return "Âm nhạc";
+            case "Thể thao":    return "Thể thao";
+            case "Sân khấu":    return "Sân khấu & nghệ thuật"; // layout Home dùng label ngắn
+            case "Hội thảo":    return "Hội thảo"; // hoặc "Khác" nếu Firestore của bạn không có "Hội thảo"
+            default:            return label; // fallback: giữ nguyên
         }
-        @NonNull @Override
-        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(parent.getContext())
-                    .inflate(android.R.layout.simple_list_item_2, parent, false);
-            return new VH(v);
-        }
-        @Override
-        public void onBindViewHolder(@NonNull VH h, int pos) {
-            Event e = getItem(pos);
-            h.title.setText(e.getTitle() == null ? "(No title)" : e.getTitle());
-            long t = e.getStartTime() == null ? 0L : e.getStartTime().toDate().getTime();
-            String time = t == 0L ? "" :
-                    new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(t);
-            h.subtitle.setText(time);
-        }
+    }
+
+    // Adapter sample placeholder nếu cần (bạn đã có EventAdapter.java nên không dùng class này)
+    static class EventAdapterPlaceholder extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private List<Event> data;
+        void submitList(List<Event> list) { this.data = list; notifyDataSetChanged(); }
+        @Override public int getItemCount() { return data == null ? 0 : data.size(); }
+        @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int v) { throw new UnsupportedOperationException("Use your real adapter"); }
+        @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {}
     }
 }

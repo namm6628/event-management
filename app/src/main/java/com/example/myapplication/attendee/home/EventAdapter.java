@@ -3,7 +3,9 @@ package com.example.myapplication.attendee.home;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
+import com.bumptech.glide.Glide;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
@@ -80,15 +82,26 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         }
         h.tvPrice.setText(h.itemView.getContext().getString(R.string.price_format, priceText));
 
+        // ✅ Load thumbnail bằng Glide
+        Glide.with(h.itemView.getContext())
+                .load(e.getThumbnail())                 // URL từ Firestore
+                .placeholder(R.drawable.placeholder)    // ảnh tạm
+                .error(R.drawable.placeholder)          // ảnh lỗi
+                .centerCrop()
+                .into(h.imgThumb);
+
+
         h.itemView.setOnClickListener(v -> {
             if (onItemClick != null) onItemClick.onClick(e);
         });
     }
 
     static class VH extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
+        final ImageView imgThumb;
         final TextView tvTitle, tvLocation, tvPrice;
         VH(@NonNull View itemView) {
             super(itemView);
+            imgThumb   = itemView.findViewById(R.id.imgThumbnail); // 👈 trùng id trong XML
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvLocation = itemView.findViewById(R.id.tvLocation);
             tvPrice = itemView.findViewById(R.id.tvPrice);

@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 
+import com.example.myapplication.common.model.Event;
 import com.example.myapplication.data.local.EventDao;
 import com.example.myapplication.data.local.EventEntity;
 import com.example.myapplication.data.remote.EventRemoteDataSource;
@@ -90,6 +91,12 @@ public class EventRepository {
 
     }
 
+    /** Dùng trực tiếp remote khi không có local (Room). */
+    public void fetchAllDirect(@NonNull EventRemoteDataSource.Success<java.util.List<Event>> onSuccess,
+                               @NonNull EventRemoteDataSource.Failure onError) {
+        remote.fetchAll(onSuccess, onError);
+    }
+
     // --- Remote: phân trang ---
     public Task<QuerySnapshot> loadFirstPage(String category, int limit) {
         return remote.loadFirstPage(category, limit);
@@ -103,4 +110,33 @@ public class EventRepository {
     public void clearLocal() {
         if (local != null) executor.execute(local::clear);
     }
+
+
+    // EventRepository.java
+    public void upsertFromRemote(@NonNull List<com.example.myapplication.common.model.Event> events) {
+        if (local == null) return;
+        executor.execute(() -> {
+            List<EventEntity> list = new ArrayList<>();
+            for (com.example.myapplication.common.model.Event e : events) {
+                EventEntity entity = new EventEntity();
+                entity.setId(e.getId() != null ? e.getId() : java.util.UUID.randomUUID().toString());
+                entity.setTitle(e.getTitle());
+                entity.setLocation(e.getLocation());
+                entity.setCategory(e.getCategory());
+                entity.setThumbnail(e.getThumbnail());
+                Long millis = null;
+                if (e.getStartTime() != null && e.getStartTime().toDate() != null) {
+                    millis = e.getStartTime().toDate().getTime();
+                }
+                entity.setStartTime(millis);
+                entity.setPrice(e.getPrice() == null ? 0.0 : e.getPrice());
+                entity.setAvailableSeats(e.getAvailableSeats() == null ? 0 : e.getAvailableSeats());
+                entity.setTotalSeats(e.getTotalSeats() == null ? 0 : e.getTotalSeats());
+                list.add(entity);
+            }
+            local.upsertAll(list); // ✅ append qua Room
+        });
+    }
+
+
 }

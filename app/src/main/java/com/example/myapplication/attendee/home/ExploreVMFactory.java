@@ -9,16 +9,18 @@ import com.example.myapplication.data.repo.EventRepository;
 
 /** Factory không tham số: tự tạo Repository (remote-only) để dùng ngay. */
 public class ExploreVMFactory implements ViewModelProvider.Factory {
+    private final EventRepository repo;
 
-    @NonNull
-    @Override
-    @SuppressWarnings("unchecked")
+    public ExploreVMFactory(EventRepository repo) {
+        this.repo = repo;
+    }
+
+    @NonNull @Override @SuppressWarnings("unchecked")
     public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
         if (modelClass.isAssignableFrom(ExploreViewModel.class)) {
-            // Repo tối thiểu dùng remote; khi thêm Room, bạn có thể đổi sang ctor (local, remote)
-            EventRepository repo = new EventRepository(new EventRemoteDataSource());
-            return (T) new ExploreViewModel(repo);
+            return (T) new ExploreViewModel(repo); // khớp constructor mới
         }
-        throw new IllegalArgumentException("Unknown ViewModel class: " + modelClass);
+        throw new IllegalArgumentException("Unknown ViewModel class: " + modelClass.getName());
     }
 }
+

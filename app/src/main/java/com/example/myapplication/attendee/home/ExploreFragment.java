@@ -6,140 +6,124 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
-import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.firebase.Timestamp;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.button.MaterialButton;
 
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
 public class ExploreFragment extends Fragment {
 
     private ExploreViewModel vm;
-    private EventsAdapter adapter;
+    private RecyclerView recycler;
+    private EventAdapter adapter; // dùng adapter thật bạn đã up
+
+    private TextInputEditText searchBar;
+    private ChipGroup chipGroup;
+    private MaterialButton btnFilter;
+
+    // Map chipId -> category chuẩn Firestore (null = Tất cả)
+    private final Map<Integer, String> chipToCategory = new HashMap<Integer, String>() {{
+        put(R.id.chip_all,   null);
+        put(R.id.chip_music, "Âm nhạc");
+        put(R.id.chip_art,   "Sân khấu & nghệ thuật");
+        put(R.id.chip_sport, "Thể thao");
+        put(R.id.chip_other, "Khác");
+    }};
 
     @Nullable @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_explore, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(v, savedInstanceState);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        RecyclerView recycler = v.findViewById(R.id.recyclerEvents);
+        // Dùng chung ViewModel đã được inject repo ở HomeFragment
+        vm = new ViewModelProvider(requireActivity()).get(ExploreViewModel.class);
+
+        recycler = view.findViewById(R.id.recyclerEvents);
+        searchBar = view.findViewById(R.id.searchBar);
+        chipGroup = view.findViewById(R.id.chipGroup);
+        btnFilter = view.findViewById(R.id.btnFilter);
+
         recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new EventsAdapter();
+        recycler.setHasFixedSize(true);
+
+        adapter = new EventAdapter(event -> {
+            // TODO: xử lý khi click event
+            // ví dụ:
+            Toast.makeText(requireContext(), "Bạn đã chọn: " + event.getTitle(), Toast.LENGTH_SHORT).show();
+        });
+
         recycler.setAdapter(adapter);
 
-        vm = new ViewModelProvider(this, new ExploreVMFactory()).get(ExploreViewModel.class);
-        vm.getEvents().observe(getViewLifecycleOwner(), adapter::submitList);
-        vm.refresh();
+        vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> {
+            adapter.submitList(list);
+            // hoặc adapter.setData(list); adapter.notifyDataSetChanged();
+        });
 
-        EditText search = v.findViewById(R.id.searchBar);
-        if (search != null) {
-            search.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    vm.setQuery(s == null ? "" : s.toString());
-                }
-                @Override public void afterTextChanged(Editable s) {}
-            });
-        }
+        // Text search
+        searchBar.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                vm.setSearchQuery(s != null ? s.toString() : "");
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
-        ChipGroup chipGroup = v.findViewById(R.id.chipGroup);
-        if (chipGroup != null) {
-            buildCategoryChips(chipGroup, Arrays.asList("Tất cả", "Music", "Hội thảo", "Sân khấu", "Thể thao"));
-        }
+        // Chip filter (singleSelection đã set trong XML)
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds == null || checkedIds.isEmpty()) {
+                vm.setCategoryFilter(null);
+                return;
+            }
+            int id = checkedIds.get(0);
+            vm.setCategoryFilter(chipToCategory.get(id));
+        });
 
+        // Bộ lọc nâng cao (placeholder)
+        btnFilter.setOnClickListener(v ->
+                Toast.makeText(requireContext(), "Mở bộ lọc nâng cao (TODO: BottomSheet)", Toast.LENGTH_SHORT).show()
+        );
+
+        // ExploreFragment KHÔNG gọi refresh() nữa nếu HomeFragment đã gọi khi vào tab.
+        // Nếu Explore là entry đầu tiên, có thể bật:
+        // if (savedInstanceState == null) vm.refresh();
+
+        // Infinite scroll (giống Home)
         recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
-                super.onScrolled(rv, dx, dy);
-                LinearLayoutManager lm = (LinearLayoutManager) rv.getLayoutManager();
-                if (lm == null) return;
-                int total = lm.getItemCount();
-                int last = lm.findLastVisibleItemPosition();
+                if (dy <= 0) return;
+                RecyclerView.LayoutManager lm = rv.getLayoutManager();
+                if (!(lm instanceof LinearLayoutManager)) return;
+                int last = ((LinearLayoutManager) lm).findLastVisibleItemPosition();
+                int total = adapter.getItemCount();
                 if (total > 0 && last >= total - 4) vm.loadMore();
             }
         });
     }
 
-    private void buildCategoryChips(ChipGroup chipGroup, List<String> labels) {
-        chipGroup.removeAllViews();
-        for (int i = 0; i < labels.size(); i++) {
-            String label = labels.get(i);
-            Chip c = new Chip(requireContext(), null, com.google.android.material.R.style.Widget_Material3_Chip_Filter);
-            c.setText(label);
-            c.setCheckable(true);
-            c.setChecked(i == 0);
-            c.setOnClickListener(view -> vm.setCategory(label));
-            chipGroup.addView(c);
-        }
-    }
-
-    /** Adapter: so sánh theo (id nếu có) hoặc (title+startTime-millis) */
-    static class EventsAdapter extends ListAdapter<Event, EventsAdapter.VH> {
-        protected EventsAdapter() { super(DIFF); }
-
-        static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
-            @Override public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
-                if (a.getId() != null && b.getId() != null) return a.getId().equals(b.getId());
-                String ta = a.getTitle() == null ? "" : a.getTitle();
-                String tb = b.getTitle() == null ? "" : b.getTitle();
-                long sa = tsToMillis(a.getStartTime());
-                long sb = tsToMillis(b.getStartTime());
-                return ta.equals(tb) && sa == sb;
-            }
-            @Override public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
-                // đơn giản hóa: so title + startTime + location
-                return eq(a.getTitle(), b.getTitle())
-                        && tsToMillis(a.getStartTime()) == tsToMillis(b.getStartTime())
-                        && eq(a.getLocation(), b.getLocation());
-            }
-
-            private boolean eq(String x, String y) { return (x == null ? "" : x).equals(y == null ? "" : y); }
-            private long tsToMillis(Timestamp ts) { return ts == null ? 0L : ts.toDate().getTime(); }
-        };
-
-        static class VH extends RecyclerView.ViewHolder {
-            final android.widget.TextView title, subtitle;
-            VH(@NonNull View itemView) {
-                super(itemView);
-                title = itemView.findViewById(android.R.id.text1);
-                subtitle = itemView.findViewById(android.R.id.text2);
-            }
-        }
-        @NonNull @Override
-        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(parent.getContext())
-                    .inflate(android.R.layout.simple_list_item_2, parent, false);
-            return new VH(v);
-        }
-        @Override
-        public void onBindViewHolder(@NonNull VH h, int position) {
-            Event e = getItem(position);
-            h.title.setText(e.getTitle() == null ? "(No title)" : e.getTitle());
-            long t = e.getStartTime() == null ? 0L : e.getStartTime().toDate().getTime();
-            String time = t == 0L ? "" :
-                    new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(t);
-            String loc = e.getLocation() == null ? "" : e.getLocation();
-            h.subtitle.setText(time + (loc.isEmpty() ? "" : " • " + loc));
-        }
+    // Adapter sample placeholder nếu cần
+    static class EventAdapterPlaceholder extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private List<Event> data;
+        void submitList(List<Event> list) { this.data = list; notifyDataSetChanged(); }
+        @Override public int getItemCount() { return data == null ? 0 : data.size(); }
+        @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int v) { throw new UnsupportedOperationException("Use your real adapter"); }
+        @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {}
     }
 }

@@ -1,17 +1,16 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// Top-level build file
 plugins {
-    // Khai báo version ở root để module apply được
     id("com.android.application") version "8.7.2" apply false
     id("com.android.library") version "8.7.2" apply false
 
-    // Nếu bạn dùng Kotlin Android (có module Kotlin) thì để thêm:
+    // Nếu có module Kotlin:
     // id("org.jetbrains.kotlin.android") version "2.0.21" apply false
 
-    // Safe Args (Java/Kotlin đều dùng id này với AGP 8.x)
+    // Safe Args (áp dụng ở module app qua plugins {})
     id("androidx.navigation.safeargs") version "2.8.3" apply false
 
-    // Google Services (Firebase)
+    // Google Services (áp dụng ở module app qua plugins {})
     id("com.google.gms.google-services") version "4.4.2" apply false
-
-
 }
+
+// Không cần buildscript/classpath nữa khi dùng plugins DSL.

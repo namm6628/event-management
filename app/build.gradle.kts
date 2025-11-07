@@ -62,8 +62,14 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
 
-    // Room, Navigation… giữ nguyên như bạn đang dùng
+    // Lifecycle (đang dùng ViewModel/LiveData)
+    implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-livedata:2.8.6")
 
+    // Room, Navigation… giữ nguyên như bạn đang dùng
+    // UI căn bản (nếu thiếu)
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("com.google.android.material:material:1.12.0")
 
     // Glide cho load ảnh

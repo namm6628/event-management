@@ -1,55 +1,62 @@
 package com.example.myapplication.data.local;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
-/**
- * Entity cho bảng "events".
- * Lưu ý: startTime lưu dạng millis (Long) để dễ ORDER BY trong SQL.
- */
-@Entity(tableName = "events")
+@Entity(
+        tableName = "events",
+        indices = {
+                @Index(value = {"startTime"}),
+                @Index(value = {"category"}),
+                @Index(value = {"title"})
+        }
+)
 public class EventEntity {
 
-    @PrimaryKey @NonNull
+    @PrimaryKey
+    @NonNull
     private String id;
 
-    private String title;
-    private String location;
-    private String category;
-    private String thumbnail;
+    @Nullable private String title;
+    @Nullable private String location;
+    @Nullable private String category;
+    @Nullable private String thumbnail;
 
-    /** Thời gian sự kiện (millis since epoch) */
-    private Long startTime;
+    /** Lưu millis (epoch). Null nếu chưa có */
+    @Nullable private Long startTime;
 
-    private Double price;
-    private Integer availableSeats;
-    private Integer totalSeats;
+    @Nullable private Double price;
+    @Nullable private Integer availableSeats;
+    @Nullable private Integer totalSeats;
 
-    @NonNull public String getId() { return id; }
-    public void setId(@NonNull String id) { this.id = id; }
+    // --- getters / setters ---
+    @Nullable public String getId() { return id; }
+    public void setId(@Nullable String id) { this.id = id; }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    @Nullable public String getTitle() { return title; }
+    public void setTitle(@Nullable String title) { this.title = title; }
 
-    public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
+    @Nullable public String getLocation() { return location; }
+    public void setLocation(@Nullable String location) { this.location = location; }
 
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
+    @Nullable public String getCategory() { return category; }
+    public void setCategory(@Nullable String category) { this.category = category; }
 
-    public String getThumbnail() { return thumbnail; }
-    public void setThumbnail(String thumbnail) { this.thumbnail = thumbnail; }
+    @Nullable public String getThumbnail() { return thumbnail; }
+    public void setThumbnail(@Nullable String thumbnail) { this.thumbnail = thumbnail; }
 
-    public Long getStartTime() { return startTime; }
-    public void setStartTime(Long startTime) { this.startTime = startTime; }
+    @Nullable public Long getStartTime() { return startTime; }
+    public void setStartTime(@Nullable Long startTime) { this.startTime = startTime; }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    @Nullable public Double getPrice() { return price; }
+    public void setPrice(@Nullable Double price) { this.price = price; }
 
-    public Integer getAvailableSeats() { return availableSeats; }
-    public void setAvailableSeats(Integer availableSeats) { this.availableSeats = availableSeats; }
+    @Nullable public Integer getAvailableSeats() { return availableSeats; }
+    public void setAvailableSeats(@Nullable Integer availableSeats) { this.availableSeats = availableSeats; }
 
-    public Integer getTotalSeats() { return totalSeats; }
-    public void setTotalSeats(Integer totalSeats) { this.totalSeats = totalSeats; }
+    @Nullable public Integer getTotalSeats() { return totalSeats; }
+    public void setTotalSeats(@Nullable Integer totalSeats) { this.totalSeats = totalSeats; }
 }
