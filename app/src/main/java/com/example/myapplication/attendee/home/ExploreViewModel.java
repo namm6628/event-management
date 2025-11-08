@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Locale;
 
 public class ExploreViewModel extends ViewModel {
 
@@ -50,15 +51,14 @@ public class ExploreViewModel extends ViewModel {
     private final MutableLiveData<List<Event>> forYouBacking = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<List<Event>> weekendBacking = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<List<DynamicCategory>> dynamicCategoriesBacking = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<List<Event>> videoEventsBacking = new MutableLiveData<>(new ArrayList<>());
+    public LiveData<List<Event>> getVideoEvents() { return videoEventsBacking; }
 
     // Danh sách các category động (bạn có thể thêm/bớt tùy ý)
     private final List<String> DYNAMIC_CATEGORY_NAMES = Arrays.asList(
             "Âm nhạc", "Hội thảo", "Sân khấu & nghệ thuật", "Thể thao", "Khác"
     );
-    // [THÊM MỚI] - Kết thúc
 
-
-    // [GIỮ NGUYÊN] - BE MỚI
     public ExploreViewModel() {
         visibleEvents.addSource(allEvents, it -> applyFilters());
         visibleEvents.addSource(categoryFilter, it -> applyFilters());
@@ -261,6 +261,14 @@ public class ExploreViewModel extends ViewModel {
                 weekendBacking.setValue(EventRemoteDataSource.map(task.getResult()));
             } else {
                 weekendBacking.setValue(Collections.emptyList());
+            }
+        });
+        // [THÊM MỚI] - Tải danh sách video
+        remote.loadVideoEvents(HORIZONTAL_PAGE_SIZE).addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                videoEventsBacking.setValue(EventRemoteDataSource.map(task.getResult()));
+            } else {
+                videoEventsBacking.setValue(Collections.emptyList());
             }
         });
     }

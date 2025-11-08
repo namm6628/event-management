@@ -36,6 +36,7 @@ import java.util.ArrayList; // [THÊM]
 import java.util.List;
 import java.util.Locale; // [THÊM]
 import java.util.Objects;
+import java.util.Objects;
 
 public class HomeFragment extends Fragment {
 
@@ -49,12 +50,15 @@ public class HomeFragment extends Fragment {
     private EventsAdapter trendingAdapter;
     private EventsAdapter forYouAdapter;
     private EventsAdapter weekendAdapter;
+    private EventsAdapter videoAdapter;
 
     private View exploreCategoriesContainer;
     private TextView tvTitleSpecial;
     private RecyclerView rvSpecial;
     private LinearLayout dynamicCategoriesLayout;
 
+    private View tvTitleVideo;
+    private RecyclerView rvVideoEvents;
     private RecyclerView.LayoutManager specialHorizontalManager;
     private RecyclerView.LayoutManager specialVerticalManager;
     private final List<EventsAdapter> dynamicAdapters = new ArrayList<>();
@@ -77,9 +81,7 @@ public class HomeFragment extends Fragment {
 
         ExploreVMFactory factory = new ExploreVMFactory(repo);
         vm = new ViewModelProvider(requireActivity(), factory).get(ExploreViewModel.class);
-        // [GIỮ NGUYÊN] - Kết thúc
 
-        // [CẬP NHẬT] --- View binding cho UI mới ---
 //        searchView = v.findViewById(R.id.searchView);
         chipGroup  = v.findViewById(R.id.chipGroup);
 
@@ -87,6 +89,9 @@ public class HomeFragment extends Fragment {
         tvTitleSpecial = v.findViewById(R.id.tvTitleSpecial);
         rvSpecial = v.findViewById(R.id.rvSpecialEvents);
         dynamicCategoriesLayout = v.findViewById(R.id.dynamicCategoriesLayout);
+
+        tvTitleVideo = v.findViewById(R.id.tvTitleVideo);
+        rvVideoEvents = v.findViewById(R.id.rvVideoEvents);
 
         specialHorizontalManager = new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false);
         specialVerticalManager = new LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false);
@@ -96,6 +101,16 @@ public class HomeFragment extends Fragment {
         rvSpecial.setLayoutManager(specialHorizontalManager);
         specialAdapter = new EventsAdapter(event -> { /* TODO: Xử lý click */ });
         rvSpecial.setAdapter(specialAdapter);
+
+        rvVideoEvents.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+        videoAdapter = new EventsAdapter(event -> {
+            if (event.getVideoUrl() != null && !event.getVideoUrl().isEmpty()) {
+                android.content.Intent intent = new android.content.Intent(requireContext(), VideoPlayerActivity.class);
+                intent.putExtra("VIDEO_URL", event.getVideoUrl());
+                startActivity(intent);
+            }
+        });
+        rvVideoEvents.setAdapter(videoAdapter);
 
         // 2. Sự kiện xu hướng
         RecyclerView rvTrending = v.findViewById(R.id.rvTrendingEvents);
@@ -120,6 +135,7 @@ public class HomeFragment extends Fragment {
         vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> {
             specialAdapter.submitList(list);
         });
+        vm.getVideoEvents().observe(getViewLifecycleOwner(), videoAdapter::submitList);
 
         // 2. Quan sát các danh sách ngang (tải trực tiếp)
         vm.getTrendingEvents().observe(getViewLifecycleOwner(), trendingAdapter::submitList);
@@ -192,7 +208,9 @@ public class HomeFragment extends Fragment {
         dynamicCategoriesLayout.setVisibility(isSearching ? View.GONE : View.VISIBLE);
 
         // Đổi tiêu đề
+        tvTitleVideo.setVisibility(isSearching ? View.GONE : View.VISIBLE);
         tvTitleSpecial.setText(isSearching ? "Kết quả tìm kiếm" : "Sự kiện đặc biệt");
+        rvVideoEvents.setVisibility(isSearching ? View.GONE : View.VISIBLE);
 
         // Đổi LayoutManager
         rvSpecial.setLayoutManager(isSearching ? specialVerticalManager : specialHorizontalManager);

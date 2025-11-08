@@ -208,7 +208,6 @@ public class EventRemoteDataSource {
         }
         return list;
     }
-
     /** Lọc client-side (theo query text) */
     public static List<Event> filterClient(List<Event> events, String query) {
         if (events == null || events.isEmpty()) return new ArrayList<>();
@@ -221,5 +220,16 @@ public class EventRemoteDataSource {
                                 (e.getLocation() != null && e.getLocation().toLowerCase(Locale.getDefault()).contains(q))
                 )
                 .collect(Collectors.toList());
+    }
+    public Task<QuerySnapshot> loadVideoEvents(int limit) {
+        Date now = new Date(); // Lấy thời gian hiện tại
+
+        Query q = db.collection("events")
+                .whereEqualTo("hasVideo", true) // [SỬA] - Lọc bình đẳng (OK)
+                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now)) // [SỬA] - Lọc bất-bình-đẳng (OK)
+                .orderBy("startTime", Query.Direction.ASCENDING)
+                .limit(limit);
+
+        return q.get();
     }
 }

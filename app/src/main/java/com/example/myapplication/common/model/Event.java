@@ -3,6 +3,7 @@ package com.example.myapplication.common.model;
 import androidx.annotation.Nullable;
 
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.PropertyName;
 
 /** Model map trực tiếp với collection "events" trên Firestore. */
 public class Event {
@@ -49,5 +50,33 @@ public class Event {
     @Nullable public Integer getTotalSeats() { return totalSeats; }
     public void setTotalSeats(Integer totalSeats) { this.totalSeats = totalSeats; }
 
+    // Dán code này vào BÊN TRONG lớp Event.java
+
+    @com.google.firebase.firestore.PropertyName("videoUrl")
+    private String videoUrl;
+
+    @com.google.firebase.firestore.PropertyName("videoUrl")
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    @com.google.firebase.firestore.PropertyName("videoUrl")
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+    // Dán code này vào BÊN TRONG lớp Event.java
+
+    @com.google.firebase.firestore.PropertyName("hasVideo")
+    private boolean hasVideo = false; // Mặc định là false
+
+    @com.google.firebase.firestore.PropertyName("hasVideo")
+    public boolean getHasVideo() {
+        return hasVideo;
+    }
+
+    @com.google.firebase.firestore.PropertyName("hasVideo")
+    public void setHasVideo(boolean hasVideo) {
+        this.hasVideo = hasVideo;
+    }
     // Bạn có thể override equals/hashCode nếu muốn dùng trong DiffUtil theo id
 }
