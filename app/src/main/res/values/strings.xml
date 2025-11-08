@@ -1,6 +1,30 @@
 <resources>
-    <string name="app_name">My Application</string>
-    <string name="price_format">Giá: %1$s</string>
-    <string name="event_image">Ảnh sự kiện</string>
+    <string name="app_name">Event Management</string>
+    <string name="search_events">Tìm kiếm sự kiện</string>
+    <string name="today">Hôm nay</string>
+    <string name="this_weekend">Cuối tuần này</string>
+    <string name="this_month">Tháng này</string>
+    <string name="all">Tất cả</string>
+    <string name="advanced_filter">Bộ lọc nâng cao</string>
 
+    <string name="city">Thành phố</string>
+    <string name="category">Danh mục</string>
+    <string name="from_date">Từ ngày</string>
+    <string name="to_date">Đến ngày</string>
+    <string name="min_price">Giá min</string>
+    <string name="max_price">Giá max</string>
+    <string name="only_free">Chỉ miễn phí</string>
+    <string name="has_ticket">Còn vé</string>
+    <string name="sort_by">Sắp xếp theo</string>
+    <string name="sort_start_at">Ngày diễn ra</string>
+    <string name="sort_created_at">Ngày tạo</string>
+    <string name="price_format">Giá: %1$s</string>
+
+    <string name="sort_price">Giá</string>
+    <string name="sort_asc">Tăng dần</string>
+    <string name="reset">Đặt lại</string>
+    <string name="apply">Áp dụng</string>
+    <string name="from_fmt">Từ: %1$s</string>
+    <string name="to_fmt">Đến: %1$s</string>
+    <string name="event_image">Ảnh sự kiện</string>
 </resources>
