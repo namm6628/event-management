@@ -1,117 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:padding="12dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
-    tools:context=".attendee.home.ExploreFragment">
+    android:layout_height="match_parent">
 
-    <!-- Thanh tìm kiếm -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/searchBarLayout"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        app:boxBackgroundMode="outline"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:startIconDrawable="@android:drawable/ic_menu_search">
+    <!-- Thanh tìm kiếm CardView -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/searchBar"
+        style="@style/Widget.Material3.CardView.Elevated"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/searchBar"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Tìm sự kiện..."
-            android:imeOptions="actionSearch"
-            android:inputType="text" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp">
 
-    <!-- Nhóm chip thể loại -->
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@string/search_icon"
+                android:src="@drawable/ic_search_24"/>
+
+            <TextView
+                android:id="@+id/tvSearchHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/search_hint"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ChipGroup category -->
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroup"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
         app:singleSelection="true"
-        app:selectionRequired="true"
-        app:layout_constraintTop_toBottomOf="@id/searchBarLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:chipSpacingHorizontal="8dp"
+        app:chipSpacingVertical="8dp">
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chip_all"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:id="@+id/chipAll"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tất cả"
-            android:checked="true"
-            android:checkable="true"
-            app:checkedIconVisible="false" />
+            android:text="@string/all_categories" />
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chip_music"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:id="@+id/chipMusic"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Âm nhạc"
-            android:checkable="true" />
+            android:text="Âm nhạc" />
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chip_art"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:id="@+id/chipArt"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sân khấu &amp; nghệ thuật"
-            android:checkable="true" />
+            android:text="Sân khấu &amp; nghệ thuật" />
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chip_sport"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:id="@+id/chipSport"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Thể thao"
-            android:checkable="true" />
+            android:text="Thể thao" />
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chip_other"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:id="@+id/chipOther"
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Khác"
-            android:checkable="true" />
-
+            android:text="Khác" />
     </com.google.android.material.chip.ChipGroup>
 
-    <!-- Nút Bộ lọc nâng cao -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnFilter"
-        style="@style/Widget.Material3.Button.TonalButton"
-        android:text="Bộ lọc nâng cao"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="8dp"
-        android:layout_marginTop="4dp"
-        app:layout_constraintTop_toBottomOf="@id/chipGroup"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Danh sách sự kiện -->
+
+    <!-- Recycler -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerEvents"
-        android:layout_width="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:padding="8dp"
-        app:layout_constraintTop_toBottomOf="@id/btnFilter"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:listitem="@layout/item_event" />
+        android:layout_weight="1"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

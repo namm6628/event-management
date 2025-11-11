@@ -8,12 +8,13 @@ plugins {
 
 android {
     namespace = "com.example.myapplication"
-    compileSdk = 36   // giữ như bạn đang dùng
+    compileSdk = 35   // giữ như bạn đang dùng
+
 
     defaultConfig {
         applicationId = "com.example.myapplication"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
 
         versionCode = 1
         versionName = "1.0"
@@ -79,3 +80,6 @@ dependencies {
     //Thêm video
     implementation("com.google.android.exoplayer:exoplayer-core:2.19.1")
     implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")}
+
+
+}

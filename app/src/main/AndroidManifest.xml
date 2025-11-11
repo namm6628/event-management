@@ -54,6 +54,16 @@
 
         <activity android:name=".attendee.home.VideoPlayerActivity" />
 
+        <activity
+            android:name=".attendee.detail.EventDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
+            android:name=".attendee.home.SearchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApplication" />
+
         <!-- LƯU Ý: KHÔNG khai báo LoginFragment / RegisterFragment ở đây -->
     </application>
 

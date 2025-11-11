@@ -85,8 +85,8 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         // ✅ Load thumbnail bằng Glide
         Glide.with(h.itemView.getContext())
                 .load(e.getThumbnail())                 // URL từ Firestore
-                .placeholder(R.drawable.placeholder)    // ảnh tạm
-                .error(R.drawable.placeholder)          // ảnh lỗi
+                .placeholder(R.drawable.sample_event)    // ảnh tạm
+                .error(R.drawable.sample_event)          // ảnh lỗi
                 .centerCrop()
                 .into(h.imgThumb);
 
@@ -101,7 +101,7 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         final TextView tvTitle, tvLocation, tvPrice;
         VH(@NonNull View itemView) {
             super(itemView);
-            imgThumb   = itemView.findViewById(R.id.imgThumbnail); // 👈 trùng id trong XML
+            imgThumb   = itemView.findViewById(R.id.ivThumb); // 👈 trùng id trong XML
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvLocation = itemView.findViewById(R.id.tvLocation);
             tvPrice = itemView.findViewById(R.id.tvPrice);

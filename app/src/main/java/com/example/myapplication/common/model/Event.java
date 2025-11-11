@@ -3,12 +3,11 @@ package com.example.myapplication.common.model;
 import androidx.annotation.Nullable;
 
 import com.google.firebase.Timestamp;
+import java.io.Serializable;
 import com.google.firebase.firestore.PropertyName;
 
-/** Model map trực tiếp với collection "events" trên Firestore. */
-public class Event {
-
-    private String id;                 // gán từ documentId
+public class Event implements Serializable {
+    private String id;               // set từ document id
     private String title;
     private String location;
     private String category;
@@ -21,9 +20,17 @@ public class Event {
     private Integer availableSeats;
     private Integer totalSeats;
 
-    // --- getters / setters ---
+    // Các field bên dưới CHƯA có trong DB, để null (mở rộng sau)
+    private String artist;           // optional
+    private String venue;            // optional
+    private Timestamp endTime;       // optional
+    private Double lat;              // optional
+    private Double lng;              // optional
 
-    @Nullable public String getId() { return id; }
+    public Event() {}
+
+    // getters/setters...
+    public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
     @Nullable public String getTitle() { return title; }
@@ -50,6 +57,16 @@ public class Event {
     @Nullable public Integer getTotalSeats() { return totalSeats; }
     public void setTotalSeats(Integer totalSeats) { this.totalSeats = totalSeats; }
 
+    public String getArtist() { return artist; }
+    public void setArtist(String artist) { this.artist = artist; }
+    public String getVenue() { return venue; }
+    public void setVenue(String venue) { this.venue = venue; }
+    public Timestamp getEndTime() { return endTime; }
+    public void setEndTime(Timestamp endTime) { this.endTime = endTime; }
+    public Double getLat() { return lat; }
+    public void setLat(Double lat) { this.lat = lat; }
+    public Double getLng() { return lng; }
+    public void setLng(Double lng) { this.lng = lng; }
     // Dán code này vào BÊN TRONG lớp Event.java
 
     @com.google.firebase.firestore.PropertyName("videoUrl")

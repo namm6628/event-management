@@ -1,30 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Event Management</string>
-    <string name="search_events">Tìm kiếm sự kiện</string>
-    <string name="today">Hôm nay</string>
-    <string name="this_weekend">Cuối tuần này</string>
-    <string name="this_month">Tháng này</string>
-    <string name="all">Tất cả</string>
-    <string name="advanced_filter">Bộ lọc nâng cao</string>
-
-    <string name="city">Thành phố</string>
-    <string name="category">Danh mục</string>
-    <string name="from_date">Từ ngày</string>
-    <string name="to_date">Đến ngày</string>
-    <string name="min_price">Giá min</string>
-    <string name="max_price">Giá max</string>
-    <string name="only_free">Chỉ miễn phí</string>
+    <string name="price_format">Giá: %s</string>
+    <string name="free">Miễn phí</string>
+    <!-- Explore / Search common -->
+    <string name="search_hint">Tìm sự kiện, nghệ sĩ, địa điểm…</string>
+    <string name="city">Thành phố</string> <string name="category">Danh mục</string>
+    <string name="from_date">Từ ngày</string> <string name="to_date">Đến ngày</string>
+    <string name="min_price">Giá tối thiểu</string> <string name="max_price">Giá tối đa</string>
+    <string name="only_free">Chỉ hiển thị sự kiện miễn phí</string>
     <string name="has_ticket">Còn vé</string>
     <string name="sort_by">Sắp xếp theo</string>
-    <string name="sort_start_at">Ngày diễn ra</string>
-    <string name="sort_created_at">Ngày tạo</string>
-    <string name="price_format">Giá: %1$s</string>
-
-    <string name="sort_price">Giá</string>
     <string name="sort_asc">Tăng dần</string>
-    <string name="reset">Đặt lại</string>
+    <string name="reset">Thiết lập lại</string>
     <string name="apply">Áp dụng</string>
-    <string name="from_fmt">Từ: %1$s</string>
-    <string name="to_fmt">Đến: %1$s</string>
+    <!-- Cities --> <string name="nationwide">Toàn quốc</string>
+    <string name="hanoi">Hà Nội</string>
+    <string name="hcm">TP.HCM</string>
+    <string name="dalat">Đà Lạt</string>
+    <string name="other_place">Vị trí khác</string>
+    <!-- Categories (nếu bạn đang dùng) -->
+    <string name="cat_all">Tất cả</string>
+    <string name="cat_music">Âm nhạc</string>
+    <string name="cat_art">Sân khấu &amp; nghệ thuật</string>
+    <string name="cat_sport">Thể thao</string>
+    <string name="cat_other">Khác</string>
+    <string name="search_title">Tìm kiếm sự kiện</string>
+    <string name="date_any">Bất kỳ thời gian</string>
+    <string name="filters">Bộ lọc</string>
+    <string name="clear_query">Xóa tìm kiếm</string>
+    <string name="apply_now">Áp dụng</string>
+    <string name="pick_date_range">Chọn khoảng ngày</string>
+    <string name="city_other">Thành phố khác</string>
+    <string name="all_categories">Tất cả danh mục</string>
     <string name="event_image">Ảnh sự kiện</string>
+    <!-- nếu trước đó chưa có thì thêm luôn mấy cái này để khỏi báo tiếp -->
+    <string name="sort_start_at">Ngày bắt đầu</string>
+    <string name="sort_created_at">Ngày tạo</string>
+    <string name="sort_price">Giá vé</string>
+    <string name="search_icon">Biểu tượng tìm kiếm</string>
+    <string name="from_fmt">Từ: %s</string>
+    <string name="to_fmt">Đến: %s</string>
+    <string name="event_detail_title">Chi tiết sự kiện</string>
+    <string name="artist_unknown">Nghệ sĩ chưa rõ</string>
+
+
+    <string name="time_range_fmt">%1$s - %2$s</string>
+    <string name="share_event">Chia sẻ</string>
+    <string name="follow_artist">Theo dõi</string>
+    <string name="open_map">Bản đồ</string>
+    <string name="followed">Đã theo dõi</string>
+    <string name="unfollowed">Đã bỏ theo dõi</string>
+    <string name="reviews_title">Đánh giá &amp; phản hồi</string>
+    <string name="review_count_fmt">%1$d đánh giá</string>
+    <string name="no_reviews">Chưa có đánh giá</string>
+
+    <string name="share_template">Mình thấy sự kiện “%1$s” tại %2$s khá hay. Đi cùng không? 🤝</string>
+
+    <string name="average_rating">Đánh giá trung bình</string>
+
+
 </resources>

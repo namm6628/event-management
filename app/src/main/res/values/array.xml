@@ -1,24 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string-array name="cities">
-        <item>TP. Hồ Chí Minh</item>
-        <item>Hà Nội</item>
-        <item>Đà Nẵng</item>
-        <item>Cần Thơ</item>
-        <item>Khác</item>
-    </string-array>
 
-    <string-array name="categories">
-        <item></item>
-        <item>Music</item>
-        <item>Seminar</item>
-        <item>Sport</item>
-        <item>Theater</item>
-        <item>Other</item>
-    </string-array>
-
+    <!-- Dùng cho dropdown sắp xếp -->
     <string-array name="sort_options">
         <item>@string/sort_start_at</item>
         <item>@string/sort_created_at</item>
         <item>@string/sort_price</item>
     </string-array>
+
+    <!-- Dùng cho autoCity trong view_event_filter.xml -->
+    <string-array name="cities">
+        <item>@string/nationwide</item>
+        <item>@string/hanoi</item>
+        <item>@string/hcm</item>
+        <item>@string/dalat</item>
+        <item>@string/other_place</item>
+    </string-array>
+
+    <!-- Dùng cho autoCategory trong view_event_filter.xml -->
+    <string-array name="categories">
+        <item>@string/cat_all</item>
+        <item>@string/cat_music</item>
+        <item>@string/cat_art</item>
+        <item>@string/cat_sport</item>
+        <item>@string/cat_other</item>
+    </string-array>
+
 </resources>

@@ -3,68 +3,51 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="6dp"
     android:layout_marginHorizontal="12dp"
-    android:elevation="4dp"
+    android:layout_marginVertical="6dp"
     app:cardCornerRadius="12dp"
     app:cardUseCompatPadding="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:padding="12dp">
 
-        <!-- ✅ Hình thumbnail -->
         <ImageView
-            android:id="@+id/imgThumbnail"
-            android:layout_width="match_parent"
-            android:layout_height="180dp"
+            android:id="@+id/ivThumb"
+            android:layout_width="96dp"
+            android:layout_height="72dp"
             android:scaleType="centerCrop"
             android:contentDescription="@string/event_image" />
 
-        <!-- Nội dung text -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:layout_marginStart="12dp">
 
-            <!-- Tiêu đề -->
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Tên sự kiện"
-                android:textColor="@android:color/black"
-                android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="2"
-                android:ellipsize="end" />
+                android:ellipsize="end"
+                android:text="Title"/>
 
-            <!-- Địa điểm -->
             <TextView
                 android:id="@+id/tvLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Địa điểm"
-                android:textColor="#555"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp"
-                android:maxLines="1"
-                android:ellipsize="end" />
+                android:text="@string/city_other"/>
 
-            <!-- Giá -->
             <TextView
                 android:id="@+id/tvPrice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Giá: 100.000đ"
-                android:textColor="#333"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
+                android:text="@string/price_format"/>
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

@@ -334,7 +334,7 @@ public class HomeFragment extends Fragment {
                 super(itemView);
                 title = itemView.findViewById(R.id.tvTitle);
                 subtitle = itemView.findViewById(R.id.tvLocation);
-                thumbnail = itemView.findViewById(R.id.imgThumbnail);
+                thumbnail = itemView.findViewById(R.id.ivThumb);
             }
 
             public void bind(Event event, OnEventClickListener listener) {
