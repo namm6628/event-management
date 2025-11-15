@@ -20,7 +20,6 @@ public class Mapper {
         e.setAvailableSeats(entity.getAvailableSeats());
         e.setTotalSeats(entity.getTotalSeats());
 
-        // ✅ startTime trong Entity là Long → đổi sang Timestamp
         if (entity.getStartTime() != null) {
             e.setStartTime(new com.google.firebase.Timestamp(
                     new java.util.Date(entity.getStartTime())

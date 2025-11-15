@@ -18,13 +18,16 @@ import com.example.myapplication.common.model.Event;
 import com.example.myapplication.databinding.ActivityEventDetailBinding;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class EventDetailActivity extends AppCompatActivity {
 
@@ -35,10 +38,16 @@ public class EventDetailActivity extends AppCompatActivity {
     private ReviewAdapter reviewAdapter;
     private Event event; // sẽ được set sau khi fetch xong
 
-    @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityEventDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        // ❌ ĐOẠN NÀY TRƯỚC ĐÂY BỊ LỖI:
+        // setContentView(R.layout.activity_event_detail);
+        // + đọc etDescription, etCategory... -> mình bỏ hẳn vì không đúng màn hình này
+        // (đã chuyển logic sang các hàm helper Organizer ở dưới)
 
         // Toolbar
         setSupportActionBar(binding.toolbar);
@@ -109,6 +118,82 @@ public class EventDetailActivity extends AppCompatActivity {
         loadEvent(eventId);
     }
 
+    // ===================== ORGANIZER HELPER =====================
+    // Giữ lại logic quản lý vé / update sự kiện nhưng
+    // KHÔNG dùng binding.* để tránh lỗi; sau này gọi từ màn Organizer riêng.
+
+    /**
+     * Thêm 1 loại vé cho sự kiện (tên, giá, quota).
+     * Gọi chỗ khác như:
+     * addTicketType(eventId, "Vé thường", 150000, 100);
+     */
+    public void addTicketType(String eventId,
+                              String ticketTypeName,
+                              double ticketPrice,
+                              int ticketQuota) {
+
+        Map<String, Object> ticket = new HashMap<>();
+        ticket.put("name", ticketTypeName);
+        ticket.put("price", ticketPrice);
+        ticket.put("quota", ticketQuota);
+        ticket.put("sold", 0);
+
+        db.collection("events")
+                .document(eventId)
+                .collection("ticketTypes")
+                .add(ticket)
+                .addOnSuccessListener(documentReference -> {
+                    // Thành công, thêm vé vào sự kiện
+                    // TODO: show Toast/log nếu cần
+                })
+                .addOnFailureListener(e -> {
+                    // TODO: xử lý lỗi (log, Toast...)
+                });
+    }
+
+    /**
+     * Cập nhật số lượng vé đã bán cho 1 loại vé.
+     */
+    public void updateTicketSales(String eventId,
+                                  String ticketTypeId,
+                                  int soldQuantity) {
+        db.collection("events")
+                .document(eventId)
+                .collection("ticketTypes")
+                .document(ticketTypeId)
+                .update("sold", FieldValue.increment(soldQuantity))
+                .addOnSuccessListener(aVoid -> {
+                    // Thành công, cập nhật số vé đã bán
+                })
+                .addOnFailureListener(e -> {
+                    // Xử lý lỗi
+                });
+    }
+
+    /**
+     * Chỉnh sửa / cập nhật cơ bản thông tin sự kiện đã tạo.
+     * Sau này màn Organizer chỉ cần truyền title/description mới vào hàm này.
+     */
+    public void updateEventBasicInfo(String eventId,
+                                     String title,
+                                     String description) {
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("title", title);
+        data.put("description", description);
+
+        db.collection("events")
+                .document(eventId)
+                .update(data)
+                .addOnSuccessListener(aVoid -> {
+                    // Thành công
+                })
+                .addOnFailureListener(e -> {
+                    // Xử lý lỗi
+                });
+    }
+    // ================== HẾT ORGANIZER HELPER ====================
+
     private void loadEvent(String eventId) {
         db.collection("events").document(eventId)
                 .get()
@@ -121,12 +206,18 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
 
                     // Đảm bảo có id (nếu schema không map sẵn)
-                    try { if (event.getId() == null || event.getId().isEmpty()) event.setId(doc.getId()); } catch (Exception ignored) {}
+                    try {
+                        if (event.getId() == null || event.getId().isEmpty()) {
+                            event.setId(doc.getId());
+                        }
+                    } catch (Exception ignored) {}
 
                     // Title trên ActionBar
                     if (getSupportActionBar() != null) {
                         getSupportActionBar().setTitle(
-                                event.getTitle() == null ? getString(R.string.event_detail_title) : event.getTitle()
+                                event.getTitle() == null
+                                        ? getString(R.string.event_detail_title)
+                                        : event.getTitle()
                         );
                     }
 
@@ -147,9 +238,15 @@ public class EventDetailActivity extends AppCompatActivity {
                     String timeText = "";
                     if (event.getStartTime() != null) {
                         try {
-                            String start = DateFormat.format("EEE, dd/MM/yyyy • HH:mm", event.getStartTime().toDate()).toString();
+                            String start = DateFormat.format(
+                                    "EEE, dd/MM/yyyy • HH:mm",
+                                    event.getStartTime().toDate()
+                            ).toString();
                             if (event.getEndTime() != null) {
-                                String end = DateFormat.format("HH:mm, dd/MM", event.getEndTime().toDate()).toString();
+                                String end = DateFormat.format(
+                                        "HH:mm, dd/MM",
+                                        event.getEndTime().toDate()
+                                ).toString();
                                 timeText = getString(R.string.time_range_fmt, start, end);
                             } else {
                                 timeText = start;
@@ -161,7 +258,9 @@ public class EventDetailActivity extends AppCompatActivity {
                     Double p = event.getPrice();
                     String priceText = (p == null || p == 0d)
                             ? getString(R.string.free)
-                            : NumberFormat.getNumberInstance(new Locale("vi","VN")).format(p) + "₫";
+                            : NumberFormat
+                            .getNumberInstance(new Locale("vi", "VN"))
+                            .format(p) + "₫";
                     binding.tvPrice.setText(priceText);
 
                     // Sau khi có event -> load reviews
@@ -194,10 +293,14 @@ public class EventDetailActivity extends AppCompatActivity {
 
                     // ⭐ Tính điểm trung bình
                     double total = 0;
-                    for (Review r : reviews) if (r.rating != null) total += r.rating;
+                    for (Review r : reviews) {
+                        if (r.rating != null) total += r.rating;
+                    }
                     double avg = count > 0 ? total / count : 0;
                     binding.ratingAverage.setRating((float) avg);
-                    binding.tvAverageRating.setText(String.format(Locale.getDefault(), "%.1f/5", avg));
+                    binding.tvAverageRating.setText(
+                            String.format(Locale.getDefault(), "%.1f/5", avg)
+                    );
 
                     // Toggle empty/list
                     if (count == 0) {
@@ -213,9 +316,10 @@ public class EventDetailActivity extends AppCompatActivity {
                 );
     }
 
-    @Override public boolean onOptionsItemSelected(MenuItem item) {
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
+            onBackPressed(); // dùng onBackPressed() cũ
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -226,6 +330,7 @@ public class EventDetailActivity extends AppCompatActivity {
         public String author;
         public String content;
         public Double rating; // 0..5
+
         public Review() {}
     }
 }

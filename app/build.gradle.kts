@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("androidx.navigation.safeargs")   // Safe Args cho Java
     id("com.google.gms.google-services") // Firebase
+    id("org.jetbrains.kotlin.android")
     // Nếu module có Kotlin:
     // id("org.jetbrains.kotlin.android")
 }
@@ -63,6 +64,9 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
 
+    implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-functions:20.4.0")
+
     // Lifecycle (đang dùng ViewModel/LiveData)
     implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.6")
     implementation("androidx.lifecycle:lifecycle-livedata:2.8.6")
@@ -79,7 +83,15 @@ dependencies {
 
     //Thêm video
     implementation("com.google.android.exoplayer:exoplayer-core:2.19.1")
-    implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")}
+    implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
 
 
 }
+
+
+
+
+

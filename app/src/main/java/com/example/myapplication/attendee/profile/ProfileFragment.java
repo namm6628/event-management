@@ -44,6 +44,11 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import androidx.navigation.fragment.NavHostFragment;
+import com.example.myapplication.auth.AuthManager;
+import com.google.firebase.auth.FirebaseAuth;
+
+
 public class ProfileFragment extends Fragment {
 
     // --- Pick ảnh / chụp ảnh & xin quyền ---
@@ -53,6 +58,9 @@ public class ProfileFragment extends Fragment {
     private ActivityResultLauncher<String> requestCameraPerm;  // CAMERA
     private Uri cameraUri;                                     // nơi lưu ảnh vừa chụp
     private MaterialSwitch switchDarkMode;
+
+    private AuthManager authManager;
+    private View btnGoOrg;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -119,6 +127,24 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle b) {
         super.onViewCreated(v, b);
+
+        authManager = new AuthManager();
+        btnGoOrg = v.findViewById(R.id.btnGoOrganizer);
+
+        if (btnGoOrg != null) {
+            btnGoOrg.setOnClickListener(x ->
+                    NavHostFragment.findNavController(this)
+                            .navigate(R.id.organizerHomeFragment)
+            );
+        }
+
+        View btnGoOrg = v.findViewById(R.id.btnGoOrganizer);
+        if (btnGoOrg != null) {
+            btnGoOrg.setOnClickListener(x ->
+                    NavHostFragment.findNavController(this)
+                            .navigate(R.id.organizerHomeFragment)
+            );
+        }
 
         switchDarkMode = v.findViewById(R.id.switchDarkMode);
 
@@ -196,6 +222,16 @@ public class ProfileFragment extends Fragment {
         super.onResume();
         View v = getView();
         if (v != null) updateUi(v);
+
+        if (btnGoOrg != null) {
+            // tạm ẩn trong lúc chờ check
+            btnGoOrg.setVisibility(View.GONE);
+
+            authManager.refreshOrganizerStatus(requireContext(), isOrganizer -> {
+                btnGoOrg.setVisibility(isOrganizer ? View.VISIBLE : View.GONE);
+            });
+        }
+
     }
 
     /* -------------------------- UI logic -------------------------- */
@@ -271,16 +307,25 @@ public class ProfileFragment extends Fragment {
                 .setTitle(colorize("Đăng xuất?", titleColor))
                 .setMessage("Bạn có chắc muốn đăng xuất không?")
                 .setPositiveButton("Đăng xuất", (d, w) -> {
-                    // ✨ Reset avatar về mặc định + xoá URI đã lưu
+                    // 1. Logout FirebaseAuth
+                    FirebaseAuth.getInstance().signOut();
+
+                    // 2. Xoá info local
                     try { AuthManager.setAvatarUri(requireContext(), null); } catch (Exception ignore) {}
                     AuthManager.logout(requireContext());
+
+                    // 3. Cập nhật UI hiện tại (chuyển sang trạng thái khách)
                     updateUi(root);
+
+                    // 4. Điều hướng về màn Login
+                    NavHostFragment.findNavController(this).navigate(R.id.loginFragment);
                 })
                 .setNegativeButton("Huỷ", null)
                 .create();
 
         dlg.show();
     }
+
 
     private void setupExpandable(@NonNull View root,
                                  @IdRes int rowId,

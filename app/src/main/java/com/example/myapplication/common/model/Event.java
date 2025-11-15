@@ -13,6 +13,29 @@ public class Event implements Serializable {
     private String category;
     private String thumbnail;
 
+
+
+
+
+
+    private String description;
+
+    private String ownerId;
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+
+
+
+
+
+
+
     // ✅ Firestore Timestamp
     private Timestamp startTime;
 

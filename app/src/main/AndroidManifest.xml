@@ -64,6 +64,17 @@
             android:exported="false"
             android:theme="@style/Theme.MyApplication" />
 
+        <activity
+            android:name=".organizer.CreateEventActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
+            android:name=".organizer.OrganizerDashboardActivity"
+            android:exported="false" />
+
+
+
         <!-- LƯU Ý: KHÔNG khai báo LoginFragment / RegisterFragment ở đây -->
     </application>
 

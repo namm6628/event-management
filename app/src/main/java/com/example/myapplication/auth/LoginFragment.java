@@ -12,10 +12,16 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+
 import com.example.myapplication.R;
 import com.google.android.material.textfield.TextInputEditText;
 
 public class LoginFragment extends Fragment {
+
+    private FirebaseAuth auth;
 
     @Nullable @Override
     public View onCreateView(@NonNull LayoutInflater inf, @Nullable ViewGroup c, @Nullable Bundle b) {
@@ -25,6 +31,8 @@ public class LoginFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle b) {
         super.onViewCreated(v, b);
+
+        auth = FirebaseAuth.getInstance();
 
         TextInputEditText edtEmail = v.findViewById(R.id.edtEmail);
         TextInputEditText edtPass  = v.findViewById(R.id.edtPassword);
@@ -44,12 +52,27 @@ public class LoginFragment extends Fragment {
                 Toast.makeText(requireContext(), "Nhập email & mật khẩu", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // DEMO: coi như đăng nhập ok
-            String name = email.split("@")[0];
-            AuthManager.login(requireContext(), name, email);
+            auth.signInWithEmailAndPassword(email, pass)
+                    .addOnSuccessListener(result -> {
+                        FirebaseUser user = result.getUser();
+                        String name = (user != null && user.getDisplayName() != null && !user.getDisplayName().isEmpty())
+                                ? user.getDisplayName()
+                                : email.split("@")[0];
 
-            // quay về Profile
-            NavHostFragment.findNavController(this).popBackStack();
+                        // Lưu info vào SharedPreferences như cũ (để ProfileFragment dùng)
+                        AuthManager.login(requireContext(), name, email);
+
+                        // ✅ Luôn đi thẳng tới Home sau khi đăng nhập
+                        NavHostFragment.findNavController(this)
+                                .navigate(R.id.homeFragment);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(),
+                                "Đăng nhập thất bại: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    });
+
+
         });
 
         v.findViewById(R.id.tvGoRegister).setOnClickListener(x ->

@@ -465,5 +465,15 @@
             android:textColor="@android:color/white"
             app:backgroundTint="@color/md_primary"
             android:visibility="gone" />
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGoOrganizer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quản lý sự kiện (Organizer)"
+            android:layout_marginTop="12dp" />
+
+
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

@@ -36,4 +36,16 @@
         android:name="com.example.myapplication.auth.RegisterFragment"
         android:label="Đăng ký" />
 
+    <fragment
+        android:id="@+id/organizerHomeFragment"
+        android:name="com.example.myapplication.organizer.OrganizerHomeFragment"
+        android:label="Quản lý sự kiện" />
+
+    <fragment
+        android:id="@+id/organizerCreateEventFragment"
+        android:name="com.example.myapplication.organizer.OrganizerCreateEventFragment"
+        android:label="Tạo sự kiện" />
+
+
+
 </navigation>

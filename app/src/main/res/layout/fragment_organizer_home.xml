@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/tvOrganizerTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sự kiện của bạn"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCreateEvent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tạo sự kiện mới"
+        app:icon="@drawable/ic_add_24"
+        app:iconGravity="textStart"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Bạn chưa tạo sự kiện nào."
+        android:gravity="center_horizontal"
+        android:padding="16dp"
+        android:visibility="gone"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerMyEvents"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+</LinearLayout>
