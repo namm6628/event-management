@@ -87,7 +87,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-
+    // Thư viện Volley (để gọi API thời tiết)
+    implementation("com.android.volley:volley:1.2.1")
 
 }
 

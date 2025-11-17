@@ -91,16 +91,22 @@ public class EventRemoteDataSource {
      * Logic: Lấy sự kiện tương lai có nhiều chỗ trống nhất
      * ⚠️ Yêu cầu COMPOSITE INDEX (Xem cảnh báo bên dưới)
      */
-    public Task<QuerySnapshot> loadForYouEvents(int limit) {
-        Date now = new Date(); // Lấy thời gian hiện tại
-
+    public Task<QuerySnapshot> loadForYouEvents(int limit, String userInterest) {
+        Date now = new Date();
         Query q = db.collection("events")
-                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now)) // Lọc sự kiện tương lai
-                .orderBy("startTime", Query.Direction.ASCENDING) // Sắp xếp phụ (bắt buộc)
-                .orderBy("availableSeats", Query.Direction.DESCENDING) // Sắp xếp chính
-                .limit(limit);
+                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now))
+                .orderBy("startTime", Query.Direction.ASCENDING);
 
-        return q.get();
+        // [THÊM LOGIC THÔNG MINH]
+        if (userInterest != null && !userInterest.isEmpty()) {
+            // AI: Nếu biết người dùng thích gì, lọc theo cái đó
+            q = q.whereEqualTo("category", userInterest);
+        } else {
+            // Default: Nếu là người mới, gợi ý cái nhiều chỗ trống (popular)
+            q = q.orderBy("availableSeats", Query.Direction.DESCENDING);
+        }
+
+        return q.limit(limit).get();
     }
 
     /** Load trang tiếp theo (phân trang) */

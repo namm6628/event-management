@@ -135,7 +135,7 @@ public class ExploreViewModel extends ViewModel {
     /**
      * [CẬP NHẬT] - Tải TRANG ĐẦU (BE MỚI) + Tải các danh sách ngang (BE CŨ)
      */
-    public void refresh() {
+    public void refresh(String userInterest) {
         if (repo == null || isLoading) return;
         isLoading = true;
         isEndReached = false;
@@ -161,9 +161,13 @@ public class ExploreViewModel extends ViewModel {
                 });
 
         // [THÊM MỚI] - Tải đồng thời 3 danh sách "AI"
-        loadHorizontalLists();
+        loadHorizontalLists(userInterest);
         // [THÊM MỚI] - Tải đồng thời các danh mục động
         loadDynamicCategories();
+    }
+
+    public void refresh() {
+        refresh(null);
     }
 
     // [GIỮ NGUYÊN] - BE MỚI: Tải TRANG TIẾP
@@ -237,7 +241,7 @@ public class ExploreViewModel extends ViewModel {
     // ------- [THÊM MỚI] - Các hàm tải danh sách ngang (Từ BE CŨ) -------
 
     /** [THÊM MỚI] - Hàm tải 3 danh sách "AI" */
-    private void loadHorizontalLists() {
+    private void loadHorizontalLists(String userInterest) {
         // Dùng remote (BE mới) để gọi các hàm AI
         remote.loadTrendingEvents(HORIZONTAL_PAGE_SIZE).addOnCompleteListener(task -> {
             if (task.isSuccessful() && task.getResult() != null) {
@@ -247,7 +251,7 @@ public class ExploreViewModel extends ViewModel {
             }
         });
 
-        remote.loadForYouEvents(HORIZONTAL_PAGE_SIZE).addOnCompleteListener(task -> {
+        remote.loadForYouEvents(HORIZONTAL_PAGE_SIZE, userInterest).addOnCompleteListener(task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 forYouBacking.setValue(EventRemoteDataSource.map(task.getResult()));
             } else {

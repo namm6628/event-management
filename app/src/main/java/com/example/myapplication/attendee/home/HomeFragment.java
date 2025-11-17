@@ -1,27 +1,28 @@
 package com.example.myapplication.attendee.home;
 
-import android.graphics.Typeface; // [THÊM]
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView; // [THÊM]
-import android.widget.LinearLayout; // [THÊM]
-import android.widget.TextView; // [THÊM]
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
-import androidx.core.widget.NestedScrollView; // [THÊM]
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DiffUtil; // [THÊM]
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.ListAdapter; // [THÊM]
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide; // [THÊM]
+import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
+import com.example.myapplication.attendee.detail.EventDetailActivity;
 import com.example.myapplication.common.model.Event;
 import com.example.myapplication.data.local.AppDatabase;
 import com.example.myapplication.data.local.EventDao;
@@ -30,22 +31,19 @@ import com.example.myapplication.data.repo.EventRepository;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
-import com.google.firebase.Timestamp; // [THÊM]
-import java.text.SimpleDateFormat; // [THÊM]
-import java.util.ArrayList; // [THÊM]
+import com.google.firebase.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale; // [THÊM]
-import java.util.Objects;
+import java.util.Locale;
 import java.util.Objects;
 
 public class HomeFragment extends Fragment {
 
-    // [GIỮ NGUYÊN] - BE MỚI
     private ExploreViewModel vm;
     private SearchView searchView;
     private ChipGroup chipGroup;
 
-    // [THAY ĐỔI] - Quản lý nhiều Adapter và View
     private EventsAdapter specialAdapter;
     private EventsAdapter trendingAdapter;
     private EventsAdapter forYouAdapter;
@@ -66,7 +64,6 @@ public class HomeFragment extends Fragment {
 
     @Nullable @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // [CẬP NHẬT] - Đảm bảo bạn đang dùng layout có NestedScrollView
         return inflater.inflate(R.layout.fragment_home, container, false);
     }
 
@@ -74,7 +71,6 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
-        // [GIỮ NGUYÊN] - BE MỚI (Khởi tạo Repo + Room)
         EventDao dao = AppDatabase.getInstance(requireContext()).eventDao();
         EventRemoteDataSource remote = new EventRemoteDataSource();
         EventRepository repo = new EventRepository(dao, remote);
@@ -82,7 +78,7 @@ public class HomeFragment extends Fragment {
         ExploreVMFactory factory = new ExploreVMFactory(repo);
         vm = new ViewModelProvider(requireActivity(), factory).get(ExploreViewModel.class);
 
-//        searchView = v.findViewById(R.id.searchView);
+        // searchView = v.findViewById(R.id.searchView);
         chipGroup  = v.findViewById(R.id.chipGroup);
 
         exploreCategoriesContainer = v.findViewById(R.id.exploreCategoriesContainer);
@@ -96,12 +92,15 @@ public class HomeFragment extends Fragment {
         specialHorizontalManager = new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false);
         specialVerticalManager = new LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false);
 
-        // [CẬP NHẬT] --- Cài đặt các Adapter ---
-        // 1. Sự kiện đặc biệt (Danh sách chính, điều khiển bởi Room)
+        // 1. Sự kiện đặc biệt
         rvSpecial.setLayoutManager(specialHorizontalManager);
-        specialAdapter = new EventsAdapter(event -> { /* TODO: Xử lý click */ });
+        specialAdapter = new EventsAdapter(event -> {
+            saveUserInterest(event); // Lưu sở thích
+            openEventDetail(event);  // Mở chi tiết
+        });
         rvSpecial.setAdapter(specialAdapter);
 
+        // Video
         rvVideoEvents.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
         videoAdapter = new EventsAdapter(event -> {
             if (event.getVideoUrl() != null && !event.getVideoUrl().isEmpty()) {
@@ -115,37 +114,39 @@ public class HomeFragment extends Fragment {
         // 2. Sự kiện xu hướng
         RecyclerView rvTrending = v.findViewById(R.id.rvTrendingEvents);
         rvTrending.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-        trendingAdapter = new EventsAdapter(event -> { /* TODO: Xử lý click */ });
+        trendingAdapter = new EventsAdapter(event -> {
+            saveUserInterest(event);
+            openEventDetail(event);
+        });
         rvTrending.setAdapter(trendingAdapter);
 
-        // 3. Dành cho bạn
+        // 3. Dành cho bạn (Sẽ thay đổi theo AI)
         RecyclerView rvForYou = v.findViewById(R.id.rvForYouEvents);
         rvForYou.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-        forYouAdapter = new EventsAdapter(event -> { /* TODO: Xử lý click */ });
+        forYouAdapter = new EventsAdapter(event -> {
+            saveUserInterest(event);
+            openEventDetail(event);
+        });
         rvForYou.setAdapter(forYouAdapter);
 
-        // 4. Cuối tuần này
+        // 4. Cuối tuần
         RecyclerView rvWeekend = v.findViewById(R.id.rvWeekendEvents);
         rvWeekend.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
-        weekendAdapter = new EventsAdapter(event -> { /* TODO: Xử lý click */ });
+        weekendAdapter = new EventsAdapter(event -> {
+            saveUserInterest(event);
+            openEventDetail(event);
+        });
         rvWeekend.setAdapter(weekendAdapter);
 
-        // [CẬP NHẬT] --- Quan sát LiveData ---
-        // 1. Quan sát danh sách chính (từ Room, đã filter)
-        vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> {
-            specialAdapter.submitList(list);
-        });
-        vm.getVideoEvents().observe(getViewLifecycleOwner(), videoAdapter::submitList);
-
-        // 2. Quan sát các danh sách ngang (tải trực tiếp)
-        vm.getTrendingEvents().observe(getViewLifecycleOwner(), trendingAdapter::submitList);
-        vm.getForYouEvents().observe(getViewLifecycleOwner(), forYouAdapter::submitList);
-        vm.getWeekendEvents().observe(getViewLifecycleOwner(), weekendAdapter::submitList);
+        // Quan sát LiveData
+        vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> specialAdapter.submitList(list));
+        vm.getVideoEvents().observe(getViewLifecycleOwner(), list -> videoAdapter.submitList(list));
+        vm.getTrendingEvents().observe(getViewLifecycleOwner(), list -> trendingAdapter.submitList(list));
+        vm.getForYouEvents().observe(getViewLifecycleOwner(), list -> forYouAdapter.submitList(list));
+        vm.getWeekendEvents().observe(getViewLifecycleOwner(), list -> weekendAdapter.submitList(list));
         vm.getDynamicCategories().observe(getViewLifecycleOwner(), this::updateDynamicCategoriesUI);
 
-
-        // [GIỮ NGUYÊN] - BE MỚI: Logic SearchView
-        if (searchView != null) { // <-- THÊM DÒNG KIỂM TRA NÀY
+        if (searchView != null) {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                 @Override public boolean onQueryTextSubmit(String query) {
                     vm.setSearchQuery(query);
@@ -161,11 +162,10 @@ public class HomeFragment extends Fragment {
             });
         }
 
-        // [GIỮ NGUYÊN] - BE MỚI: Logic Chip filter
-        if (chipGroup != null) { // <-- THÊM DÒNG KIỂM TRA NÀY
+        if (chipGroup != null) {
             chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
                 if (checkedIds == null || checkedIds.isEmpty()) {
-                    vm.setCategoryFilter(null); // Tất cả
+                    vm.setCategoryFilter(null);
                     return;
                 }
                 int id = checkedIds.get(0);
@@ -177,14 +177,27 @@ public class HomeFragment extends Fragment {
             });
         }
 
-        // [CẬP NHẬT] - Logic Infinite scroll (dùng hàm mới)
         setupScrollListeners(v);
 
-        // [GIỮ NGUYÊN] - BE MỚI: Tải lần đầu
-        if (savedInstanceState == null) vm.refresh();
+        // [CẬP NHẬT] - Gọi refresh kèm theo sở thích (để mục "Dành cho bạn" thông minh hơn)
+        if (savedInstanceState == null) {
+            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("USER_PREFS", android.content.Context.MODE_PRIVATE);
+            String lastInterest = prefs.getString("LAST_INTEREST_CATEGORY", null);
+            vm.refresh(lastInterest);
+        }
     }
 
-    // [GIỮ NGUYÊN] - BE MỚI: Hàm map Chip
+    // [THÊM MỚI] - Cập nhật lại khi quay lại màn hình (AI learning)
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (vm != null) {
+            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("USER_PREFS", android.content.Context.MODE_PRIVATE);
+            String lastInterest = prefs.getString("LAST_INTEREST_CATEGORY", null);
+            vm.refresh(lastInterest);
+        }
+    }
+
     private String mapChipLabelToCategory(String label) {
         if (label == null) return null;
         switch (label.trim()) {
@@ -197,44 +210,32 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    // ------- [THÊM] - Các hàm trợ giúp cho UI (Từ BE CŨ) -------
-
-    /** [THÊM] - Cập nhật UI khi tìm kiếm */
     private void handleSearchUI(String query) {
         boolean isSearching = query != null && !query.isEmpty();
-
-        // Ẩn/hiện các danh sách ngang
         exploreCategoriesContainer.setVisibility(isSearching ? View.GONE : View.VISIBLE);
         dynamicCategoriesLayout.setVisibility(isSearching ? View.GONE : View.VISIBLE);
-
-        // Đổi tiêu đề
         tvTitleVideo.setVisibility(isSearching ? View.GONE : View.VISIBLE);
         tvTitleSpecial.setText(isSearching ? "Kết quả tìm kiếm" : "Sự kiện đặc biệt");
         rvVideoEvents.setVisibility(isSearching ? View.GONE : View.VISIBLE);
-
-        // Đổi LayoutManager
         rvSpecial.setLayoutManager(isSearching ? specialVerticalManager : specialHorizontalManager);
     }
 
-    /** [THÊM] - Cài đặt logic cuộn (load more) cho UI mới */
     private void setupScrollListeners(View v) {
-        // Logic 1: Load more khi cuộn NestedScrollView (chế độ bình thường)
         NestedScrollView nestedScrollView = v.findViewById(R.id.nestedScrollView);
         nestedScrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (sv, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-            if (exploreCategoriesContainer.getVisibility() == View.VISIBLE) { // Nếu đang ở chế độ bth
+            if (exploreCategoriesContainer.getVisibility() == View.VISIBLE) {
                 if (scrollY == (sv.getChildAt(0).getMeasuredHeight() - sv.getMeasuredHeight())) {
                     vm.loadMore();
                 }
             }
         });
 
-        // Logic 2: Load more khi cuộn rvSpecial (chế độ tìm kiếm)
         rvSpecial.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
                 if (dy <= 0) return;
-                if (exploreCategoriesContainer.getVisibility() == View.GONE) { // Nếu đang ở chế độ tìm kiếm
+                if (exploreCategoriesContainer.getVisibility() == View.GONE) {
                     LinearLayoutManager lm = (LinearLayoutManager) recyclerView.getLayoutManager();
                     if (lm == null) return;
                     int last = lm.findLastVisibleItemPosition();
@@ -247,7 +248,6 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    /** [THÊM] - Hàm tự động tạo và thêm các danh mục động */
     private void updateDynamicCategoriesUI(List<DynamicCategory> categories) {
         dynamicCategoriesLayout.removeAllViews();
         dynamicAdapters.clear();
@@ -259,7 +259,6 @@ public class HomeFragment extends Fragment {
         int paddingEnd12dp = (int) (12 * density);
 
         for (DynamicCategory category : categories) {
-            // Tạo TextView (Tiêu đề)
             TextView titleView = new TextView(requireContext());
             titleView.setText(category.getCategoryName());
             titleView.setTextAppearance(android.R.style.TextAppearance_Material_Medium);
@@ -269,7 +268,6 @@ public class HomeFragment extends Fragment {
             titleParams.setMargins(0, 0, 0, marginBottom8dp);
             titleView.setLayoutParams(titleParams);
 
-            // Tạo RecyclerView (Danh sách sự kiện)
             RecyclerView rv = new RecyclerView(requireContext());
             rv.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
             rv.setClipToPadding(false);
@@ -279,21 +277,44 @@ public class HomeFragment extends Fragment {
             rvParams.setMargins(0, 0, 0, marginBottom16dp);
             rv.setLayoutParams(rvParams);
 
-            // Tạo Adapter và gán dữ liệu
-            EventsAdapter dynamicAdapter = new EventsAdapter(event -> { /* TODO: Xử lý click */ });
+            // Adapter cho danh mục động
+            EventsAdapter dynamicAdapter = new EventsAdapter(event -> {
+                saveUserInterest(event);
+                openEventDetail(event);
+            });
             rv.setAdapter(dynamicAdapter);
             dynamicAdapter.submitList(category.getEvents());
             dynamicAdapters.add(dynamicAdapter);
 
-            // Thêm vào layout
             dynamicCategoriesLayout.addView(titleView);
             dynamicCategoriesLayout.addView(rv);
         }
     }
 
-    // ------- [THÊM] - Adapter (dùng item_event_card.xml) -------
+    // [THÊM MỚI] - Hàm helper mở màn hình chi tiết
+    // [SỬA LẠI HÀM NÀY]
+    private void openEventDetail(Event event) {
+        if (event.getId() == null || event.getId().isEmpty()) {
+            android.widget.Toast.makeText(requireContext(), "Thiếu ID sự kiện", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-    // Interface cho callback khi click
+        // Code của bạn đây:
+        android.content.Intent it = new android.content.Intent(requireContext(), EventDetailActivity.class);
+        it.putExtra(EventDetailActivity.EXTRA_EVENT_ID, event.getId());
+        startActivity(it);
+    }
+
+    // [THÊM MỚI] - Hàm lưu sở thích (AI Learning)
+    private void saveUserInterest(Event event) {
+        if (event.getCategory() != null) {
+            android.content.SharedPreferences prefs = requireContext().getSharedPreferences("USER_PREFS", android.content.Context.MODE_PRIVATE);
+            prefs.edit().putString("LAST_INTEREST_CATEGORY", event.getCategory()).apply();
+        }
+    }
+
+    // ------- ADAPTER (GIỮ NGUYÊN ID CŨ) -------
+
     public interface OnEventClickListener {
         void onEventClick(Event event);
     }
@@ -309,42 +330,42 @@ public class HomeFragment extends Fragment {
 
         static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
             @Override public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
-                // Logic so sánh ID (an toàn nhất)
                 String idA = a.getId() == null ? a.getTitle() : a.getId();
                 String idB = b.getId() == null ? b.getTitle() : b.getId();
                 return idA.equals(idB);
             }
             @Override public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
-                // Logic so sánh nội dung (từ các lần trước)
                 String titleA = a.getTitle() == null ? "" : a.getTitle();
                 String titleB = b.getTitle() == null ? "" : b.getTitle();
                 Timestamp timeA = a.getStartTime();
                 Timestamp timeB = b.getStartTime();
                 boolean timesSame = (timeA == null) ? (timeB == null) : timeA.equals(timeB);
                 return titleA.equals(titleB) && timesSame &&
-                        java.util.Objects.equals(a.getAvailableSeats(), b.getAvailableSeats());
+                        Objects.equals(a.getAvailableSeats(), b.getAvailableSeats());
             }
         };
 
         static class VH extends RecyclerView.ViewHolder {
-            final TextView title, subtitle;
+            final TextView title, subtitle, price;
             final ImageView thumbnail;
 
             VH(@NonNull View itemView) {
                 super(itemView);
+                // [GIỮ NGUYÊN] - Dùng ID cũ từ layout item_event.xml của bạn
                 title = itemView.findViewById(R.id.tvTitle);
                 subtitle = itemView.findViewById(R.id.tvLocation);
+                price = itemView.findViewById(R.id.tvPrice);
                 thumbnail = itemView.findViewById(R.id.ivThumb);
             }
 
             public void bind(Event event, OnEventClickListener listener) {
-                // Gán listener cho toàn bộ card
                 itemView.setOnClickListener(v -> listener.onEventClick(event));
             }
         }
 
         @NonNull @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            // [GIỮ NGUYÊN] - Dùng layout item_event.xml của bạn
             View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_event, parent, false);
             return new VH(v);
@@ -355,25 +376,33 @@ public class HomeFragment extends Fragment {
             Event e = getItem(pos);
             if (e == null) return;
 
-            // Bind dữ liệu (text, thời gian)
             h.title.setText(e.getTitle() == null ? "(No title)" : e.getTitle());
             long t = (e.getStartTime() == null) ? 0L : e.getStartTime().toDate().getTime();
             String time = (t == 0L) ? "" :
                     new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(t);
             h.subtitle.setText(time);
 
-            // Bind hình ảnh (dùng Glide)
+            Double p = e.getPrice();
+            if (p == null || p == 0) {
+                h.price.setText("Miễn phí");
+                h.price.setTextColor(android.graphics.Color.parseColor("#4CAF50")); // Màu xanh lá
+            } else {
+                // Format số tiền (ví dụ: 150,000 đ)
+                String priceText = java.text.NumberFormat.getNumberInstance(new java.util.Locale("vi", "VN")).format(p) + " đ";
+                h.price.setText(priceText);
+                h.price.setTextColor(android.graphics.Color.parseColor("#D32F2F")); // Màu đỏ
+            }
+
             if (e.getThumbnail() != null && !e.getThumbnail().isEmpty()) {
                 Glide.with(h.itemView.getContext())
                         .load(e.getThumbnail())
                         .centerCrop()
-                        .placeholder(R.color.chip_bg) // Dùng màu placeholder
+                        .placeholder(R.color.chip_bg)
                         .into(h.thumbnail);
             } else {
-                h.thumbnail.setImageResource(R.color.chip_bg); // Màu placeholder
+                h.thumbnail.setImageResource(R.color.chip_bg);
             }
 
-            // Bind click listener
             h.bind(e, clickListener);
         }
     }
