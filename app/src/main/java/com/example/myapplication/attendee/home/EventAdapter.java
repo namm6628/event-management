@@ -5,26 +5,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import com.bumptech.glide.Glide;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
-import com.google.firebase.Timestamp;  // ✅ dùng để xử lý startTime
+import com.google.firebase.Timestamp;
 
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 
-/**
- * ListAdapter + DiffUtil để cập nhật mượt.
- * onItemClick: truyền lambda nếu muốn xử lý click item (có thể null).
- */
 public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
 
-    public interface OnItemClick { void onClick(@NonNull Event e); }
+    public interface OnItemClick {
+        void onClick(@NonNull Event e);
+    }
 
     private final OnItemClick onItemClick;
 
@@ -33,80 +34,108 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         this.onItemClick = onItemClick;
     }
 
-    static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
-        @Override
-        public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
-            String ai = a.getId(), bi = b.getId();
-            return ai != null && bi != null && ai.equals(bi);
+    // =========== DiffUtil =============
+    private static final DiffUtil.ItemCallback<Event> DIFF =
+            new DiffUtil.ItemCallback<Event>() {
+                @Override
+                public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
+                    String ai = a.getId(), bi = b.getId();
+                    return ai != null && bi != null && ai.equals(bi);
+                }
+
+                @Override
+                public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
+                    return safe(a.getTitle()).equals(safe(b.getTitle()))
+                            && safe(a.getLocation()).equals(safe(b.getLocation()))
+                            && val(a.getPrice()) == val(b.getPrice())
+                            && ts(a.getStartTime()) == ts(b.getStartTime())
+                            && safe(a.getThumbnail()).equals(safe(b.getThumbnail()));
+                }
+
+                private String safe(String s) { return s == null ? "" : s; }
+                private double val(Double d)   { return d == null ? 0d : d; }
+                private long ts(Timestamp t)  {
+                    return t == null ? 0L : t.toDate().getTime();
+                }
+            };
+
+    // =========== ViewHolder =============
+    static class VH extends RecyclerView.ViewHolder {
+        final ImageView ivThumb;
+        final TextView tvTitle, tvPrice, tvDate;
+
+
+        VH(@NonNull View itemView) {
+            super(itemView);
+            ivThumb   = itemView.findViewById(R.id.ivThumb);
+            tvTitle   = itemView.findViewById(R.id.tvTitle);
+            tvPrice   = itemView.findViewById(R.id.tvPrice);
+            tvDate    = itemView.findViewById(R.id.tvDate);
         }
+    }
 
-        @Override
-        public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
-            // nếu Event chưa có equals(), so sánh các field cơ bản
-            return safe(a.getTitle()).equals(safe(b.getTitle()))
-                    && safe(a.getLocation()).equals(safe(b.getLocation()))
-                    && safe(a.getCategory()).equals(safe(b.getCategory()))
-                    && val(a.getPrice()) == val(b.getPrice())                         // Double
-                    && val(a.getStartTime()) == val(b.getStartTime())                 // ✅ Timestamp → millis
-                    && val(a.getAvailableSeats()) == val(b.getAvailableSeats())       // Integer
-                    && val(a.getTotalSeats()) == val(b.getTotalSeats())               // Integer
-                    && safe(a.getThumbnail()).equals(safe(b.getThumbnail()));
-        }
-
-        private String safe(String s){ return s == null ? "" : s; }
-        private long val(Integer i){ return i == null ? -1L : i.longValue(); }
-        private long val(Long l){ return l == null ? -1L : l; }
-        private double val(Double d) { return d == null ? 0.0 : d; }
-
-        // ✅ helper cho Firestore Timestamp
-        private long val(Timestamp t) { return t == null ? 0L : t.toDate().getTime(); }
-    };
-
-    @NonNull @Override
+    @NonNull
+    @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_event, parent, false);
+                .inflate(R.layout.item_explore_event, parent, false);
         return new VH(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
         Event e = getItem(position);
-        h.tvTitle.setText(nz(e.getTitle(), "—"));
-        h.tvLocation.setText(nz(e.getLocation(), "—"));
 
-        String priceText = "—";
-        if (e.getPrice() != null) {
-            priceText = NumberFormat.getCurrencyInstance(new Locale("vi","VN"))
-                    .format(e.getPrice());
+        // Title
+        String title = e.getTitle() == null ? "—" : e.getTitle();
+        h.tvTitle.setText(title);
+
+        // Time -> "21 Tháng 11, 2025"
+        String dateText = "";
+        Timestamp ts = e.getStartTime();
+        if (ts != null) {
+            Date d = ts.toDate();
+            SimpleDateFormat sdf =
+                    new SimpleDateFormat("dd 'Tháng' MM, yyyy", new Locale("vi", "VN"));
+            dateText = sdf.format(d);
         }
-        h.tvPrice.setText(h.itemView.getContext().getString(R.string.price_format, priceText));
+        h.tvDate.setText(dateText);
 
-        // ✅ Load thumbnail bằng Glide
+
+
+        // Price / Status
+        String priceLabel;
+        boolean isPast = false;
+        if (ts != null) {
+            isPast = ts.toDate().before(new Date());
+        }
+
+        if (isPast) {
+            priceLabel = "Sự kiện đã kết thúc";
+        } else {
+            Double p = e.getPrice();
+            if (p == null || p <= 0) {
+                priceLabel = "Miễn phí";
+            } else {
+                String pStr = NumberFormat
+                        .getNumberInstance(new Locale("vi", "VN"))
+                        .format(p);
+                priceLabel = "Từ " + pStr + " đ";
+            }
+        }
+        h.tvPrice.setText(priceLabel);
+
+        // Thumbnail với Glide
         Glide.with(h.itemView.getContext())
-                .load(e.getThumbnail())                 // URL từ Firestore
-                .placeholder(R.drawable.sample_event)    // ảnh tạm
-                .error(R.drawable.sample_event)          // ảnh lỗi
+                .load(e.getThumbnail())
+                .placeholder(R.drawable.sample_event)
+                .error(R.drawable.sample_event)
                 .centerCrop()
-                .into(h.imgThumb);
+                .into(h.ivThumb);
 
-
+        // Click item
         h.itemView.setOnClickListener(v -> {
             if (onItemClick != null) onItemClick.onClick(e);
         });
     }
-
-    static class VH extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
-        final ImageView imgThumb;
-        final TextView tvTitle, tvLocation, tvPrice;
-        VH(@NonNull View itemView) {
-            super(itemView);
-            imgThumb   = itemView.findViewById(R.id.ivThumb); // 👈 trùng id trong XML
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvLocation = itemView.findViewById(R.id.tvLocation);
-            tvPrice = itemView.findViewById(R.id.tvPrice);
-        }
-    }
-
-    private static String nz(String s, String d){ return s == null ? d : s; }
 }

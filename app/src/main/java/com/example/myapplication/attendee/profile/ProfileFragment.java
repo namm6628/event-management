@@ -61,6 +61,7 @@ public class ProfileFragment extends Fragment {
 
     private AuthManager authManager;
     private View btnGoOrg;
+    private View btnRequestOrg;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -130,11 +131,19 @@ public class ProfileFragment extends Fragment {
 
         authManager = new AuthManager();
         btnGoOrg = v.findViewById(R.id.btnGoOrganizer);
+        btnRequestOrg = v.findViewById(R.id.btnRequestOrganizer);
 
         if (btnGoOrg != null) {
             btnGoOrg.setOnClickListener(x ->
                     NavHostFragment.findNavController(this)
                             .navigate(R.id.organizerHomeFragment)
+            );
+        }
+
+        if (btnRequestOrg != null) {
+            btnRequestOrg.setOnClickListener(x ->
+                    NavHostFragment.findNavController(this)
+                            .navigate(R.id.organizerRequestFragment)
             );
         }
 
@@ -224,13 +233,24 @@ public class ProfileFragment extends Fragment {
         if (v != null) updateUi(v);
 
         if (btnGoOrg != null) {
-            // tạm ẩn trong lúc chờ check
             btnGoOrg.setVisibility(View.GONE);
-
-            authManager.refreshOrganizerStatus(requireContext(), isOrganizer -> {
-                btnGoOrg.setVisibility(isOrganizer ? View.VISIBLE : View.GONE);
-            });
         }
+        if (btnRequestOrg != null) {
+            btnRequestOrg.setVisibility(View.GONE);
+        }
+
+        authManager.refreshOrganizerStatus(requireContext(), isOrganizer -> {
+            if (!isAdded()) return;
+
+            if (btnGoOrg != null) {
+                btnGoOrg.setVisibility(isOrganizer ? View.VISIBLE : View.GONE);
+            }
+            if (btnRequestOrg != null) {
+                // Nếu chưa là organizer → hiện nút đăng ký
+                btnRequestOrg.setVisibility(isOrganizer ? View.GONE : View.VISIBLE);
+            }
+        });
+
 
     }
 

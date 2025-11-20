@@ -367,10 +367,10 @@ public class HomeFragment extends Fragment {
                 Glide.with(h.itemView.getContext())
                         .load(e.getThumbnail())
                         .centerCrop()
-                        .placeholder(R.color.chip_bg) // Dùng màu placeholder
+                        .placeholder(R.color.chip_bg_light) // Dùng màu placeholder
                         .into(h.thumbnail);
             } else {
-                h.thumbnail.setImageResource(R.color.chip_bg); // Màu placeholder
+                h.thumbnail.setImageResource(R.color.chip_bg_light); // Màu placeholder
             }
 
             // Bind click listener

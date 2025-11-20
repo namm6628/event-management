@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đăng ký tài khoản tổ chức sự kiện"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp"/>
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Vui lòng điền thông tin đơn vị/nhóm tổ chức. Admin sẽ duyệt và kích hoạt quyền Organizer cho bạn."
+            android:textSize="14sp"
+            android:paddingBottom="16dp"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tên đơn vị / nhóm tổ chức *">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtOrgName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Loại hình (Cá nhân / Doanh nghiệp, CLB...)">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtOrgType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Mô tả ngắn về đơn vị / sự kiện dự kiến tổ chức">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtOrgDesc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minLines="3"
+                android:maxLines="5" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSubmitOrganizerRequest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Gửi yêu cầu"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</ScrollView>

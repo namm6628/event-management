@@ -474,6 +474,14 @@
             android:text="Quản lý sự kiện (Organizer)"
             android:layout_marginTop="12dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRequestOrganizer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đăng ký tổ chức sự kiện"
+            android:layout_marginTop="8dp" />
+
+
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

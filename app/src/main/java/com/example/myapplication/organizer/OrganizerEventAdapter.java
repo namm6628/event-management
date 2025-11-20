@@ -1,8 +1,10 @@
 package com.example.myapplication.organizer;
 
+import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -11,24 +13,26 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAdapter.VH> {
 
-    public interface OnItemClick {
-        void onClick(@NonNull Event e);
+    public interface Listener {
+        void onEdit(@NonNull Event e);
+        void onViewAttendees(@NonNull Event e);
     }
 
     private final List<Event> data = new ArrayList<>();
-    private final OnItemClick onItemClick;
+    private final Listener listener;
 
-    public OrganizerEventAdapter(OnItemClick onItemClick) {
-        this.onItemClick = onItemClick;
+    public OrganizerEventAdapter(Listener listener) {
+        this.listener = listener;
     }
 
     public void submit(List<Event> list) {
@@ -48,7 +52,7 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
         Event e = data.get(position);
-        h.bind(e, onItemClick);
+        h.bind(e, listener);
     }
 
     @Override
@@ -57,7 +61,9 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        final TextView tvTitle, tvTime, tvVenue, tvTicketInfo;
+        final TextView tvTitle, tvTime, tvVenue, tvTicketInfo, tvTicketTypesDetail;
+        final Button btnEdit, btnViewAttendees;
+        private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         VH(@NonNull View itemView) {
             super(itemView);
@@ -65,46 +71,141 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
             tvTime = itemView.findViewById(R.id.tvTime);
             tvVenue = itemView.findViewById(R.id.tvVenue);
             tvTicketInfo = itemView.findViewById(R.id.tvTicketInfo);
+            tvTicketTypesDetail = itemView.findViewById(R.id.tvTicketTypesDetail); // NEW
+            btnEdit = itemView.findViewById(R.id.btnEdit);
+            btnViewAttendees = itemView.findViewById(R.id.btnViewAttendees);
         }
 
-        void bind(Event e, OnItemClick onItemClick) {
-            tvTitle.setText(e.getTitle() == null ? "(Không tên)" : e.getTitle());
-            tvVenue.setText(e.getLocation() == null ? "Chưa cập nhật địa điểm" : e.getLocation());
+        void bind(Event e, Listener listener) {
 
-            // Thời gian
+            // ===== TITLE =====
+            tvTitle.setText(e.getTitle() == null ? "(Không tên)" : e.getTitle());
+
+            // ===== LOCATION =====
+            tvVenue.setText(
+                    e.getLocation() == null
+                            ? "Chưa cập nhật địa điểm"
+                            : e.getLocation()
+            );
+
+            // ===== TIME =====
             String timeText = "Chưa đặt thời gian";
             Timestamp ts = e.getStartTime();
             if (ts != null) {
-                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy • HH:mm", Locale.getDefault());
-                timeText = sdf.format(ts.toDate());
+                try {
+                    timeText = DateFormat.format(
+                            "dd/MM/yyyy • HH:mm",
+                            ts.toDate()
+                    ).toString();
+                } catch (Exception ignore) {}
             }
             tvTime.setText(timeText);
 
-            // Vé & giá
+
+
+            // ===== BASIC TICKET INFO =====
             Integer total = e.getTotalSeats();
             Integer avail = e.getAvailableSeats();
             Double price = e.getPrice();
 
-            String ticketInfo = "Vé: ";
-            if (total != null && avail != null) {
-                int sold = total - avail;
-                ticketInfo += sold + "/" + total;
+            int sold = (total != null && avail != null) ? (total - avail) : 0;
+
+            String priceStr = (price != null && price > 0)
+                    ? NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(price) + "₫"
+                    : "Miễn phí";
+
+            String status = e.getStatus() == null ? "active" : e.getStatus();
+            String statusLabel;
+            long now = System.currentTimeMillis();
+            long eventTime = ts != null ? ts.toDate().getTime() : 0;
+
+// ===== STATUS LOGIC =====
+            if (sold >= (total != null ? total : 0)) {
+                statusLabel = "Hết vé";
+            } else if (eventTime < now) {
+                statusLabel = "Sự kiện đã kết thúc";
             } else {
-                ticketInfo += "Chưa cấu hình";
+                statusLabel = "Đang mở bán";
             }
 
-            if (price != null && price > 0) {
-                String priceStr = NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(price) + "₫";
-                ticketInfo += " | Giá: " + priceStr;
-            } else {
-                ticketInfo += " | Miễn phí";
-            }
+            tvTicketInfo.setText(
+                    "Tổng số vé: " + sold + "/" + (total != null ? total : 0)
 
-            tvTicketInfo.setText(ticketInfo);
+                            + " | " + statusLabel
+            );
 
-            itemView.setOnClickListener(v -> {
-                if (onItemClick != null) onItemClick.onClick(e);
+            // ===== LOAD TICKET TYPES SUBCOLLECTION =====
+            loadTicketTypes(e, tvTicketTypesDetail);
+
+            // ===== BUTTONS =====
+            btnEdit.setOnClickListener(v -> {
+                if (listener != null) listener.onEdit(e);
             });
+
+            btnViewAttendees.setOnClickListener(v -> {
+                if (listener != null) listener.onViewAttendees(e);
+            });
+
+            // card click = edit
+            itemView.setOnClickListener(v -> {
+                if (listener != null) listener.onEdit(e);
+            });
+        }
+
+        private void loadTicketTypes(Event event, TextView tv) {
+            String eventId = event.getId();
+            if (eventId == null) {
+                tv.setText("");
+                return;
+            }
+
+            tv.setText("Đang tải loại vé...");
+
+            db.collection("events")
+                    .document(eventId)
+                    .collection("ticketTypes")
+                    .get()
+                    .addOnSuccessListener(snap -> {
+
+                        if (snap.isEmpty()) {
+                            tv.setText(""); // Không có loại vé
+                            return;
+                        }
+
+                        StringBuilder sb = new StringBuilder();
+                        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+
+                        for (DocumentSnapshot d : snap.getDocuments()) {
+                            String name = d.getString("name");
+                            Double price = d.getDouble("price");
+                            Long quota = d.getLong("quota");
+                            Long sold = d.getLong("sold");
+
+                            if (sb.length() > 0) sb.append("\n");
+
+                            sb.append("Loại vé: ")
+                                    .append(name == null ? "Không tên" : name)
+                                    .append(" | Giá: ");
+                            if (price == null || price == 0d)
+                                sb.append("Miễn phí");
+                            else
+                                sb.append(nf.format(price)).append("đ");
+
+                            long q = quota == null ? 0 : quota;
+                            long s = sold == null ? 0 : sold;
+
+                            sb.append(" | Đã bán: ").append(s).append("/").append(q)
+                                    .append(" | ");
+
+                            if (s >= q)
+                                sb.append("Hết vé");
+                            else
+                                sb.append("Đang mở bán");
+                        }
+
+                        tv.setText(sb.toString());
+                    })
+                    .addOnFailureListener(e -> tv.setText("Không tải được loại vé"));
         }
     }
 }

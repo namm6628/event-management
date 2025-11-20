@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.myapplication.R;
@@ -96,7 +97,10 @@ public class ExploreFragment extends Fragment {
             startActivity(it);
         });
 
-        binding.recyclerEvents.setLayoutManager(new LinearLayoutManager(requireContext()));
+        GridLayoutManager grid = new GridLayoutManager(requireContext(), 2);
+        binding.recyclerEvents.setLayoutManager(grid);
+        binding.recyclerEvents.setHasFixedSize(true);
+
         binding.recyclerEvents.setAdapter(adapter);
 
         // Thanh tìm kiếm (CardView) -> mở SearchActivity

@@ -73,6 +73,16 @@
             android:name=".organizer.OrganizerDashboardActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".organizer.OrganizerAttendeesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".attendee.detail.SelectTicketsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApplication" />
+
+
 
 
         <!-- LƯU Ý: KHÔNG khai báo LoginFragment / RegisterFragment ở đây -->

@@ -59,5 +59,13 @@
 
     <string name="average_rating">Đánh giá trung bình</string>
 
+    <string name="ticket_info_header">Thông tin vé</string>
+    <string name="ticket_from_label">Chỉ từ</string>
+
+    <string name="see_more">Xem thêm</string>
+    <string name="see_less">Thu gọn</string>
+
+
+
 
 </resources>

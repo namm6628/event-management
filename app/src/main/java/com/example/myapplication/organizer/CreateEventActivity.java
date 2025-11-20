@@ -1,9 +1,13 @@
 package com.example.myapplication.organizer;
 
-import android.content.Intent;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -11,285 +15,600 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide;
-import com.example.myapplication.common.model.Event;
-import com.example.myapplication.databinding.ActivityCreateEventBinding;
+import com.example.myapplication.R;
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.LinearLayout;
+
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class CreateEventActivity extends AppCompatActivity {
 
-    public static final String EXTRA_EVENT_ID = "extra_event_id";
+    private EditText edtTitle, edtArtist, edtCategory, edtLocation,
+            edtDescription, edtPrice, edtTotalSeats;
+    private TextView tvPickedDateTime;
+    private ImageView ivPreview;
+    private MaterialButton btnPickDateTime, btnPickImage, btnSave;
 
-    private ActivityCreateEventBinding binding;
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private Timestamp selectedStartTime;
+    private Uri selectedImageUri;
 
-    private String eventId;              // null -> tạo mới, khác null -> edit
-    private boolean isEditMode = false;
+    private String editingEventId = null;
 
-    private Calendar selectedStartTime;  // ngày/giờ đã chọn
-    private Uri imageUri;                // ảnh mới chọn
-    private String existingThumbnailUrl; // ảnh cũ (nếu edit)
-    private String existingOwnerId;      // ownerId cũ (nếu edit)
+    private ActivityResultLauncher<String> pickImageLauncher;
 
-    private ActivityResultLauncher<Intent> pickImageLauncher;
+    private LinearLayout layoutTicketContainer;
+    private MaterialButton btnAddTicketType;
+
+    // lưu các dòng nhập loại vé
+    private final List<TicketRow> ticketRows = new ArrayList<>();
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityCreateEventBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_create_event);
 
-        eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
-        isEditMode = (eventId != null);
+        // ánh xạ view
+        edtTitle       = findViewById(R.id.edtTitle);
+        edtArtist      = findViewById(R.id.edtArtist);
+        edtCategory    = findViewById(R.id.edtCategory);
+        edtLocation    = findViewById(R.id.edtLocation);
+        edtDescription = findViewById(R.id.edtDescription);
+        edtPrice       = findViewById(R.id.edtPrice);
+        edtTotalSeats  = findViewById(R.id.edtTotalSeats);
+        tvPickedDateTime = findViewById(R.id.tvPickedDateTime);
+        ivPreview      = findViewById(R.id.ivPreview);
+        btnPickDateTime = findViewById(R.id.btnPickDateTime);
+        btnPickImage   = findViewById(R.id.btnPickImage);
+        btnSave        = findViewById(R.id.btnSave);
 
-        if (isEditMode) {
-            setTitle("Chỉnh sửa sự kiện");
-            loadEvent();
-        } else {
-            setTitle("Tạo sự kiện mới");
+
+        layoutTicketContainer = findViewById(R.id.layoutTicketContainer);
+        btnAddTicketType     = findViewById(R.id.btnAddTicketType);
+
+
+
+        btnAddTicketType.setOnClickListener(v -> {
+            addTicketRow();
+        });
+
+
+        // nút back trên action bar (nếu đang dùng)
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle("Tạo sự kiện mới");
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        selectedStartTime = null;
-        imageUri = null;
-        existingThumbnailUrl = null;
-        existingOwnerId = null;
+        // Lấy eventId nếu đang ở chế độ EDIT
+        editingEventId = getIntent().getStringExtra("EXTRA_EVENT_ID");
 
-        // Chọn ảnh cover
+        if (getSupportActionBar() != null) {
+            if (editingEventId == null) {
+                getSupportActionBar().setTitle("Tạo sự kiện mới");
+            } else {
+                getSupportActionBar().setTitle("Chỉnh sửa sự kiện");
+            }
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
+        if (editingEventId != null) {
+            // 👉 Load event từ Firestore + fill form
+            loadEventForEdit(editingEventId);
+            btnSave.setText("Cập nhật sự kiện");
+        }
+
+
+        // chọn ngày giờ
+        btnPickDateTime.setOnClickListener(v -> showDateTimePicker());
+
+        // chọn ảnh
         pickImageLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Uri uri = result.getData().getData();
-                        if (uri != null) {
-                            imageUri = uri;
-                            binding.ivPreview.setImageURI(uri);
-                        }
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        selectedImageUri = uri;
+                        ivPreview.setImageURI(uri);
                     }
                 }
         );
+        btnPickImage.setOnClickListener(v ->
+                pickImageLauncher.launch("image/*")
+        );
 
-        binding.btnPickImage.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_PICK);
-            intent.setType("image/*");
-            pickImageLauncher.launch(intent);
-        });
-
-        // Chọn ngày giờ
-        binding.btnPickDateTime.setOnClickListener(v -> pickDateTime());
-
-        // Lưu sự kiện
-        binding.btnSave.setOnClickListener(v -> saveEvent());
+        // lưu sự kiện
+        btnSave.setOnClickListener(v -> saveEvent());
     }
 
-    private void pickDateTime() {
-        final Calendar cal = Calendar.getInstance();
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
+    }
 
-        new android.app.DatePickerDialog(
+    private void showDateTimePicker() {
+        Calendar now = Calendar.getInstance();
+
+        DatePickerDialog dp = new DatePickerDialog(
                 this,
                 (view, year, month, dayOfMonth) -> {
-                    cal.set(Calendar.YEAR, year);
-                    cal.set(Calendar.MONTH, month);
-                    cal.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+                    // sau khi chọn ngày -> chọn giờ
+                    Calendar picked = Calendar.getInstance();
+                    picked.set(Calendar.YEAR, year);
+                    picked.set(Calendar.MONTH, month);
+                    picked.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 
-                    new android.app.TimePickerDialog(
+                    TimePickerDialog tp = new TimePickerDialog(
                             this,
-                            (timeView, hourOfDay, minute) -> {
-                                cal.set(Calendar.HOUR_OF_DAY, hourOfDay);
-                                cal.set(Calendar.MINUTE, minute);
-                                cal.set(Calendar.SECOND, 0);
-
-                                selectedStartTime = cal;
-                                SimpleDateFormat sdf =
-                                        new SimpleDateFormat("dd/MM/yyyy • HH:mm", Locale.getDefault());
-                                binding.tvPickedDateTime.setText(sdf.format(cal.getTime()));
+                            (timePicker, hourOfDay, minute) -> {
+                                picked.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                                picked.set(Calendar.MINUTE, minute);
+                                picked.set(Calendar.SECOND, 0);
+                                selectedStartTime = new Timestamp(picked.getTime());
+                                String text = String.format(
+                                        "%02d/%02d/%04d • %02d:%02d",
+                                        dayOfMonth, month + 1, year, hourOfDay, minute
+                                );
+                                tvPickedDateTime.setText(text);
                             },
-                            cal.get(Calendar.HOUR_OF_DAY),
-                            cal.get(Calendar.MINUTE),
+                            now.get(Calendar.HOUR_OF_DAY),
+                            now.get(Calendar.MINUTE),
                             true
-                    ).show();
+                    );
+                    tp.show();
                 },
-                cal.get(Calendar.YEAR),
-                cal.get(Calendar.MONTH),
-                cal.get(Calendar.DAY_OF_MONTH)
-        ).show();
+                now.get(Calendar.YEAR),
+                now.get(Calendar.MONTH),
+                now.get(Calendar.DAY_OF_MONTH)
+        );
+        dp.show();
     }
 
-    /**
-     * Nếu ở chế độ edit, load event từ Firestore và fill vào UI.
-     */
-    private void loadEvent() {
-        db.collection("events")
-                .document(eventId)
-                .get()
-                .addOnSuccessListener(this::bindEvent)
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Không tải được sự kiện: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+    private void addTicketRow() {
+        addTicketRowWithData(null, null, null);
     }
 
-    private void bindEvent(DocumentSnapshot snap) {
-        Event e = snap.toObject(Event.class);
-        if (e == null) {
-            Toast.makeText(this, "Dữ liệu sự kiện không hợp lệ", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
+    private void addTicketRowWithData(@Nullable String name,
+                                      @Nullable Double price,
+                                      @Nullable Long quota) {
+        View rowView = LayoutInflater.from(this)
+                .inflate(R.layout.item_ticket_type_input, layoutTicketContainer, false);
 
-        existingOwnerId = e.getOwnerId();
-        existingThumbnailUrl = e.getThumbnail();
+        EditText edtName  = rowView.findViewById(R.id.edtTicketName);
+        EditText edtPrice = rowView.findViewById(R.id.edtTicketPrice);
+        EditText edtQuota = rowView.findViewById(R.id.edtTicketQuota);
+        TextView btnRemove = rowView.findViewById(R.id.btnRemoveRow);
 
-        binding.edtTitle.setText(e.getTitle());
-        binding.edtArtist.setText(e.getArtist());   // có thể null, OK
-        binding.edtCategory.setText(e.getCategory());
-        binding.edtLocation.setText(e.getLocation());
+        if (name != null)  edtName.setText(name);
+        if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
+        if (quota != null) edtQuota.setText(String.valueOf(quota.intValue()));
 
-        if (e.getPrice() != null) {
-            binding.edtPrice.setText(String.valueOf(e.getPrice().intValue()));
-        }
-        if (e.getTotalSeats() != null) {
-            binding.edtTotalSeats.setText(String.valueOf(e.getTotalSeats()));
-        }
+        TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, rowView);
+        ticketRows.add(row);
 
-        // Start time
-        if (e.getStartTime() != null) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(e.getStartTime().toDate());
-            selectedStartTime = cal;
+        btnRemove.setOnClickListener(v -> {
+            layoutTicketContainer.removeView(rowView);
+            ticketRows.remove(row);
+        });
 
-            SimpleDateFormat sdf =
-                    new SimpleDateFormat("dd/MM/yyyy • HH:mm", Locale.getDefault());
-            binding.tvPickedDateTime.setText(sdf.format(cal.getTime()));
-        }
+        layoutTicketContainer.addView(rowView);
+    }
 
-        // Thumbnail preview (nếu có)
-        if (!TextUtils.isEmpty(e.getThumbnail())) {
-            Glide.with(this)
-                    .load(e.getThumbnail())
-                    .into(binding.ivPreview);
+
+    private static class TicketRow {
+        EditText edtName, edtPrice, edtQuota;
+        View root;
+
+        TicketRow(EditText name, EditText price, EditText quota, View root) {
+            this.edtName = name;
+            this.edtPrice = price;
+            this.edtQuota = quota;
+            this.root = root;
         }
     }
+
 
     private void saveEvent() {
-        String title = text(binding.edtTitle);
-        String artist = text(binding.edtArtist);
-        String category = text(binding.edtCategory);
-        String location = text(binding.edtLocation);
-        String priceStr = text(binding.edtPrice);
-        String seatsStr = text(binding.edtTotalSeats);
-
-        if (TextUtils.isEmpty(title) || TextUtils.isEmpty(location)) {
-            Toast.makeText(this, "Nhập ít nhất Tên sự kiện và Địa điểm", Toast.LENGTH_SHORT).show();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "Bạn cần đăng nhập", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Double price = null;
-        if (!TextUtils.isEmpty(priceStr)) {
-            try {
-                price = Double.parseDouble(priceStr);
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, "Giá vé không hợp lệ", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
+        String title   = text(edtTitle);
+        String artist  = text(edtArtist);
+        String cat     = text(edtCategory);
+        String loc     = text(edtLocation);
+        String desc    = text(edtDescription);
 
-        Integer totalSeats = null;
-        if (!TextUtils.isEmpty(seatsStr)) {
-            try {
-                totalSeats = Integer.parseInt(seatsStr);
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, "Tổng vé không hợp lệ", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
+        String sSeats  = text(edtTotalSeats);  // tổng số ghế
 
-        String uid = FirebaseAuth.getInstance().getUid();
-        if (uid == null) {
-            Toast.makeText(this, "Bạn cần đăng nhập để tạo/chỉnh sửa sự kiện", Toast.LENGTH_SHORT).show();
+
+        if (TextUtils.isEmpty(title)) {
+            edtTitle.setError("Nhập tên sự kiện");
+            return;
+        }
+        if (TextUtils.isEmpty(cat)) {
+            edtCategory.setError("Nhập thể loại");
+            return;
+        }
+        if (TextUtils.isEmpty(loc)) {
+            edtLocation.setError("Nhập địa điểm");
+            return;
+        }
+        if (selectedStartTime == null) {
+            Toast.makeText(this, "Chọn ngày & giờ diễn ra", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Event e = new Event();
-        e.setTitle(title);
-        // Nghệ sĩ có thể để trống -> cho phép null
-        e.setArtist(TextUtils.isEmpty(artist) ? null : artist);
-        e.setCategory(category);
-        e.setLocation(location);
-        e.setPrice(price);
-        e.setTotalSeats(totalSeats);
-        e.setAvailableSeats(totalSeats); // nếu muốn giữ availableSeats cũ khi edit phức tạp hơn
-        e.setOwnerId(isEditMode && existingOwnerId != null ? existingOwnerId : uid);
+        // ====== LẤY DANH SÁCH LOẠI VÉ TỪ CÁC DÒNG INPUT ======
+        List<Map<String, Object>> ticketTypes = new ArrayList<>();
+        int totalSeatsFromTickets = 0;
+        double minPriceFromTickets = Double.MAX_VALUE;
 
-        if (selectedStartTime != null) {
-            e.setStartTime(new Timestamp(selectedStartTime.getTime()));
+        for (TicketRow row : ticketRows) {
+            String name  = row.edtName.getText().toString().trim();
+            String sPrice = row.edtPrice.getText().toString().trim();
+            String sQuota = row.edtQuota.getText().toString().trim();
+
+            // nếu cả 3 ô đều trống thì bỏ qua dòng này
+            if (name.isEmpty() && sPrice.isEmpty() && sQuota.isEmpty()) {
+                continue;
+            }
+
+            if (name.isEmpty()) {
+                row.edtName.setError("Nhập tên loại vé");
+                return;
+            }
+            if (sPrice.isEmpty()) {
+                row.edtPrice.setError("Nhập giá vé");
+                return;
+            }
+            if (sQuota.isEmpty()) {
+                row.edtQuota.setError("Nhập số vé");
+                return;
+            }
+
+            double price;
+            int quota;
+            try {
+                price = Double.parseDouble(sPrice);
+                quota = Integer.parseInt(sQuota);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "Giá / số vé không hợp lệ", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (quota <= 0) {
+                row.edtQuota.setError("Số vé phải > 0");
+                return;
+            }
+
+            Map<String, Object> ticket = new HashMap<>();
+            ticket.put("name", name);
+            ticket.put("price", price);
+            ticket.put("quota", quota);
+            ticket.put("sold", 0);
+            ticketTypes.add(ticket);
+
+            totalSeatsFromTickets += quota;
+            if (price > 0 && price < minPriceFromTickets) {
+                minPriceFromTickets = price;
+            }
+        }
+
+        double price;
+        int totalSeats;
+
+// ===== Trường hợp KHÔNG CÓ loại vé → sự kiện miễn phí =====
+        if (ticketTypes.isEmpty()) {
+
+            // Bắt buộc vẫn phải nhập tổng số vé
+            if (TextUtils.isEmpty(sSeats)) {
+                edtTotalSeats.setError("Nhập tổng số vé");
+                return;
+            }
+
+            try {
+                totalSeats = Integer.parseInt(sSeats);
+            } catch (NumberFormatException e) {
+                edtTotalSeats.setError("Số vé không hợp lệ");
+                return;
+            }
+
+            if (totalSeats <= 0) {
+                edtTotalSeats.setError("Tổng vé phải > 0");
+                return;
+            }
+
+            // Không có loại vé ⇒ FREE
+            price = 0d;
+
+// ===== Có loại vé ⇒ kiểm tra quota & tính giá min =====
         } else {
-            e.setStartTime(Timestamp.now());
+            if (TextUtils.isEmpty(sSeats)) {
+                edtTotalSeats.setError("Nhập tổng số vé");
+                return;
+            }
+
+            try {
+                totalSeats = Integer.parseInt(sSeats);
+            } catch (NumberFormatException e) {
+                edtTotalSeats.setError("Số vé không hợp lệ");
+                return;
+            }
+
+            // Tổng quota không được > tổng ghế
+            if (totalSeatsFromTickets > totalSeats) {
+                Toast.makeText(this,
+                        "Tổng số vé các loại (" + totalSeatsFromTickets +
+                                ") lớn hơn số ghế (" + totalSeats + ")",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            // Bạn muốn đúng bằng nhau
+            if (totalSeatsFromTickets != totalSeats) {
+                Toast.makeText(this,
+                        "Tổng số vé các loại phải bằng tổng số ghế (" + totalSeats + ")",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            // Giá event = giá thấp nhất trong các loại vé
+            price = (minPriceFromTickets == Double.MAX_VALUE) ? 0d : minPriceFromTickets;
         }
 
-        // Tạo docRef
-        final var docRef = (isEditMode
-                ? db.collection("events").document(eventId)
-                : db.collection("events").document());
 
-        e.setId(docRef.getId());
+        btnSave.setEnabled(false);
 
-        if (imageUri == null) {
-            // Không chọn ảnh mới:
-            // - Nếu edit: giữ thumbnail cũ
-            // - Nếu create: để null
-            e.setThumbnail(existingThumbnailUrl);
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String ownerId = user.getUid();
+        String eventId = (editingEventId != null)
+                ? editingEventId
+                : UUID.randomUUID().toString();
 
-            docRef.set(e)
-                    .addOnSuccessListener(r -> {
+        if (selectedImageUri != null) {
+            FirebaseStorage.getInstance()
+                    .getReference("event_covers/" + ownerId + "/" + eventId + ".jpg")
+                    .putFile(selectedImageUri)
+                    .addOnSuccessListener(taskSnapshot ->
+                            taskSnapshot.getStorage().getDownloadUrl()
+                                    .addOnSuccessListener(uri ->
+                                            writeEventToFirestore(
+                                                    db, eventId, ownerId,
+                                                    title, artist, cat, loc, desc,
+                                                    selectedStartTime, price, totalSeats,
+                                                    uri.toString(), ticketTypes
+                                            )
+                                    )
+                                    .addOnFailureListener(e -> {
+                                        btnSave.setEnabled(true);
+                                        Toast.makeText(this,
+                                                "Lỗi lấy URL ảnh: " + e.getMessage(),
+                                                Toast.LENGTH_LONG).show();
+                                    })
+                    )
+                    .addOnFailureListener(e -> {
+                        btnSave.setEnabled(true);
                         Toast.makeText(this,
-                                isEditMode ? "Đã cập nhật sự kiện" : "Đã tạo sự kiện",
+                                "Lỗi upload ảnh: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    });
+        } else {
+            writeEventToFirestore(
+                    db, eventId, ownerId,
+                    title, artist, cat, loc, desc,
+                    selectedStartTime, price, totalSeats,
+                    null, ticketTypes
+            );
+        }
+    }
+
+
+    private void writeEventToFirestore(FirebaseFirestore db,
+                                       String eventId,
+                                       String ownerId,
+                                       String title,
+                                       String artist,
+                                       String cat,
+                                       String loc,
+                                       String desc,
+                                       Timestamp startTime,
+                                       double price,
+                                       int totalSeats,
+                                       @Nullable String thumbnailUrl,
+                                       List<Map<String, Object>> ticketTypes) {
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("title", title);
+        data.put("artist", artist);
+        data.put("category", cat);
+        data.put("location", loc);
+        data.put("description", desc);
+        data.put("ownerId", ownerId);
+        data.put("startTime", startTime);
+        data.put("price", price);
+        data.put("totalSeats", totalSeats);
+        data.put("availableSeats", totalSeats); // lúc mới tạo = tổng vé
+        data.put("status", "active");           // hoặc "draft" tuỳ ý bạn
+        data.put("createdAt", FieldValue.serverTimestamp());
+        data.put("updatedAt", FieldValue.serverTimestamp());
+
+
+        if (editingEventId == null) {
+            data.put("createdAt", FieldValue.serverTimestamp());
+        }
+
+        if (thumbnailUrl != null) {
+            data.put("thumbnail", thumbnailUrl);
+        }
+
+        if (editingEventId == null) {
+            db.collection("events")
+                    .document(eventId)
+                    .set(data)
+                    .addOnSuccessListener(unused -> {
+                        saveTicketTypes(db, eventId, ticketTypes);
+                        Toast.makeText(this,
+                                "Tạo sự kiện thành công!",
                                 Toast.LENGTH_SHORT).show();
                         finish();
                     })
-                    .addOnFailureListener(err ->
-                            Toast.makeText(this, "Lỗi lưu sự kiện: " + err.getMessage(), Toast.LENGTH_SHORT).show()
-                    );
+                    .addOnFailureListener(e -> {
+                        btnSave.setEnabled(true);
+                        Toast.makeText(this,
+                                "Lỗi lưu sự kiện: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    });
         } else {
-            // Có ảnh mới -> upload Storage trước
-            StorageReference ref = FirebaseStorage.getInstance()
-                    .getReference("event-covers/" + docRef.getId() + ".jpg");
-
-            ref.putFile(imageUri)
-                    .continueWithTask(task -> {
-                        if (!task.isSuccessful()) {
-                            throw task.getException();
-                        }
-                        return ref.getDownloadUrl();
+            db.collection("events")
+                    .document(eventId)
+                    .update(data)
+                    .addOnSuccessListener(unused -> {
+                        saveTicketTypes(db, eventId, ticketTypes);
+                        Toast.makeText(this,
+                                "Cập nhật sự kiện thành công!",
+                                Toast.LENGTH_SHORT).show();
+                        finish();
                     })
-                    .addOnSuccessListener(uri -> {
-                        String url = uri.toString();
-                        e.setThumbnail(url);
-                        docRef.set(e)
-                                .addOnSuccessListener(r -> {
-                                    Toast.makeText(this,
-                                            isEditMode ? "Đã cập nhật sự kiện" : "Đã tạo sự kiện",
-                                            Toast.LENGTH_SHORT).show();
-                                    finish();
-                                })
-                                .addOnFailureListener(err ->
-                                        Toast.makeText(this, "Lỗi lưu sự kiện: " + err.getMessage(), Toast.LENGTH_SHORT).show()
-                                );
-                    })
-                    .addOnFailureListener(err ->
-                            Toast.makeText(this, "Lỗi upload ảnh: " + err.getMessage(), Toast.LENGTH_SHORT).show()
-                    );
+                    .addOnFailureListener(e -> {
+                        btnSave.setEnabled(true);
+                        Toast.makeText(this,
+                                "Lỗi cập nhật sự kiện: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    });
         }
+
     }
 
-    private String text(com.google.android.material.textfield.TextInputEditText e) {
-        return e == null || e.getText() == null ? "" : e.getText().toString().trim();
+    private void saveTicketTypes(FirebaseFirestore db,
+                                 String eventId,
+                                 List<Map<String, Object>> ticketTypes) {
+
+        // Xoá hết ticketTypes cũ trước
+        db.collection("events")
+                .document(eventId)
+                .collection("ticketTypes")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    for (com.google.firebase.firestore.DocumentSnapshot d : snap.getDocuments()) {
+                        d.getReference().delete();
+                    }
+
+                    // Không có loại vé mới → event free, chỉ cần xoá là xong
+                    if (ticketTypes == null || ticketTypes.isEmpty()) {
+                        return;
+                    }
+
+                    // Ghi lại toàn bộ loại vé mới
+                    for (Map<String, Object> ticket : ticketTypes) {
+                        db.collection("events")
+                                .document(eventId)
+                                .collection("ticketTypes")
+                                .add(ticket);
+                    }
+                });
+    }
+
+
+
+
+    private void loadEventForEdit(String eventId) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) {
+                        Toast.makeText(this, "Không tìm thấy sự kiện", Toast.LENGTH_SHORT).show();
+                        finish();
+                        return;
+                    }
+
+
+
+                    edtTitle.setText(doc.getString("title"));
+                    edtArtist.setText(doc.getString("artist"));
+                    edtCategory.setText(doc.getString("category"));
+                    edtLocation.setText(doc.getString("location"));
+                    edtDescription.setText(doc.getString("description"));
+
+                    Double price = doc.getDouble("price");
+                    Long totalSeats = doc.getLong("totalSeats");
+                    if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
+                    if (totalSeats != null) edtTotalSeats.setText(String.valueOf(totalSeats));
+
+                    Timestamp ts = doc.getTimestamp("startTime");
+                    if (ts != null) {
+                        selectedStartTime = ts;
+                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy • HH:mm");
+                        tvPickedDateTime.setText(sdf.format(ts.toDate()));
+                    }
+
+                    // thumbnail: nếu muốn, bạn có thể dùng Glide để load vào ivPreview
+
+                    loadTicketTypesForEdit(eventId);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this,
+                            "Lỗi tải sự kiện: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                    finish();
+                });
+    }
+
+    private void loadTicketTypesForEdit(String eventId) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Xoá các dòng cũ trên UI (tránh bị trùng khi vào màn nhiều lần)
+        layoutTicketContainer.removeAllViews();
+        ticketRows.clear();
+
+        db.collection("events")
+                .document(eventId)
+                .collection("ticketTypes")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (snap.isEmpty()) {
+                        // Không có loại vé → sự kiện free, không cần auto thêm dòng
+                        return;
+                    }
+
+                    for (com.google.firebase.firestore.DocumentSnapshot d : snap.getDocuments()) {
+                        String name   = d.getString("name");
+                        Double price  = d.getDouble("price");
+                        Long quota    = d.getLong("quota");
+
+                        addTicketRowWithData(name, price, quota);
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this,
+                                "Lỗi tải loại vé: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show()
+                );
+    }
+
+
+
+    private String text(EditText e) {
+        return e == null || e.getText() == null
+                ? ""
+                : e.getText().toString().trim();
     }
 }

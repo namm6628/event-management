@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvEventTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tên sự kiện"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/tvUnitPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Giá 1 vé: 150.000 ₫"
+        android:textColor="@color/text_secondary" />
+
+    <EditText
+        android:id="@+id/edtQuantity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:inputType="number"
+        android:hint="Số lượng vé"
+        android:background="@drawable/bg_ticket_section"
+        android:padding="8dp" />
+
+    <TextView
+        android:id="@+id/tvTotalPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Tổng: 150.000 ₫"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="@color/mint_primary" />
+
+</LinearLayout>

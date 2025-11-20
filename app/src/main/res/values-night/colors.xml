@@ -1,32 +1,29 @@
+<!-- res/values-night/colors.xml -->
 <resources>
 
-    <!-- Brand Mint Palette -->
+    <!-- Brand Mint -->
     <color name="mint_primary">#00C46C</color>
-    <color name="mint_primary_dark">#009D57</color>
+    <color name="mint_primary_dark">#00A86A</color>
     <color name="mint_accent">#00A186</color>
 
-    <!-- Light -->
-    <color name="bg_primary">#F9F9F9</color>
-    <color name="bg_card">#FFFFFF</color>
+    <!-- SỬA THÀNH: xám đậm kiểu Google / Ticketbox hơn -->
+    <color name="bg_primary">#202124</color>   <!-- nền chung -->
+    <color name="bg_card">#2A2D32</color>     <!-- card / surface -->
 
-    <color name="text_primary">#1A1A1A</color>
-    <color name="text_secondary">#6E6E6E</color>
+    <color name="text_primary">#F5F5F5</color>
+    <color name="text_secondary">#B0B3B8</color>
 
-    <color name="border_light">#E0E0E0</color>
+    <color name="border_light">#3A3D42</color>
 
-    <!-- Chip / tag -->
-    <color name="chip_bg_light">#2000C46C</color> <!-- 12% mint -->
-    <color name="chip_text_light">#00C46C</color>
-
-    <!-- ALIAS để app bạn khỏi lỗi layout -->
+    <!-- Alias cho layout cũ -->
     <color name="md_primary">@color/mint_primary</color>
-    <color name="md_onPrimary">@android:color/white</color>
+    <color name="md_onPrimary">@android:color/black</color>
     <color name="md_surface">@color/bg_primary</color>
     <color name="md_onSurface">@color/text_primary</color>
     <color name="md_outline">@color/border_light</color>
     <color name="card_bg">@color/bg_card</color>
 
-    <!-- Map từ palette cũ Spotify sang palette mint mới -->
+    <!-- Map luôn sp_* nếu trước dùng -->
     <color name="sp_green">@color/mint_primary</color>
     <color name="sp_green_dark">@color/mint_primary_dark</color>
     <color name="sp_black">@color/bg_primary</color>
@@ -35,10 +32,4 @@
     <color name="sp_on_dark">@android:color/white</color>
     <color name="sp_on_dark_60">#99FFFFFF</color>
 
-    <color name="colorError">#E63946</color>
-
-
-
 </resources>
-
-

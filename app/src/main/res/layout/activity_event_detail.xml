@@ -3,7 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/bg_primary">
 
     <!-- AppBar -->
     <com.google.android.material.appbar.AppBarLayout
@@ -14,16 +15,18 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimaryContainer"
-            android:titleTextColor="@android:color/black"
+            android:background="?attr/colorPrimary"
+            app:titleTextColor="@color/md_onPrimary"
             app:navigationIcon="@drawable/ic_arrow_back_24"
-            app:title="@string/event_detail_title"/>
+            app:title="@string/event_detail_title" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Content -->
+    <!-- Content cuộn -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollContent"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginBottom="72dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -38,57 +41,229 @@
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:scaleType="centerCrop"
+                android:contentDescription="@string/event_image"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
-                android:src="@drawable/sample_event"
-                android:contentDescription="@string/event_image" />
+                android:src="@drawable/sample_event" />
 
-            <!-- Title -->
-            <TextView
-                android:id="@+id/tvTitle"
+            <!-- CARD THÔNG TIN SỰ KIỆN -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardEventInfo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="Tên sự kiện"
-                android:textSize="20sp"
+                android:layout_marginTop="16dp"
+                app:cardUseCompatPadding="true"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/bg_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Tên sự kiện -->
+                    <TextView
+                        android:id="@+id/tvTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tên sự kiện"
+                        android:textStyle="bold"
+                        android:textSize="20sp"
+                        android:textColor="@color/text_primary" />
+
+                    <!-- giữ lại cho code Java, nhưng ẩn -->
+                    <TextView
+                        android:id="@+id/tvArtist"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/tvPrice"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+
+
+                    <!-- Hàng thời gian -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_event_24"
+                            app:tint="@color/mint_primary" />
+
+                        <TextView
+                            android:id="@+id/tvTime"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:text="20:00 - 23:30, 29 Tháng 11, 2025"
+                            android:textColor="@color/text_primary" />
+                    </LinearLayout>
+
+                    <!-- Hàng địa điểm -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_place_24"
+                            app:tint="@color/mint_primary" />
+
+                        <TextView
+                            android:id="@+id/tvVenue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:text="Khách sạn Sheraton Hải Phòng"
+                            android:textColor="@color/text_primary" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+
+            <!-- TIÊU ĐỀ GIỚI THIỆU -->
+            <TextView
+                android:id="@+id/tvIntroHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Giới thiệu"
                 android:textStyle="bold"
-                android:textColor="@android:color/black"/>
+                android:textSize="18sp"
+                android:textColor="@color/text_primary" />
 
-            <!-- Artist -->
-            <TextView
-                android:id="@+id/tvArtist"
+            <!-- CARD NỘI DUNG GIỚI THIỆU -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardIntro"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/artist_unknown"
-                android:textColor="@android:color/darker_gray"
-                android:layout_marginTop="2dp"/>
+                android:layout_marginTop="8dp"
+                app:cardUseCompatPadding="true"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/bg_card">
 
-            <!-- Time -->
-            <TextView
-                android:id="@+id/tvTime"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvIntroTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Giới thiệu sự kiện:"
+                        android:textStyle="bold"
+                        android:textSize="15sp"
+                        android:textColor="@color/text_primary" />
+
+                    <!-- CHÍNH LÀ tvDescription CŨ -->
+                    <TextView
+                        android:id="@+id/tvDescription"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="2dp"
+                        android:maxLines="4"
+                        android:ellipsize="end" />
+
+                    <!-- Nút Xem thêm / Thu gọn -->
+                    <TextView
+                        android:id="@+id/tvDescriptionToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/see_more"
+                    android:textColor="@color/mint_primary"
+                    android:textStyle="bold" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+
+
+
+
+            <!-- ====== KHUNG LOẠI VÉ ====== -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Thời gian: 20/12/2025 - 19:00"
-                android:textColor="@android:color/darker_gray"
-                android:layout_marginTop="2dp"/>
+                android:layout_marginTop="16dp"
+                app:cardUseCompatPadding="true"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/bg_card">
 
-            <!-- Venue -->
-            <TextView
-                android:id="@+id/tvVenue"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Địa điểm: Nhà hát lớn Hà Nội"
-                android:textColor="@android:color/darker_gray"
-                android:layout_marginTop="2dp"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
 
-            <!-- Price -->
-            <TextView
-                android:id="@+id/tvPrice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Giá vé: 150.000 VNĐ"
-                android:textColor="@android:color/holo_red_dark"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"/>
+                    <!-- HEADER LOẠI VÉ -->
+                    <LinearLayout
+                        android:id="@+id/layoutTicketHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvTicketDateTime"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Thứ 6, 22/11/2025 • 19:30"
+                            android:textStyle="bold"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:id="@+id/tvToggleTicketTypes"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Hiện loại vé"
+                            android:textColor="@color/mint_primary"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Divider nhỏ -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@color/border_light" />
+
+                    <!-- DANH SÁCH LOẠI VÉ -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recyclerTicketTypes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <!-- Action row -->
             <LinearLayout
@@ -101,43 +276,57 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnShare"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/share_event"
+                    android:textAllCaps="false"
+                    android:textColor="@color/mint_primary"
+                    app:strokeColor="@color/mint_primary"
+                    app:strokeWidth="1dp"
                     app:icon="@android:drawable/ic_menu_share"
-                    app:iconGravity="textStart"/>
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/mint_primary"
+                    app:cornerRadius="999dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnFollow"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/follow_artist"
+                    android:textAllCaps="false"
+                    android:textColor="@color/mint_primary"
+                    app:strokeColor="@color/mint_primary"
+                    app:strokeWidth="1dp"
                     app:icon="@drawable/ic_search_24"
                     app:iconGravity="textStart"
-                    android:checkable="true"/>
+                    app:iconTint="@color/mint_primary"
+                    app:cornerRadius="999dp"
+                    android:checkable="true" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnOpenMap"
-                    style="@style/Widget.MaterialComponents.Button"
+                    style="@style/Widget.Material3.Button"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/open_map"
-                    android:backgroundTint="?attr/colorPrimary"
-                    android:textColor="@android:color/white"/>
+                    android:textAllCaps="false"
+                    android:textColor="@color/md_onPrimary"
+                    app:cornerRadius="999dp"
+                    app:backgroundTint="@color/mint_primary" />
             </LinearLayout>
 
             <!-- Review header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:layout_marginTop="20dp"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/tvReviewTitle"
@@ -146,16 +335,16 @@
                     android:text="@string/reviews_title"
                     android:textStyle="bold"
                     android:textSize="18sp"
-                    android:textColor="@android:color/black"/>
+                    android:textColor="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/tvReviewCount"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="24dp"
                     android:layout_marginStart="8dp"
                     android:text="0"
-                    android:textSize="16sp"
-                    android:textColor="@android:color/darker_gray"/>
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp" />
             </LinearLayout>
 
             <!-- Average rating -->
@@ -163,20 +352,20 @@
                 android:id="@+id/layoutAverageRating"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
                 android:gravity="center_vertical"
-                android:layout_marginTop="4dp">
+                android:orientation="horizontal">
 
                 <RatingBar
                     android:id="@+id/ratingAverage"
                     style="?android:attr/ratingBarStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:numStars="5"
-                    android:stepSize="0.5"
                     android:isIndicator="true"
+                    android:numStars="5"
                     android:rating="0"
-                    android:layout_marginEnd="8dp"/>
+                    android:stepSize="0.5"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:id="@+id/tvAverageRating"
@@ -184,29 +373,80 @@
                     android:layout_height="wrap_content"
                     android:text="0.0/5"
                     android:textSize="14sp"
-                    android:textColor="@android:color/darker_gray"/>
+                    android:textColor="@color/text_secondary" />
             </LinearLayout>
 
-
-            <!-- Empty view (ẩn/hiện theo dữ liệu) -->
+            <!-- Empty view -->
             <TextView
                 android:id="@+id/tvEmptyReviews"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/no_reviews"
-                android:textColor="@android:color/darker_gray"
                 android:gravity="center"
                 android:padding="8dp"
-                android:visibility="gone"/>
+                android:text="@string/no_reviews"
+                android:textColor="@color/text_secondary"
+                android:visibility="gone" />
 
             <!-- Reviews -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerReviews"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:layout_marginTop="8dp"/>
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- THANH GIÁ + ĐẶT VÉ – CỐ ĐỊNH DƯỚI MÀN HÌNH -->
+    <LinearLayout
+        android:id="@+id/layoutBottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:background="@android:color/white"
+        android:elevation="8dp">
+
+        <!-- Cột bên trái: "Chỉ từ" + giá -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvBottomFromLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/ticket_from_label"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary" />
+
+            <TextView
+                android:id="@+id/tvBottomPrice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0₫"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+
+        <!-- Nút Đặt vé -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBuyTicket"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Đặt vé"
+            android:textAllCaps="false"
+            app:cornerRadius="999dp" />
+    </LinearLayout>
+
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

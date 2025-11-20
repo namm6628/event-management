@@ -1,22 +1,22 @@
 <resources>
-    <style name="Theme.MyApplication" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Dark: xanh đậm -->
-        <item name="colorPrimary">#0A5A27</item>
-        <item name="colorOnPrimary">@android:color/white</item>
-        <item name="colorPrimaryContainer">#083F1D</item>
+    <style name="Theme.MyApplication" parent="Theme.Material3.Dark.NoActionBar">
 
-        <item name="colorSurface">#121212</item>
-        <item name="colorOnSurface">#FFFFFFFF</item>
-        <item name="colorSurfaceVariant">#2B2B2B</item>
-        <item name="colorOnSurfaceVariant">#99FFFFFF</item>
-        <item name="colorOutline">#3D3D3D</item>
+        <item name="colorPrimary">@color/mint_primary</item>
+        <item name="colorOnPrimary">@android:color/black</item>
+        <item name="colorPrimaryContainer">@color/mint_primary_dark</item>
 
-        <item name="android:windowBackground">#121212</item>
+        <item name="colorSurface">@color/bg_card</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/bg_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/border_light</item>
 
-        <!-- Giữ icon hệ thống sáng màu trên nền đậm -->
-        <item name="android:statusBarColor">?attr/colorPrimary</item>
-        <item name="android:navigationBarColor">?attr/colorPrimary</item>
+        <item name="android:windowBackground">@color/bg_primary</item>
+
+        <item name="android:statusBarColor">@color/mint_primary_dark</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
     </style>
+
+    <style name="App" parent="Theme.MyApplication" />
+
 </resources>

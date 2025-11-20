@@ -13,12 +13,8 @@ public class Event implements Serializable {
     private String category;
     private String thumbnail;
 
-
-
-
-
-
     private String description;
+    private String status;
 
     private String ownerId;
     public String getOwnerId() {
@@ -28,13 +24,6 @@ public class Event implements Serializable {
     public void setOwnerId(String ownerId) {
         this.ownerId = ownerId;
     }
-
-
-
-
-
-
-
 
     // ✅ Firestore Timestamp
     private Timestamp startTime;
@@ -79,6 +68,15 @@ public class Event implements Serializable {
 
     @Nullable public Integer getTotalSeats() { return totalSeats; }
     public void setTotalSeats(Integer totalSeats) { this.totalSeats = totalSeats; }
+
+    @Nullable
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    @Nullable
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
 
     public String getArtist() { return artist; }
     public void setArtist(String artist) { this.artist = artist; }

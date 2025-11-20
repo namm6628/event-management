@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -53,12 +54,22 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        adapter = new OrganizerEventAdapter(e -> {
-            // click vào event -> mở màn chi tiết
-            Intent i = new Intent(this, EventDetailActivity.class);
-            i.putExtra(EventDetailActivity.EXTRA_EVENT_ID, e.getId());
-            startActivity(i);
+        adapter = new OrganizerEventAdapter(new OrganizerEventAdapter.Listener() {
+            @Override
+            public void onEdit(@NonNull Event e) {
+                Intent it = new Intent(OrganizerDashboardActivity.this, CreateEventActivity.class);
+                it.putExtra("EXTRA_EVENT_ID", e.getId());
+                startActivity(it);
+            }
+
+            @Override
+            public void onViewAttendees(@NonNull Event e) {
+                Intent it = new Intent(OrganizerDashboardActivity.this, OrganizerAttendeesActivity.class);
+                it.putExtra("EXTRA_EVENT_ID", e.getId());
+                startActivity(it);
+            }
         });
+
 
         binding.recyclerEvents.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)

@@ -46,6 +46,12 @@
         android:name="com.example.myapplication.organizer.OrganizerCreateEventFragment"
         android:label="Tạo sự kiện" />
 
+    <fragment
+        android:id="@+id/organizerRequestFragment"
+        android:name="com.example.myapplication.organizer.OrganizerRequestFragment"
+        android:label="Đăng ký tổ chức sự kiện" />
+
+
 
 
 </navigation>

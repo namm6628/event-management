@@ -1,5 +1,6 @@
 package com.example.myapplication.organizer;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -48,13 +49,32 @@ public class OrganizerHomeFragment extends Fragment {
 
         db = FirebaseFirestore.getInstance();
 
-        adapter = new OrganizerEventAdapter(e -> {
-            // TODO: sau này mở màn chi tiết/edit sự kiện
-            Toast.makeText(requireContext(), "Click: " + e.getTitle(), Toast.LENGTH_SHORT).show();
-        });
+        adapter = new OrganizerEventAdapter(new OrganizerEventAdapter.Listener() {
+            @Override
+            public void onEdit(@NonNull Event e) {
+                if (e.getId() == null) {
+                    Toast.makeText(requireContext(), "Event thiếu id", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent it = new Intent(requireContext(), CreateEventActivity.class);
+                it.putExtra(com.example.myapplication.attendee.detail.EventDetailActivity.EXTRA_EVENT_ID, e.getId());
+                startActivity(it);
+            }
 
+            @Override
+            public void onViewAttendees(@NonNull Event e) {
+                if (e.getId() == null) {
+                    Toast.makeText(requireContext(), "Event thiếu id", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent it = new Intent(requireContext(), OrganizerAttendeesActivity.class);
+                it.putExtra(OrganizerAttendeesActivity.EXTRA_EVENT_ID, e.getId());
+                startActivity(it);
+            }
+        });
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(adapter);
+
 
         View btnCreate = v.findViewById(R.id.btnCreateEvent);
         if (btnCreate != null) {
@@ -77,7 +97,7 @@ public class OrganizerHomeFragment extends Fragment {
         }
 
         db.collection("events")
-                .whereEqualTo("ownerUid", user.getUid()) // KHÔNG orderBy để tránh lỗi index lúc này
+                .whereEqualTo("ownerId", user.getUid()) // KHÔNG orderBy để tránh lỗi index lúc này
                 .get()
                 .addOnSuccessListener(snap -> {
                     List<Event> list = new ArrayList<>();
@@ -98,4 +118,11 @@ public class OrganizerHomeFragment extends Fragment {
                     tvEmpty.setVisibility(View.VISIBLE);
                 });
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadMyEvents();   // 👈 quay lại màn là load lại list
+    }
+
 }

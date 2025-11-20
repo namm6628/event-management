@@ -37,6 +37,8 @@ import java.util.Set;
 public class OrganizerCreateEventFragment extends Fragment {
 
     private EditText edtTitle, edtArtist, edtCategory, edtLocation, edtPrice, edtTotalSeats;
+    private EditText edtDescription;
+
     private TextView tvPickedDateTime;
     private ImageView ivPreview;
     private View btnSave, btnPickDateTime, btnPickImage;
@@ -103,6 +105,8 @@ public class OrganizerCreateEventFragment extends Fragment {
         edtLocation   = v.findViewById(R.id.edtLocation);
         edtPrice      = v.findViewById(R.id.edtPrice);
         edtTotalSeats = v.findViewById(R.id.edtTotalSeats);
+        edtDescription = v.findViewById(R.id.edtDescription);
+
 
         tvPickedDateTime = v.findViewById(R.id.tvPickedDateTime);
         ivPreview        = v.findViewById(R.id.ivPreview);
@@ -178,6 +182,8 @@ public class OrganizerCreateEventFragment extends Fragment {
         String location = getText(edtLocation);
         String priceStr = getText(edtPrice);
         String totalStr = getText(edtTotalSeats);
+        String desc = getText(edtDescription);
+
 
         // --- Validate cơ bản ---
         if (TextUtils.isEmpty(title)) {
@@ -269,13 +275,20 @@ public class OrganizerCreateEventFragment extends Fragment {
         data.put("price", price);
         data.put("availableSeats", totalSeats); // lúc mới tạo = total
         data.put("totalSeats", totalSeats);
-        data.put("ownerUid", user.getUid());
+        data.put("ownerId", user.getUid());
+        data.put("status", "active");
         data.put("createdAt", FieldValue.serverTimestamp());
+        data.put("updatedAt", FieldValue.serverTimestamp());
 
         // Một số field tuỳ chọn (rules cho phép có/không)
         if (!TextUtils.isEmpty(artist)) {
             data.put("artist", artist);
         }
+
+        if (!TextUtils.isEmpty(desc)) {
+            data.put("description", desc);
+        }
+
 
         // Ghi Firestore
         db.collection("events")

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Tên + giá -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvTicketName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NGÔI SAO"
+                android:textStyle="bold"
+                android:textColor="@color/mint_primary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tvTicketPrice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.200.000 đ"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Chip Hết vé -->
+        <TextView
+            android:id="@+id/tvSoldOut"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:text="Hết vé"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:background="@drawable/bg_sold_out"
+            android:visibility="gone" />
+
+        <!-- – 0 + -->
+        <LinearLayout
+            android:id="@+id/layoutCounter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:id="@+id/btnMinus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:text="-"
+                android:textSize="20sp"
+                android:background="@color/bg_card"
+                android:textColor="@color/text_primary" />
+
+            <TextView
+                android:id="@+id/tvQuantity"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:text="0"
+                android:textSize="16sp"
+                android:background="@color/bg_card"
+                android:textColor="@color/text_primary" />
+
+            <TextView
+                android:id="@+id/btnPlus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:text="+"
+                android:textSize="20sp"
+                android:background="@color/bg_card"
+                android:textColor="@color/mint_primary" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/border_light" />
+
+</LinearLayout>
