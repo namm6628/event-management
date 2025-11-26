@@ -82,6 +82,26 @@
             android:exported="false"
             android:theme="@style/Theme.MyApplication" />
 
+        <activity
+            android:name=".attendee.detail.OrderSuccessActivity"
+            android:exported="false" />
+
+        <meta-data
+            android:name="firebase_functions_default_region"
+            android:value="asia-southeast1"/>
+
+
+        <activity
+            android:name=".attendee.notification.AttendeeNotificationsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".organizer.OrganizerBroadcastActivity"
+            android:exported="false" />
+
+
+
+
 
 
 

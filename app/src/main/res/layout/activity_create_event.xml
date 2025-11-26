@@ -23,7 +23,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Nghệ sĩ / Diễn giả">
+            android:hint="Nghệ sĩ / Diễn giả (không có thì bỏ trống)">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtArtist"
                 android:layout_width="match_parent"
@@ -33,7 +33,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Thể loại (Âm nhạc, Thể thao...)">
+            android:hint="Thể loại sự kiện">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtCategory"
                 android:layout_width="match_parent"
@@ -56,30 +56,35 @@
 
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutPlace"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Địa điểm">
+            android:hint="Địa điểm tổ chức (Tên địa điểm, tòa nhà…)">
+
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edtLocation"
+                android:id="@+id/edtPlace"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutAddressDetail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Giá vé (VNĐ)">
+            android:hint="Địa chỉ chi tiết (số nhà, tên đường…)">
+
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edtPrice"
-                android:inputType="number"
+                android:id="@+id/edtAddressDetail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Tổng số vé">
+            android:hint="Tổng số vé của sự kiện">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtTotalSeats"
                 android:inputType="number"
@@ -117,7 +122,7 @@
             android:id="@+id/tvPickedDateTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chưa chọn thời gian"
+            android:text="Chọn ngày &amp; giờ tổ chức sự kiện"
             android:textSize="13sp"
             android:layout_marginTop="8dp" />
 
@@ -127,12 +132,20 @@
             android:layout_height="wrap_content"
             android:text="Chọn ngày &amp; giờ" />
 
+        <TextView
+            android:id="@+id/tvPickImage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Chọn ảnh bìa sự kiện"
+            android:textSize="13sp"
+            android:layout_marginTop="8dp" />
+
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPickImage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chọn ảnh cover"
+            android:text="Chọn ảnh"
             android:layout_marginTop="12dp"/>
 
         <ImageView

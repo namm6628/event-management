@@ -29,136 +29,173 @@
         android:layout_marginBottom="72dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
+        <!-- Dùng ConstraintLayout để control ratio + overlay -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/contentRoot"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Cover -->
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivCover"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:scaleType="centerCrop"
-                android:contentDescription="@string/event_image"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
-                android:src="@drawable/sample_event" />
+            <!-- HEADER: ẢNH + CARD THÔNG TIN ĐÈ LÊN 1/3 DƯỚI -->
+            <FrameLayout
+                android:id="@+id/headerContainer"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/tvIntroHeader"
+                app:layout_constraintDimensionRatio="1:1">
+                <!-- 1:1 = vuông, tương đương 4:4 -->
 
-            <!-- CARD THÔNG TIN SỰ KIỆN -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cardEventInfo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardUseCompatPadding="true"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/bg_card">
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="80dp"
+                    android:layout_gravity="bottom"
+                    android:background="@drawable/bg_cover_gradient" />
 
-                <LinearLayout
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivCover"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@string/event_image"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
+
+                <!-- CARD THÔNG TIN SỰ KIỆN – ĐÈ LÊN 1/3 DƯỚI CỦA ẢNH -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardEventInfo"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_gravity="bottom"
+                    android:layout_marginLeft="16dp"
+                    android:layout_marginRight="16dp"
+                    android:layout_marginBottom="0dp"
+                    app:cardUseCompatPadding="true"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="@color/bg_card">
 
-                    <!-- Tên sự kiện -->
-                    <TextView
-                        android:id="@+id/tvTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Tên sự kiện"
-                        android:textStyle="bold"
-                        android:textSize="20sp"
-                        android:textColor="@color/text_primary" />
-
-                    <!-- giữ lại cho code Java, nhưng ẩn -->
-                    <TextView
-                        android:id="@+id/tvArtist"
-                        android:layout_width="0dp"
-                        android:layout_height="0dp"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/tvPrice"
-                        android:layout_width="0dp"
-                        android:layout_height="0dp"
-                        android:visibility="gone" />
-
-
-                    <!-- Hàng thời gian -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_event_24"
-                            app:tint="@color/mint_primary" />
+                        <!-- Tên sự kiện -->
+                        <TextView
+                            android:id="@+id/tvTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Tên sự kiện"
+                            android:textStyle="bold"
+                            android:textSize="20sp"
+                            android:textColor="@color/text_primary" />
+
+                        <!-- giữ lại cho code Java, nhưng ẩn -->
+                        <TextView
+                            android:id="@+id/tvArtist"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:visibility="gone" />
 
                         <TextView
-                            android:id="@+id/tvTime"
+                            android:id="@+id/tvPrice"
                             android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:visibility="gone" />
+
+                        <!-- Hàng thời gian -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="20:00 - 23:30, 29 Tháng 11, 2025"
-                            android:textColor="@color/text_primary" />
-                    </LinearLayout>
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
-                    <!-- Hàng địa điểm -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_event_24"
+                                app:tint="@color/mint_primary" />
 
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_place_24"
-                            app:tint="@color/mint_primary" />
+                            <TextView
+                                android:id="@+id/tvTime"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:layout_weight="1"
+                                android:text="20:00 - 23:30, 29 Tháng 11, 2025"
+                                android:textColor="@color/text_primary" />
+                        </LinearLayout>
 
+                        <!-- Hàng địa điểm -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_place_24"
+                                app:tint="@color/mint_primary" />
+
+                            <TextView
+                                android:id="@+id/tvVenue"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:layout_weight="1"
+                                android:text="Khách sạn Sheraton Hải Phòng"
+                                android:textColor="@color/text_primary" />
+
+                        </LinearLayout>
+                        <!-- Địa chỉ chi tiết (dòng dưới địa điểm) -->
                         <TextView
-                            android:id="@+id/tvVenue"
-                            android:layout_width="0dp"
+                            android:id="@+id/tvAddressDetail"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="Khách sạn Sheraton Hải Phòng"
-                            android:textColor="@color/text_primary" />
+                            android:layout_marginTop="4dp"
+                            android:layout_marginStart="28dp"
+                            android:text="Số nhà, tên đường, phường/xã..."
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary" />
+
                     </LinearLayout>
+                </androidx.cardview.widget.CardView>
 
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </FrameLayout>
 
-
-            <!-- TIÊU ĐỀ GIỚI THIỆU -->
+            <!-- ====== GIỚI THIỆU ====== -->
             <TextView
                 android:id="@+id/tvIntroHeader"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="Giới thiệu"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:textColor="@color/text_primary" />
+                android:textColor="@color/text_primary"
+                app:layout_constraintTop_toBottomOf="@id/headerContainer"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
-            <!-- CARD NỘI DUNG GIỚI THIỆU -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardIntro"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 app:cardUseCompatPadding="true"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/bg_card">
+                app:cardBackgroundColor="@color/bg_card"
+                app:layout_constraintTop_toBottomOf="@id/tvIntroHeader"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -175,7 +212,6 @@
                         android:textSize="15sp"
                         android:textColor="@color/text_primary" />
 
-                    <!-- CHÍNH LÀ tvDescription CŨ -->
                     <TextView
                         android:id="@+id/tvDescription"
                         android:layout_width="match_parent"
@@ -187,7 +223,6 @@
                         android:maxLines="4"
                         android:ellipsize="end" />
 
-                    <!-- Nút Xem thêm / Thu gọn -->
                     <TextView
                         android:id="@+id/tvDescriptionToggle"
                         android:layout_width="wrap_content"
@@ -195,24 +230,24 @@
                         android:layout_gravity="center_horizontal"
                         android:layout_marginTop="8dp"
                         android:text="@string/see_more"
-                    android:textColor="@color/mint_primary"
-                    android:textStyle="bold" />
+                        android:textColor="@color/mint_primary"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-
-
-
-
             <!-- ====== KHUNG LOẠI VÉ ====== -->
             <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
+                android:id="@+id/cardTicketTypesWrapper"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 app:cardUseCompatPadding="true"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/bg_card">
+                app:cardBackgroundColor="@color/bg_card"
+                app:layout_constraintTop_toBottomOf="@id/cardIntro"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -220,7 +255,6 @@
                     android:orientation="vertical"
                     android:padding="12dp">
 
-                    <!-- HEADER LOẠI VÉ -->
                     <LinearLayout
                         android:id="@+id/layoutTicketHeader"
                         android:layout_width="match_parent"
@@ -247,14 +281,12 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- Divider nhỏ -->
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginTop="8dp"
                         android:background="@color/border_light" />
 
-                    <!-- DANH SÁCH LOẠI VÉ -->
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/recyclerTicketTypes"
                         android:layout_width="match_parent"
@@ -265,14 +297,18 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Action row -->
+            <!-- ====== HÀNG BUTTON CHIA SẺ / THEO DÕI / BẢN ĐỒ ====== -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:id="@+id/layoutActions"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:weightSum="3">
+                android:weightSum="3"
+                app:layout_constraintTop_toBottomOf="@id/cardTicketTypesWrapper"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnShare"
@@ -320,13 +356,17 @@
                     app:backgroundTint="@color/mint_primary" />
             </LinearLayout>
 
-            <!-- Review header -->
+            <!-- ====== REVIEW ====== -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:id="@+id/layoutReviewHeader"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                app:layout_constraintTop_toBottomOf="@id/layoutActions"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
                 <TextView
                     android:id="@+id/tvReviewTitle"
@@ -347,14 +387,16 @@
                     android:textSize="16sp" />
             </LinearLayout>
 
-            <!-- Average rating -->
             <LinearLayout
                 android:id="@+id/layoutAverageRating"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                app:layout_constraintTop_toBottomOf="@id/layoutReviewHeader"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
                 <RatingBar
                     android:id="@+id/ratingAverage"
@@ -376,27 +418,31 @@
                     android:textColor="@color/text_secondary" />
             </LinearLayout>
 
-            <!-- Empty view -->
             <TextView
                 android:id="@+id/tvEmptyReviews"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:padding="8dp"
                 android:text="@string/no_reviews"
                 android:textColor="@color/text_secondary"
-                android:visibility="gone" />
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/layoutAverageRating"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
-            <!-- Reviews -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerReviews"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:nestedScrollingEnabled="false" />
+                android:nestedScrollingEnabled="false"
+                app:layout_constraintTop_toBottomOf="@id/tvEmptyReviews"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
-        </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 
     <!-- THANH GIÁ + ĐẶT VÉ – CỐ ĐỊNH DƯỚI MÀN HÌNH -->
@@ -411,7 +457,6 @@
         android:background="@android:color/white"
         android:elevation="8dp">
 
-        <!-- Cột bên trái: "Chỉ từ" + giá -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -437,7 +482,6 @@
                 android:textColor="@android:color/black" />
         </LinearLayout>
 
-        <!-- Nút Đặt vé -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBuyTicket"
             style="@style/Widget.MaterialComponents.Button"
@@ -447,6 +491,5 @@
             android:textAllCaps="false"
             app:cornerRadius="999dp" />
     </LinearLayout>
-
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

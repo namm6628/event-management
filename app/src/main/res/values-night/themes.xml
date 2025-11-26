@@ -1,22 +1,27 @@
 <resources>
     <style name="Theme.MyApplication" parent="Theme.Material3.Dark.NoActionBar">
 
+        <!-- Primary -->
         <item name="colorPrimary">@color/mint_primary</item>
-        <item name="colorOnPrimary">@android:color/black</item>
+        <item name="colorOnPrimary">@android:color/white</item>
         <item name="colorPrimaryContainer">@color/mint_primary_dark</item>
 
-        <item name="colorSurface">@color/bg_card</item>
+        <!-- Dark Background -->
+        <item name="colorSurface">@color/bg_primary</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorSurfaceVariant">@color/bg_primary</item>
+
+        <item name="colorSurfaceVariant">@color/bg_card</item>
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+
         <item name="colorOutline">@color/border_light</item>
 
+        <!-- Window background -->
         <item name="android:windowBackground">@color/bg_primary</item>
 
-        <item name="android:statusBarColor">@color/mint_primary_dark</item>
+        <!-- Status bar -->
+        <item name="android:statusBarColor">@color/bg_primary</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style name="App" parent="Theme.MyApplication" />
-
 </resources>

@@ -2,49 +2,53 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:padding="12dp"
+    android:padding="16dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
 
-    <!-- Thanh tìm kiếm CardView -->
+    <!-- SEARCH BAR -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/searchBar"
-        style="@style/Widget.Material3.CardView.Elevated"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:clickable="true"
         android:focusable="true"
         android:foreground="?attr/selectableItemBackground"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp">
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        android:backgroundTint="?attr/colorSurfaceVariant">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
 
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:contentDescription="@string/search_icon"
-                android:src="@drawable/ic_search_24"/>
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_search_24"
+                android:tint="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tvSearchHint"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="12dp"
                 android:text="@string/search_hint"
-                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"/>
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="15sp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- ChipGroup category -->
+
+    <!-- CHIP GROUP -->
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroup"
+        android:layout_marginTop="16dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:singleSelection="true"
@@ -88,13 +92,13 @@
     </com.google.android.material.chip.ChipGroup>
 
 
-
-    <!-- Recycler -->
+    <!-- RECYCLER -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerEvents"
         android:layout_marginTop="12dp"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:background="?attr/colorSurface" />
 
 </LinearLayout>

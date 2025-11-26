@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    >
+
+    <!-- AppBar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            style="@style/Widget.MaterialComponents.Toolbar.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/mint_primary"
+        app:title="Vé của tôi"
+        app:titleCentered="true"
+        app:titleTextColor="@android:color/white"
+        app:menu="@menu/menu_tickets"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Nội dung -->
+    <LinearLayout
+        android:id="@+id/contentMain"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- Tab Sắp diễn ra / Đã kết thúc -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/bg_primary"
+            app:tabIndicatorColor="@color/mint_primary"
+            app:tabIndicatorHeight="3dp"
+            app:tabIndicatorFullWidth="false"
+            app:tabMode="fixed"
+            app:tabGravity="fill"
+            app:tabTextColor="@color/tab_ticket_text"
+            app:tabSelectedTextColor="@color/tab_ticket_text" />
+
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/viewPager"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+    </LinearLayout>
+
+    <!-- Empty state nếu CHƯA có vé nào -->
+    <LinearLayout
+        android:id="@+id/layoutEmptyAll"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="24dp"
+        android:background="?attr/colorSurface"
+
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/imgEmpty"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:src="@drawable/illustration_no_ticket"
+        android:scaleType="centerCrop"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Bạn chưa có vé nào cả!"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/empty_ticket_text"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBuyNow"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Mua vé ngay"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/mint_primary"/>
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

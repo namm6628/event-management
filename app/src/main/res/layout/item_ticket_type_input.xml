@@ -7,10 +7,10 @@
 
     <EditText
         android:id="@+id/edtTicketName"
-        android:layout_width="0dp"
+        android:layout_width="1dp"
         android:layout_height="wrap_content"
         android:layout_weight="2"
-        android:hint="Tên loại vé"
+        android:hint="loại vé"
         android:inputType="textCapSentences" />
 
     <EditText
@@ -24,11 +24,11 @@
 
     <EditText
         android:id="@+id/edtTicketQuota"
-        android:layout_width="0dp"
+        android:layout_width="20dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="4dp"
-        android:hint="Số vé"
+        android:hint="Số lượng vé"
         android:inputType="number" />
 
     <TextView

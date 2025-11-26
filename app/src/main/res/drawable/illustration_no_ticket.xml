@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="220dp"
+    android:viewportWidth="220"
+    android:viewportHeight="220">
+
+    <!-- nền sky -->
+    <path
+        android:fillColor="#FFFCB05A"
+        android:pathData="M0,0h220v140h-220z" />
+
+    <!-- mặt biển -->
+    <path
+        android:fillColor="#FFFF7043"
+        android:pathData="M0,140h220v40h-220z" />
+
+    <!-- bãi cát -->
+    <path
+        android:fillColor="#FFFFE0B2"
+        android:pathData="M0,160h220v60h-220z" />
+
+    <!-- mặt trời -->
+    <path
+        android:fillColor="#FFFFD54F"
+        android:pathData="M110,40a40,40 0 1,0 0.1,0z" />
+
+    <!-- nhân vật nhỏ -->
+    <path
+        android:fillColor="#FF43A047"
+        android:pathData="M110,90a26,26 0 1,0 0.1,0z" />
+    <path
+        android:fillColor="#FF2E7D32"
+        android:pathData="M86,130h48v40h-48z" />
+</vector>

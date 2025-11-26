@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="12dp"
+    android:background="?attr/colorSurface">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nestedScrollView"
@@ -23,10 +24,10 @@
                 android:id="@+id/tvTitleSpecial"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Danh sách sự kiện
-"
+                android:text="Danh sách sự kiện"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp"/>
 
             <androidx.recyclerview.widget.RecyclerView
@@ -45,6 +46,7 @@
                 android:text="Video Giới Thiệu"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp"/>
 
             <androidx.recyclerview.widget.RecyclerView
@@ -69,6 +71,7 @@
                     android:text="Sự kiện xu hướng"
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="8dp"/>
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -87,6 +90,7 @@
                     android:text="Dành cho bạn"
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="8dp"/>
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -105,6 +109,7 @@
                     android:text="Sự kiện cuối tuần"
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="8dp"/>
 
                 <androidx.recyclerview.widget.RecyclerView

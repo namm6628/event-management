@@ -16,6 +16,8 @@ public class Event implements Serializable {
     private String description;
     private String status;
 
+    private String addressDetail;
+
     private String ownerId;
     public String getOwnerId() {
         return ownerId;
@@ -50,6 +52,9 @@ public class Event implements Serializable {
 
     @Nullable public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+
+    @Nullable public String getAddressDetail() { return addressDetail; }
+    public void setAddressDetail(String addressDetail) { this.addressDetail = addressDetail; }
 
     @Nullable public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }

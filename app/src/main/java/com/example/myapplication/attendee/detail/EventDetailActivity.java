@@ -176,14 +176,24 @@ public class EventDetailActivity extends AppCompatActivity {
 
         // Mở bản đồ
         binding.btnOpenMap.setOnClickListener(v -> {
-            String q = (event == null) ? null : event.getLocation();
+            String q = null;
+            if (event != null) {
+                // Ưu tiên địa chỉ chi tiết
+                if (event.getAddressDetail() != null && !event.getAddressDetail().isEmpty()) {
+                    q = event.getAddressDetail();
+                } else {
+                    q = event.getLocation(); // fallback
+                }
+            }
+
             if (q == null || q.isEmpty()) {
-                Toast.makeText(this, "Chưa có địa điểm", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Chưa có địa chỉ để mở bản đồ", Toast.LENGTH_SHORT).show();
             } else {
                 Uri uri = Uri.parse("geo:0,0?q=" + Uri.encode(q));
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));
             }
         });
+
 
         // RecyclerView reviews
         reviewAdapter = new ReviewAdapter();
@@ -299,11 +309,15 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
 
                     // Ảnh
+                    String thumb = event.getThumbnail();
+
                     Glide.with(this)
-                            .load(event.getThumbnail())
+                            .load(thumb)
+                            .centerCrop()                     // đảm bảo luôn phủ kín khung
                             .placeholder(R.drawable.sample_event)
                             .error(R.drawable.sample_event)
                             .into(binding.ivCover);
+
 
                     // Text
                     binding.tvTitle.setText(event.getTitle() == null ? "" : event.getTitle());
@@ -311,28 +325,32 @@ public class EventDetailActivity extends AppCompatActivity {
                             event.getArtist() == null ? getString(R.string.artist_unknown) : event.getArtist()
                     );
                     binding.tvVenue.setText(event.getLocation() == null ? "" : event.getLocation());
+                    // Địa chỉ chi tiết (field mới)
+                    binding.tvAddressDetail.setText(
+                            event.getAddressDetail() == null ? "" : event.getAddressDetail()
+                    );
+
 
                     String timeText = "";
                     if (event.getStartTime() != null) {
                         try {
-                            String start = DateFormat.format(
-                                    "EEE, dd/MM/yyyy • HH:mm",
-                                    event.getStartTime().toDate()
-                            ).toString();
-                            Timestamp endTs = event.getEndTime();
-                            if (endTs != null) {
-                                String end = DateFormat.format(
-                                        "HH:mm, dd/MM",
-                                        endTs.toDate()
-                                ).toString();
-                                timeText = getString(R.string.time_range_fmt, start, end);
+                            java.util.Date startDate = event.getStartTime().toDate();
+                            String day = DateFormat.format("dd/MM/yyyy", startDate).toString();
+                            String startHour = DateFormat.format("HH:mm", startDate).toString();
+
+                            if (event.getEndTime() != null) {
+                                java.util.Date endDate = event.getEndTime().toDate();
+                                String endHour = DateFormat.format("HH:mm", endDate).toString();
+                                timeText = startHour + " - " + endHour + ", " + day;
                             } else {
-                                timeText = start;
+                                // Không có endTime thì chỉ hiện giờ bắt đầu
+                                timeText = startHour + ", " + day;
                             }
                         } catch (Exception ignored) {
                         }
                     }
                     binding.tvTime.setText(timeText);
+                    binding.tvTicketDateTime.setText(timeText);
 
                     String desc = event.getDescription();
                     if (desc == null || desc.trim().isEmpty()) {

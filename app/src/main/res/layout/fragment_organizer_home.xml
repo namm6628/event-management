@@ -10,10 +10,18 @@
         android:id="@+id/tvOrganizerTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Sự kiện của bạn"
+        android:text="Sự kiện đã tạo"
         android:textSize="20sp"
         android:textStyle="bold"
         android:paddingBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnProfile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hồ sơ ban tổ chức"
+        android:layout_marginTop="12dp"/>
+
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCreateEvent"
@@ -28,7 +36,7 @@
         android:id="@+id/tvEmpty"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Bạn chưa tạo sự kiện nào."
+        android:text="Chưa có sự kiện."
         android:gravity="center_horizontal"
         android:padding="16dp"
         android:visibility="gone"/>

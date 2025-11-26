@@ -43,6 +43,18 @@
         <item name="android:textSize">16sp</item>
     </style>
 
+    <style name="Widget.TicketMate.FilterChip" parent="Widget.Material3.Chip.Filter">
+        <item name="chipCornerRadius">12dp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="chipBackgroundColor">@color/chip_bg_light</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="android:elevation">0dp</item>
+        <item name="rippleColor">@color/mint_primary</item>
+        <item name="chipStrokeColor">@color/border_light</item>
+        <item name="chipStrokeWidth">0dp</item>
+    </style>
+
+
 
 
 </resources>

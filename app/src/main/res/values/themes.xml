@@ -1,18 +1,26 @@
+<!-- res/values/themes.xml -->
 <resources>
+
     <style name="Theme.MyApplication" parent="Theme.Material3.Light.NoActionBar">
 
+        <!-- Brand -->
         <item name="colorPrimary">@color/mint_primary</item>
         <item name="colorOnPrimary">@android:color/white</item>
         <item name="colorPrimaryContainer">@color/mint_primary_dark</item>
 
+        <!-- Surface / text -->
         <item name="colorSurface">@color/bg_card</item>
         <item name="colorOnSurface">@color/text_primary</item>
+
         <item name="colorSurfaceVariant">@color/bg_primary</item>
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+
         <item name="colorOutline">@color/border_light</item>
 
+        <!-- Nền toàn app -->
         <item name="android:windowBackground">@color/bg_primary</item>
 
+        <!-- Status bar trên cùng -->
         <item name="android:statusBarColor">@color/mint_primary</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>

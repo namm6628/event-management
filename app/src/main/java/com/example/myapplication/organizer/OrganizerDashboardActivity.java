@@ -40,6 +40,12 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
         binding = ActivityOrganizerDashboardBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        binding.cardSettings.setOnClickListener(v -> {
+            Intent it = new Intent(this, OrganizerProfileActivity.class);
+            startActivity(it);
+        });
+
+
         setupToolbar();
         setupRecyclerView();
         setupActions();
@@ -68,6 +74,14 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
                 it.putExtra("EXTRA_EVENT_ID", e.getId());
                 startActivity(it);
             }
+            @Override
+            public void onBroadcast(@NonNull Event e) {
+                Intent it = new Intent(OrganizerDashboardActivity.this, OrganizerBroadcastActivity.class);
+                it.putExtra(OrganizerBroadcastActivity.EXTRA_EVENT_ID, e.getId());
+                it.putExtra(OrganizerBroadcastActivity.EXTRA_EVENT_TITLE, e.getTitle());
+                startActivity(it);
+            }
+
         });
 
 
@@ -90,14 +104,18 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
 
         // Danh sách người tham dự
         binding.cardAttendees.setOnClickListener(v -> {
-            // TODO: mở màn AttendeeListActivity (nơi gọi Cloud Function importAttendees)
+            // TODO: mở màn AttendeeListActivity
         });
 
-        // Cài đặt organizer
+        // ✅ Cài đặt organizer → mở OrganizerProfileActivity
         binding.cardSettings.setOnClickListener(v -> {
-            // TODO: mở màn OrganizerSettingsActivity
+            startActivity(new Intent(
+                    OrganizerDashboardActivity.this,
+                    OrganizerProfileActivity.class
+            ));
         });
     }
+
 
     @Override
     protected void onStart() {

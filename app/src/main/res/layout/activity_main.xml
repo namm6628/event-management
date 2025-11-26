@@ -50,6 +50,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_bottom_nav"
+
         android:elevation="8dp"
         android:paddingTop="6dp"
         android:paddingBottom="10dp"

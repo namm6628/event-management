@@ -13,14 +13,16 @@ import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.example.myapplication.attendee.ticket.TicketNavigationHost;  // 👈 thêm dòng này
 import com.example.myapplication.databinding.ActivityMainBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements TicketNavigationHost { // 👈 implement interface
 
     private ActivityMainBinding binding;
-    private AppBarConfiguration appBarConfiguration;  // 👈 thêm biến này
+    private AppBarConfiguration appBarConfiguration;
+    private NavController navController; // 👈 moved lên biến global
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
         // NavController
         NavHostFragment navHostFragment =
                 (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
-        NavController navController = navHostFragment.getNavController();
+        navController = navHostFragment.getNavController();
 
         // NavGraph
         NavGraph navGraph = navController.getNavInflater().inflate(R.navigation.nav_graph);
@@ -57,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         }
         navController.setGraph(navGraph);
 
-        // 👇 top-level destinations (KHÔNG hiện mũi tên back)
+        // Top-level destinations (không hiện back)
         appBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.homeFragment,
                 R.id.exploreFragment,
@@ -67,13 +69,12 @@ public class MainActivity extends AppCompatActivity {
                 R.id.registerFragment
         ).build();
 
-        // Toolbar tự hiện nút back
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
 
         // Bottom nav
         NavigationUI.setupWithNavController(binding.bottomNav, navController);
 
-        // Ẩn bottom nav ở login / register
+        // Ẩn bottom nav khi login / register
         navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
             int destId = destination.getId();
             if (destId == R.id.loginFragment || destId == R.id.registerFragment) {
@@ -84,13 +85,24 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // 🔥 Hàm xử lý nút "Mua vé ngay"
+    @Override
+    public void onBuyTicketClicked() {
+        if (navController == null) return;
+
+        // Chọn tab Explore ở bottom nav
+        binding.bottomNav.setSelectedItemId(R.id.exploreFragment);
+
+        // Điều hướng sang ExploreFragment
+        navController.navigate(R.id.exploreFragment);
+    }
+
     @Override
     public boolean onSupportNavigateUp() {
         NavHostFragment navHostFragment =
                 (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
         NavController navController = navHostFragment.getNavController();
 
-        // ✅ dùng appBarConfiguration, không truyền null nữa
         return NavigationUI.navigateUp(navController, appBarConfiguration)
                 || super.onSupportNavigateUp();
     }

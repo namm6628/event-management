@@ -1,31 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     app:startDestination="@+id/homeFragment">
 
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.example.myapplication.attendee.home.HomeFragment"
-        android:label="Home" />
+        android:label="TikcetMate" />
 
     <fragment
         android:id="@+id/exploreFragment"
         android:name="com.example.myapplication.attendee.home.ExploreFragment"
-        android:label="Explore" />
+        android:label="" />
 
     <fragment
         android:id="@+id/ticketsFragment"
         android:name="com.example.myapplication.attendee.ticket.TicketsFragment"
-        android:label="Tickets" />
+        android:label="" />
 
     <fragment
         android:id="@+id/profileFragment"
         android:name="com.example.myapplication.attendee.profile.ProfileFragment"
-        android:label="Profile" />
+        android:label="" />
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.example.myapplication.auth.LoginFragment"
-        android:label="Đăng nhập" >
+        android:label="" >
         <action
             android:id="@+id/action_login_to_register"
             app:destination="@id/registerFragment" />
@@ -50,6 +51,16 @@
         android:id="@+id/organizerRequestFragment"
         android:name="com.example.myapplication.organizer.OrganizerRequestFragment"
         android:label="Đăng ký tổ chức sự kiện" />
+
+    <fragment
+        android:id="@+id/organizerProfileFragment"
+        android:name="com.example.myapplication.attendee.profile.OrganizerProfileFragment"
+        android:label="Hồ sơ"
+        tools:layout="@layout/fragment_organizer_profile" />
+
+
+
+
 
 
 

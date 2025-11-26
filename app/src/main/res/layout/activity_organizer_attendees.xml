@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:background="@android:color/white"
     android:layout_width="match_parent"
@@ -18,7 +19,7 @@
         android:id="@+id/tvHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Danh sách người tham dự"
+        android:text="Thông tin người đặt vé"
         android:textStyle="bold"
         android:textSize="16sp"
         android:paddingStart="16dp"
@@ -30,12 +31,68 @@
         android:id="@+id/tvSubHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Theo dõi các đơn đặt vé cho sự kiện này"
+        android:text="Các đơn đặt vé cho sự kiện này"
         android:textSize="13sp"
         android:textColor="#777777"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingBottom="8dp" />
+
+    <!-- 🔹 3 nút thao tác: CSV – Excel – Import -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="start"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <!-- Nút CSV -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportCsv"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Export CSV"
+            android:textAllCaps="false"
+            android:textSize="14sp" />
+
+        <!-- spacing nhỏ giữa nút -->
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp"/>
+
+        <!-- Nút Excel -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportExcel"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Export excel"
+            android:textAllCaps="false"
+            android:textSize="14sp" />
+
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp"/>
+
+        <!-- Nút Import -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnImportDemo"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Import csv"
+            android:textAllCaps="false"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
 
     <ProgressBar
         android:id="@+id/progress"

@@ -1,5 +1,6 @@
 package com.example.myapplication.attendee.detail;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,13 +15,20 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.R;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class SelectTicketsActivity extends AppCompatActivity {
 
@@ -65,11 +73,100 @@ public class SelectTicketsActivity extends AppCompatActivity {
                 Toast.makeText(this, "Vui lòng chọn vé", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // TODO: ở đây gọi API/Firestore để tạo đơn đặt vé + lưu chi tiết từng loại
-            Toast.makeText(this,
-                    "Tiếp tục với " + totalQuantity + " vé",
-                    Toast.LENGTH_SHORT).show();
+
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user == null) {
+                Toast.makeText(this, "Bạn cần đăng nhập", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String userId = user.getUid();
+            String userEmail = user.getEmail();
+
+            // Build ticket items
+            List<TicketSelectAdapter.TicketType> current = new ArrayList<>(adapter.data);
+            List<Map<String, Object>> ticketItems = new ArrayList<>();
+
+            WriteBatch batch = db.batch();
+
+// Order doc
+            DocumentReference orderRef = db.collection("orders").document();
+            DocumentReference eventRef = db.collection("events").document(eventId);
+
+            for (TicketSelectAdapter.TicketType t : current) {
+                if (t.selected <= 0) continue;
+
+                long quota = t.quota == null ? 0 : t.quota;
+                long sold = t.sold == null ? 0 : t.sold;
+                long available = quota - sold;
+
+                if (t.selected > available) {
+                    Toast.makeText(this, "Loại vé " + t.name + " chỉ còn " + available + " vé",
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                // add ticket
+                Map<String, Object> m = new HashMap<>();
+                m.put("typeId", t.id);
+                m.put("name", t.name);
+                m.put("price", t.price);
+                m.put("quantity", t.selected);
+                ticketItems.add(m);
+
+                // update sold
+                DocumentReference ticketRef = db.collection("events")
+                        .document(eventId)
+                        .collection("ticketTypes")
+                        .document(t.id);
+
+                long newSold = sold + t.selected;
+                batch.update(ticketRef, "sold", newSold);
+            }
+
+// ⚠️ TRỪ AVAILABLESEATS SAU KHI DUYỆT XONG
+            batch.update(eventRef, "availableSeats",
+                    FieldValue.increment(-totalQuantity));
+
+
+            // Build order map
+            Map<String, Object> order = new HashMap<>();
+            order.put("eventId", eventId);
+            order.put("userId", userId);
+            order.put("userEmail", userEmail);
+            order.put("userName", "Test User");
+            order.put("phone", "0123456789");
+            order.put("totalTickets", totalQuantity);
+            order.put("totalAmount", totalPrice);
+            order.put("status", "paid"); // để export được ngay
+            order.put("tickets", ticketItems);
+            order.put("createdAt", FieldValue.serverTimestamp());
+
+            batch.set(orderRef, order);
+
+            btnContinue.setEnabled(false);
+
+            batch.commit()
+                    .addOnSuccessListener(unused -> {
+                        btnContinue.setEnabled(true);
+
+                        Intent i = new Intent(this, OrderSuccessActivity.class);
+                        i.putExtra(OrderSuccessActivity.EXTRA_ORDER_ID, orderRef.getId());
+                        i.putExtra(OrderSuccessActivity.EXTRA_TOTAL_QTY, totalQuantity);
+                        i.putExtra(OrderSuccessActivity.EXTRA_TOTAL_PRICE, totalPrice);
+                        startActivity(i);
+
+                        finish();
+                    })
+
+                    .addOnFailureListener(e -> {
+                        btnContinue.setEnabled(true);
+                        Toast.makeText(this,
+                                "Lỗi đặt vé: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    });
         });
+
 
         loadTickets();
     }

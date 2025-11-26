@@ -71,6 +71,19 @@ public class OrganizerHomeFragment extends Fragment {
                 it.putExtra(OrganizerAttendeesActivity.EXTRA_EVENT_ID, e.getId());
                 startActivity(it);
             }
+
+            @Override
+            public void onBroadcast(@NonNull Event e) {
+                if (e.getId() == null) {
+                    Toast.makeText(requireContext(), "Event thiếu id", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent it = new Intent(requireContext(), OrganizerBroadcastActivity.class);
+                it.putExtra(OrganizerBroadcastActivity.EXTRA_EVENT_ID, e.getId());
+                it.putExtra(OrganizerBroadcastActivity.EXTRA_EVENT_TITLE, e.getTitle());
+                startActivity(it);
+            }
+
         });
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(adapter);
@@ -83,6 +96,12 @@ public class OrganizerHomeFragment extends Fragment {
                             .navigate(R.id.organizerCreateEventFragment)
             );
         }
+
+        v.findViewById(R.id.btnProfile).setOnClickListener(view ->
+                NavHostFragment.findNavController(this)
+                        .navigate(R.id.organizerProfileFragment)
+        );
+
 
         loadMyEvents();
     }

@@ -36,11 +36,11 @@ import android.widget.LinearLayout;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class CreateEventActivity extends AppCompatActivity {
 
-    private EditText edtTitle, edtArtist, edtCategory, edtLocation,
-            edtDescription, edtPrice, edtTotalSeats;
+    private EditText edtTitle, edtArtist, edtCategory,
+            edtPlace, edtAddressDetail,
+            edtDescription, edtTotalSeats;
     private TextView tvPickedDateTime;
     private ImageView ivPreview;
     private MaterialButton btnPickDateTime, btnPickImage, btnSave;
@@ -58,38 +58,35 @@ public class CreateEventActivity extends AppCompatActivity {
     // lưu các dòng nhập loại vé
     private final List<TicketRow> ticketRows = new ArrayList<>();
 
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_event);
 
-        // ánh xạ view
-        edtTitle       = findViewById(R.id.edtTitle);
-        edtArtist      = findViewById(R.id.edtArtist);
-        edtCategory    = findViewById(R.id.edtCategory);
-        edtLocation    = findViewById(R.id.edtLocation);
-        edtDescription = findViewById(R.id.edtDescription);
-        edtPrice       = findViewById(R.id.edtPrice);
-        edtTotalSeats  = findViewById(R.id.edtTotalSeats);
-        tvPickedDateTime = findViewById(R.id.tvPickedDateTime);
-        ivPreview      = findViewById(R.id.ivPreview);
-        btnPickDateTime = findViewById(R.id.btnPickDateTime);
-        btnPickImage   = findViewById(R.id.btnPickImage);
-        btnSave        = findViewById(R.id.btnSave);
+        // ánh xạ view đúng với XML
+        edtTitle          = findViewById(R.id.edtTitle);
+        edtArtist         = findViewById(R.id.edtArtist);
+        edtCategory       = findViewById(R.id.edtCategory);
+        edtDescription    = findViewById(R.id.edtDescription);
+        edtPlace          = findViewById(R.id.edtPlace);
+        edtAddressDetail  = findViewById(R.id.edtAddressDetail);
+        edtTotalSeats     = findViewById(R.id.edtTotalSeats);
 
+        tvPickedDateTime  = findViewById(R.id.tvPickedDateTime);
+        ivPreview         = findViewById(R.id.ivPreview);
+        btnPickDateTime   = findViewById(R.id.btnPickDateTime);
+        btnPickImage      = findViewById(R.id.btnPickImage);
+        btnSave           = findViewById(R.id.btnSave);
 
         layoutTicketContainer = findViewById(R.id.layoutTicketContainer);
-        btnAddTicketType     = findViewById(R.id.btnAddTicketType);
-
-
+        btnAddTicketType      = findViewById(R.id.btnAddTicketType);
 
         btnAddTicketType.setOnClickListener(v -> {
+            // debug cho chắc
+            // Toast.makeText(this, "Thêm 1 loại vé", Toast.LENGTH_SHORT).show();
             addTicketRow();
         });
 
-
-        // nút back trên action bar (nếu đang dùng)
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Tạo sự kiện mới");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -108,11 +105,13 @@ public class CreateEventActivity extends AppCompatActivity {
         }
 
         if (editingEventId != null) {
-            // 👉 Load event từ Firestore + fill form
+            // load để sửa
             loadEventForEdit(editingEventId);
             btnSave.setText("Cập nhật sự kiện");
+        } else {
+            // TẠO MỚI: auto thêm sẵn 1 dòng loại vé để test luôn
+            addTicketRow();
         }
-
 
         // chọn ngày giờ
         btnPickDateTime.setOnClickListener(v -> showDateTimePicker());
@@ -147,7 +146,6 @@ public class CreateEventActivity extends AppCompatActivity {
         DatePickerDialog dp = new DatePickerDialog(
                 this,
                 (view, year, month, dayOfMonth) -> {
-                    // sau khi chọn ngày -> chọn giờ
                     Calendar picked = Calendar.getInstance();
                     picked.set(Calendar.YEAR, year);
                     picked.set(Calendar.MONTH, month);
@@ -209,7 +207,6 @@ public class CreateEventActivity extends AppCompatActivity {
         layoutTicketContainer.addView(rowView);
     }
 
-
     private static class TicketRow {
         EditText edtName, edtPrice, edtQuota;
         View root;
@@ -222,7 +219,6 @@ public class CreateEventActivity extends AppCompatActivity {
         }
     }
 
-
     private void saveEvent() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -230,14 +226,13 @@ public class CreateEventActivity extends AppCompatActivity {
             return;
         }
 
-        String title   = text(edtTitle);
-        String artist  = text(edtArtist);
-        String cat     = text(edtCategory);
-        String loc     = text(edtLocation);
-        String desc    = text(edtDescription);
-
-        String sSeats  = text(edtTotalSeats);  // tổng số ghế
-
+        String title    = text(edtTitle);
+        String artist   = text(edtArtist);
+        String cat      = text(edtCategory);
+        String place    = text(edtPlace);
+        String addrDtl  = text(edtAddressDetail);
+        String desc     = text(edtDescription);
+        String sSeats   = text(edtTotalSeats);
 
         if (TextUtils.isEmpty(title)) {
             edtTitle.setError("Nhập tên sự kiện");
@@ -247,8 +242,12 @@ public class CreateEventActivity extends AppCompatActivity {
             edtCategory.setError("Nhập thể loại");
             return;
         }
-        if (TextUtils.isEmpty(loc)) {
-            edtLocation.setError("Nhập địa điểm");
+        if (TextUtils.isEmpty(place)) {
+            edtPlace.setError("Nhập địa điểm tổ chức");
+            return;
+        }
+        if (TextUtils.isEmpty(addrDtl)) {
+            edtAddressDetail.setError("Nhập địa chỉ chi tiết");
             return;
         }
         if (selectedStartTime == null) {
@@ -256,17 +255,16 @@ public class CreateEventActivity extends AppCompatActivity {
             return;
         }
 
-        // ====== LẤY DANH SÁCH LOẠI VÉ TỪ CÁC DÒNG INPUT ======
+        // LẤY DANH SÁCH LOẠI VÉ
         List<Map<String, Object>> ticketTypes = new ArrayList<>();
         int totalSeatsFromTickets = 0;
         double minPriceFromTickets = Double.MAX_VALUE;
 
         for (TicketRow row : ticketRows) {
-            String name  = row.edtName.getText().toString().trim();
+            String name   = row.edtName.getText().toString().trim();
             String sPrice = row.edtPrice.getText().toString().trim();
             String sQuota = row.edtQuota.getText().toString().trim();
 
-            // nếu cả 3 ô đều trống thì bỏ qua dòng này
             if (name.isEmpty() && sPrice.isEmpty() && sQuota.isEmpty()) {
                 continue;
             }
@@ -315,10 +313,8 @@ public class CreateEventActivity extends AppCompatActivity {
         double price;
         int totalSeats;
 
-// ===== Trường hợp KHÔNG CÓ loại vé → sự kiện miễn phí =====
         if (ticketTypes.isEmpty()) {
-
-            // Bắt buộc vẫn phải nhập tổng số vé
+            // sự kiện free nhưng vẫn cần tổng vé
             if (TextUtils.isEmpty(sSeats)) {
                 edtTotalSeats.setError("Nhập tổng số vé");
                 return;
@@ -336,10 +332,7 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // Không có loại vé ⇒ FREE
             price = 0d;
-
-// ===== Có loại vé ⇒ kiểm tra quota & tính giá min =====
         } else {
             if (TextUtils.isEmpty(sSeats)) {
                 edtTotalSeats.setError("Nhập tổng số vé");
@@ -353,7 +346,6 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // Tổng quota không được > tổng ghế
             if (totalSeatsFromTickets > totalSeats) {
                 Toast.makeText(this,
                         "Tổng số vé các loại (" + totalSeatsFromTickets +
@@ -362,7 +354,6 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // Bạn muốn đúng bằng nhau
             if (totalSeatsFromTickets != totalSeats) {
                 Toast.makeText(this,
                         "Tổng số vé các loại phải bằng tổng số ghế (" + totalSeats + ")",
@@ -370,10 +361,8 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // Giá event = giá thấp nhất trong các loại vé
             price = (minPriceFromTickets == Double.MAX_VALUE) ? 0d : minPriceFromTickets;
         }
-
 
         btnSave.setEnabled(false);
 
@@ -392,7 +381,8 @@ public class CreateEventActivity extends AppCompatActivity {
                                     .addOnSuccessListener(uri ->
                                             writeEventToFirestore(
                                                     db, eventId, ownerId,
-                                                    title, artist, cat, loc, desc,
+                                                    title, artist, cat,
+                                                    place, addrDtl, desc,
                                                     selectedStartTime, price, totalSeats,
                                                     uri.toString(), ticketTypes
                                             )
@@ -413,13 +403,13 @@ public class CreateEventActivity extends AppCompatActivity {
         } else {
             writeEventToFirestore(
                     db, eventId, ownerId,
-                    title, artist, cat, loc, desc,
+                    title, artist, cat,
+                    place, addrDtl, desc,
                     selectedStartTime, price, totalSeats,
                     null, ticketTypes
             );
         }
     }
-
 
     private void writeEventToFirestore(FirebaseFirestore db,
                                        String eventId,
@@ -427,7 +417,8 @@ public class CreateEventActivity extends AppCompatActivity {
                                        String title,
                                        String artist,
                                        String cat,
-                                       String loc,
+                                       String place,
+                                       String addrDtl,
                                        String desc,
                                        Timestamp startTime,
                                        double price,
@@ -439,17 +430,16 @@ public class CreateEventActivity extends AppCompatActivity {
         data.put("title", title);
         data.put("artist", artist);
         data.put("category", cat);
-        data.put("location", loc);
+        data.put("location", place);
+        data.put("addressDetail", addrDtl);
         data.put("description", desc);
         data.put("ownerId", ownerId);
         data.put("startTime", startTime);
         data.put("price", price);
         data.put("totalSeats", totalSeats);
-        data.put("availableSeats", totalSeats); // lúc mới tạo = tổng vé
-        data.put("status", "active");           // hoặc "draft" tuỳ ý bạn
-        data.put("createdAt", FieldValue.serverTimestamp());
+        data.put("availableSeats", totalSeats);
+        data.put("status", "active");
         data.put("updatedAt", FieldValue.serverTimestamp());
-
 
         if (editingEventId == null) {
             data.put("createdAt", FieldValue.serverTimestamp());
@@ -494,14 +484,12 @@ public class CreateEventActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                     });
         }
-
     }
 
     private void saveTicketTypes(FirebaseFirestore db,
                                  String eventId,
                                  List<Map<String, Object>> ticketTypes) {
 
-        // Xoá hết ticketTypes cũ trước
         db.collection("events")
                 .document(eventId)
                 .collection("ticketTypes")
@@ -511,12 +499,10 @@ public class CreateEventActivity extends AppCompatActivity {
                         d.getReference().delete();
                     }
 
-                    // Không có loại vé mới → event free, chỉ cần xoá là xong
                     if (ticketTypes == null || ticketTypes.isEmpty()) {
                         return;
                     }
 
-                    // Ghi lại toàn bộ loại vé mới
                     for (Map<String, Object> ticket : ticketTypes) {
                         db.collection("events")
                                 .document(eventId)
@@ -525,9 +511,6 @@ public class CreateEventActivity extends AppCompatActivity {
                     }
                 });
     }
-
-
-
 
     private void loadEventForEdit(String eventId) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -540,27 +523,25 @@ public class CreateEventActivity extends AppCompatActivity {
                         return;
                     }
 
-
-
                     edtTitle.setText(doc.getString("title"));
                     edtArtist.setText(doc.getString("artist"));
                     edtCategory.setText(doc.getString("category"));
-                    edtLocation.setText(doc.getString("location"));
+                    edtPlace.setText(doc.getString("location"));
+                    edtAddressDetail.setText(doc.getString("addressDetail"));
                     edtDescription.setText(doc.getString("description"));
 
-                    Double price = doc.getDouble("price");
                     Long totalSeats = doc.getLong("totalSeats");
-                    if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
-                    if (totalSeats != null) edtTotalSeats.setText(String.valueOf(totalSeats));
+                    if (totalSeats != null) {
+                        edtTotalSeats.setText(String.valueOf(totalSeats));
+                    }
 
                     Timestamp ts = doc.getTimestamp("startTime");
                     if (ts != null) {
                         selectedStartTime = ts;
-                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy • HH:mm");
+                        java.text.SimpleDateFormat sdf =
+                                new java.text.SimpleDateFormat("dd/MM/yyyy • HH:mm");
                         tvPickedDateTime.setText(sdf.format(ts.toDate()));
                     }
-
-                    // thumbnail: nếu muốn, bạn có thể dùng Glide để load vào ivPreview
 
                     loadTicketTypesForEdit(eventId);
                 })
@@ -575,7 +556,6 @@ public class CreateEventActivity extends AppCompatActivity {
     private void loadTicketTypesForEdit(String eventId) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Xoá các dòng cũ trên UI (tránh bị trùng khi vào màn nhiều lần)
         layoutTicketContainer.removeAllViews();
         ticketRows.clear();
 
@@ -585,7 +565,6 @@ public class CreateEventActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snap -> {
                     if (snap.isEmpty()) {
-                        // Không có loại vé → sự kiện free, không cần auto thêm dòng
                         return;
                     }
 
@@ -603,8 +582,6 @@ public class CreateEventActivity extends AppCompatActivity {
                                 Toast.LENGTH_SHORT).show()
                 );
     }
-
-
 
     private String text(EditText e) {
         return e == null || e.getText() == null

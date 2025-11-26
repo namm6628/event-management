@@ -333,7 +333,7 @@ public class HomeFragment extends Fragment {
             VH(@NonNull View itemView) {
                 super(itemView);
                 title = itemView.findViewById(R.id.tvTitle);
-                subtitle = itemView.findViewById(R.id.tvLocation);
+                subtitle = itemView.findViewById(R.id.tvPlace);
                 thumbnail = itemView.findViewById(R.id.ivThumb);
             }
 

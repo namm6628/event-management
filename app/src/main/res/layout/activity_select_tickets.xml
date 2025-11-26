@@ -14,7 +14,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@color/bg_primary"
         app:navigationIcon="@drawable/ic_arrow_back_24"
-        app:title="Loại vé"
+        app:title="Chọn vé"
         app:titleTextColor="@color/text_primary" />
 
     <!-- Header -->

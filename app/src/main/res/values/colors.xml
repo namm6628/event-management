@@ -1,3 +1,4 @@
+<!-- res/values/colors.xml -->
 <resources>
 
     <!-- Brand Mint Palette -->
@@ -5,14 +6,22 @@
     <color name="mint_primary_dark">#009D57</color>
     <color name="mint_accent">#00A186</color>
 
-    <!-- Light -->
-    <color name="bg_primary">#F9F9F9</color>
-    <color name="bg_card">#FFFFFF</color>
+    <!-- Light background -->
+    <color name="bg_primary">#F9F9F9</color>   <!-- nền chung -->
+    <color name="bg_card">#FFFFFF</color>     <!-- thẻ / surface -->
 
+    <!-- Bottom nav (light) -->
+    <color name="bg_bottom_nav">#FFFFFF</color>
+
+    <!-- Text -->
     <color name="text_primary">#1A1A1A</color>
     <color name="text_secondary">#6E6E6E</color>
 
+    <!-- Border / divider -->
     <color name="border_light">#E0E0E0</color>
+
+    <!-- Search bar background (light) -->
+    <color name="search_bg_light">#F3F3F5</color>
 
     <!-- Chip / tag -->
     <color name="chip_bg_light">#2000C46C</color> <!-- 12% mint -->
@@ -37,8 +46,6 @@
 
     <color name="colorError">#E63946</color>
 
-
+    <color name="empty_ticket_text">@android:color/black</color>
 
 </resources>
-
-
