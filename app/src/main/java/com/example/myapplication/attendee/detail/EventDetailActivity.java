@@ -7,8 +7,10 @@ import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,11 +18,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
-import com.example.myapplication.common.model.TicketType;
 import com.example.myapplication.databinding.ActivityEventDetailBinding;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.Timestamp;
@@ -33,6 +39,10 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.Transaction;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,18 +50,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.view.View;
-import android.view.LayoutInflater;
-import android.view.ViewGroup;
-import android.widget.TextView;
-
-
 public class EventDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
+
+    // API Key OpenWeatherMap (đổi thành key của bạn)
+    private static final String WEATHER_API_KEY = "d217750b1e400fc2300711ab107183f2";
+
+    // Volley queue để gọi API thời tiết
+    private RequestQueue volleyQueue;
 
     private ActivityEventDetailBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -62,17 +69,31 @@ public class EventDetailActivity extends AppCompatActivity {
     private ListenerRegistration eventListener;
 
     private TicketTypeAdapter ticketTypeAdapter;
-
     private Double minTicketPrice = null;
-
     private boolean isDescriptionExpanded = false;
 
-
+    // Weather UI
+    private View layoutWeatherContainer;
+    private View layoutSkeletonWeather;
+    private View layoutWeather;
+    private ImageView ivWeatherIcon;
+    private TextView tvWeather;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityEventDetailBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        // Khởi tạo Volley
+        volleyQueue = Volley.newRequestQueue(this);
+
+        // Link weather views từ layout
+        layoutWeatherContainer = binding.layoutWeatherContainer;
+        layoutSkeletonWeather = binding.layoutSkeletonWeather;
+        layoutWeather = binding.layoutWeather;
+        ivWeatherIcon = binding.ivWeatherIcon;
+        tvWeather = binding.tvWeather;
 
         // Mặc định thu gọn mô tả
         binding.tvDescription.setMaxLines(4);
@@ -91,22 +112,18 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-
-        setContentView(binding.getRoot());
+        binding.btnWriteReview.setOnClickListener(v -> showRateDialog());
 
         // Adapter loại vé
         ticketTypeAdapter = new TicketTypeAdapter();
-
         binding.recyclerTicketTypes.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         );
         binding.recyclerTicketTypes.setAdapter(ticketTypeAdapter);
 
-
         binding.tvTicketDateTime.setText(getString(R.string.ticket_info_header));
 
-
-// Toggle ẩn/hiện loại vé
+        // Toggle ẩn/hiện loại vé
         binding.tvToggleTicketTypes.setOnClickListener(v -> {
             if (binding.recyclerTicketTypes.getVisibility() == View.VISIBLE) {
                 binding.recyclerTicketTypes.setVisibility(View.GONE);
@@ -117,26 +134,22 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-
+        // Lấy eventId từ Intent
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
 
         // Toolbar
-
         setSupportActionBar(binding.toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.event_detail_title); // cố định
+            getSupportActionBar().setTitle(R.string.event_detail_title);
         }
-
         binding.toolbar.setNavigationOnClickListener(v -> onBackPressed());
-
 
         if (eventId == null || eventId.isEmpty()) {
             Toast.makeText(this, "Không có ID sự kiện", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-
 
         // UI mặc định
         binding.tvTitle.setText("");
@@ -147,16 +160,18 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.tvDescription.setText("");
 
         binding.tvReviewCount.setText(getString(R.string.review_count_fmt, 0));
-        binding.recyclerReviews.setVisibility(android.view.View.GONE);
-        binding.tvEmptyReviews.setVisibility(android.view.View.VISIBLE);
+        binding.recyclerReviews.setVisibility(View.GONE);
+        binding.tvEmptyReviews.setVisibility(View.VISIBLE);
         binding.ratingAverage.setRating(0f);
         binding.tvAverageRating.setText("0.0/5");
 
         // Share
         binding.btnShare.setOnClickListener(v -> {
-            String share = getString(R.string.share_template,
+            String share = getString(
+                    R.string.share_template,
                     event != null && event.getTitle() != null ? event.getTitle() : "",
-                    event != null && event.getLocation() != null ? event.getLocation() : "");
+                    event != null && event.getLocation() != null ? event.getLocation() : ""
+            );
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_TEXT, share);
@@ -178,11 +193,10 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.btnOpenMap.setOnClickListener(v -> {
             String q = null;
             if (event != null) {
-                // Ưu tiên địa chỉ chi tiết
                 if (event.getAddressDetail() != null && !event.getAddressDetail().isEmpty()) {
                     q = event.getAddressDetail();
                 } else {
-                    q = event.getLocation(); // fallback
+                    q = event.getLocation();
                 }
             }
 
@@ -194,22 +208,13 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-
-        // RecyclerView reviews
+        // Reviews
         reviewAdapter = new ReviewAdapter();
         binding.recyclerReviews.setLayoutManager(new LinearLayoutManager(this));
         binding.recyclerReviews.setAdapter(reviewAdapter);
 
-        // 🎫 Nút Đặt vé – PHẢI nằm trong onCreate
-        // lấy eventId từ Intent 1 lần
-        eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
-
-// ...
-
+        // Nút Đặt vé
         binding.btnBuyTicket.setOnClickListener(v -> {
-            // test xem có nhận click chưa
-
-
             if (eventId == null || eventId.isEmpty()) {
                 Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
                 return;
@@ -219,12 +224,7 @@ public class EventDetailActivity extends AppCompatActivity {
             i.putExtra(SelectTicketsActivity.EXTRA_EVENT_ID, eventId);
             startActivity(i);
         });
-
-
     }
-
-
-
 
     // ===================== ORGANIZER HELPER =====================
 
@@ -310,26 +310,24 @@ public class EventDetailActivity extends AppCompatActivity {
 
                     // Ảnh
                     String thumb = event.getThumbnail();
-
                     Glide.with(this)
                             .load(thumb)
-                            .centerCrop()                     // đảm bảo luôn phủ kín khung
+                            .centerCrop()
                             .placeholder(R.drawable.sample_event)
                             .error(R.drawable.sample_event)
                             .into(binding.ivCover);
 
-
                     // Text
                     binding.tvTitle.setText(event.getTitle() == null ? "" : event.getTitle());
                     binding.tvArtist.setText(
-                            event.getArtist() == null ? getString(R.string.artist_unknown) : event.getArtist()
+                            event.getArtist() == null
+                                    ? getString(R.string.artist_unknown)
+                                    : event.getArtist()
                     );
                     binding.tvVenue.setText(event.getLocation() == null ? "" : event.getLocation());
-                    // Địa chỉ chi tiết (field mới)
                     binding.tvAddressDetail.setText(
                             event.getAddressDetail() == null ? "" : event.getAddressDetail()
                     );
-
 
                     String timeText = "";
                     if (event.getStartTime() != null) {
@@ -343,7 +341,6 @@ public class EventDetailActivity extends AppCompatActivity {
                                 String endHour = DateFormat.format("HH:mm", endDate).toString();
                                 timeText = startHour + " - " + endHour + ", " + day;
                             } else {
-                                // Không có endTime thì chỉ hiện giờ bắt đầu
                                 timeText = startHour + ", " + day;
                             }
                         } catch (Exception ignored) {
@@ -353,11 +350,9 @@ public class EventDetailActivity extends AppCompatActivity {
                     binding.tvTicketDateTime.setText(timeText);
 
                     String desc = event.getDescription();
-                    if (desc == null || desc.trim().isEmpty()) {
-                        binding.tvDescription.setText("");
-                    } else {
-                        binding.tvDescription.setText(desc);
-                    }
+                    binding.tvDescription.setText(
+                            (desc == null || desc.trim().isEmpty()) ? "" : desc
+                    );
 
                     Double p = event.getPrice();
                     String priceText = (p == null || p == 0d)
@@ -368,11 +363,8 @@ public class EventDetailActivity extends AppCompatActivity {
                     binding.tvPrice.setText(priceText);
                     binding.tvBottomPrice.setText(priceText);
 
-
                     loadTicketTypes();
-
-
-                    // Load reviews
+                    loadWeatherForecast(event);   // 🔹 gọi dự báo thời tiết
                     loadReviews();
                 });
     }
@@ -386,7 +378,6 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-
     private void loadTicketTypes() {
         if (event == null || event.getId() == null) return;
 
@@ -397,14 +388,14 @@ public class EventDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(snap -> {
                     List<TicketTypeAdapter.TicketType> list = new ArrayList<>();
                     for (DocumentSnapshot d : snap.getDocuments()) {
-                        TicketTypeAdapter.TicketType t = d.toObject(TicketTypeAdapter.TicketType.class);
+                        TicketTypeAdapter.TicketType t =
+                                d.toObject(TicketTypeAdapter.TicketType.class);
                         if (t != null) list.add(t);
                     }
                     ticketTypeAdapter.submit(list);
 
                     // 👉 TÍNH GIÁ MIN TỪ ticketTypes
                     if (list.isEmpty()) {
-                        // Không có loại vé: giữ logic cũ
                         Double p = event.getPrice();
                         String priceText = (p == null || p == 0d)
                                 ? getString(R.string.free)
@@ -426,7 +417,6 @@ public class EventDetailActivity extends AppCompatActivity {
                         }
 
                         if (!hasPaidTicket) {
-                            // Tất cả vé free
                             binding.tvPrice.setText(getString(R.string.free));
                             binding.tvBottomPrice.setText(getString(R.string.free));
                             minTicketPrice = 0d;
@@ -442,11 +432,165 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(this, "Không tải được loại vé: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this,
+                                        "Không tải được loại vé: " + e.getMessage(),
+                                        Toast.LENGTH_SHORT)
+                                .show()
                 );
     }
 
+    // =============== WEATHER HELPERS ===============
+
+    private void showWeatherLoading() {
+        if (layoutWeatherContainer != null) {
+            layoutWeatherContainer.setVisibility(View.VISIBLE);
+        }
+        if (layoutSkeletonWeather != null) {
+            layoutSkeletonWeather.setVisibility(View.VISIBLE);
+        }
+        if (layoutWeather != null) {
+            layoutWeather.setVisibility(View.INVISIBLE);
+            layoutWeather.setAlpha(1f);
+        }
+        if (tvWeather != null) {
+            tvWeather.setText("Đang tải dự báo...");
+        }
+    }
+
+    private void showWeatherError(String message) {
+        if (layoutSkeletonWeather != null) {
+            layoutSkeletonWeather.setVisibility(View.GONE);
+        }
+        if (layoutWeather != null) {
+            layoutWeather.setVisibility(View.VISIBLE);
+            layoutWeather.setAlpha(1f);
+        }
+        if (ivWeatherIcon != null) {
+            ivWeatherIcon.setImageResource(R.drawable.outline_cloud_24);
+        }
+        if (tvWeather != null) {
+            tvWeather.setText(message);
+        }
+    }
+
+    private void fadeInWeather() {
+        if (layoutWeather == null || layoutSkeletonWeather == null) return;
+        layoutSkeletonWeather.setVisibility(View.GONE);
+        layoutWeather.setAlpha(0f);
+        layoutWeather.setVisibility(View.VISIBLE);
+        layoutWeather.animate()
+                .alpha(1f)
+                .setDuration(250)
+                .setListener(null);
+    }
+
+    private void bindWeather(String description, double tempC) {
+        if (ivWeatherIcon != null) {
+            // Tạm thời dùng 1 icon chung, sau này nếu có icon riêng mưa/nắng thì map thêm
+            ivWeatherIcon.setImageResource(R.drawable.outline_cloud_24);
+        }
+
+        if (tvWeather != null) {
+            String text = String.format(
+                    Locale.getDefault(),
+                    "Dự báo: %.0f°C, %s",
+                    tempC,
+                    description
+            );
+            tvWeather.setText(text);
+        }
+    }
+
+    // =============== DỰ BÁO THỜI TIẾT CHO SỰ KIỆN ===============
+
+    private void loadWeatherForecast(Event event) {
+        if (tvWeather == null) return;
+
+        if (event == null) {
+            showWeatherError("Không có sự kiện để dự báo");
+            return;
+        }
+
+        showWeatherLoading();
+
+        if (event.getLocation() == null || event.getStartTime() == null) {
+            showWeatherError("Không có đủ thông tin để dự báo");
+            return;
+        }
+
+        long eventTimeMillis = event.getStartTime().toDate().getTime();
+
+        // API free chỉ dự báo 5 ngày tới
+        long fiveDaysMs = 5L * 24 * 3600 * 1000;
+        if (eventTimeMillis > System.currentTimeMillis() + fiveDaysMs) {
+            showWeatherError("Sự kiện còn quá xa để dự báo thời tiết");
+            return;
+        }
+
+        String city = mapCityName(event.getLocation());
+
+        String url = String.format(
+                Locale.getDefault(),
+                "https://api.openweathermap.org/data/2.5/forecast?q=%s&appid=%s&units=metric&lang=vi",
+                city,
+                WEATHER_API_KEY
+        );
+
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.GET,
+                url,
+                null,
+                response -> {
+                    try {
+                        JSONArray list = response.getJSONArray("list");
+                        JSONObject bestForecast = null;
+                        long minDiff = Long.MAX_VALUE;
+
+                        for (int i = 0; i < list.length(); i++) {
+                            JSONObject item = list.getJSONObject(i);
+                            long dt = item.getLong("dt") * 1000L;
+                            long diff = Math.abs(dt - eventTimeMillis);
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                bestForecast = item;
+                            }
+                        }
+
+                        if (bestForecast != null) {
+                            double temp = bestForecast
+                                    .getJSONObject("main")
+                                    .getDouble("temp");
+                            String desc = bestForecast
+                                    .getJSONArray("weather")
+                                    .getJSONObject(0)
+                                    .getString("description");
+
+                            bindWeather(desc, temp);
+                            fadeInWeather();
+                        } else {
+                            showWeatherError("Không tìm thấy mốc thời gian phù hợp");
+                        }
+                    } catch (JSONException e) {
+                        showWeatherError("Không đọc được dữ liệu thời tiết");
+                    }
+                },
+                error -> showWeatherError("Không tải được thời tiết")
+        );
+
+        volleyQueue.add(request);
+    }
+
+    private String mapCityName(String location) {
+        if (location == null) return "Ho Chi Minh City";
+        String loc = location.toLowerCase(Locale.ROOT);
+        if (loc.contains("hcm") || loc.contains("hồ chí minh") || loc.contains("ho chi minh"))
+            return "Ho Chi Minh City";
+        if (loc.contains("hà nội") || loc.contains("ha noi"))
+            return "Hanoi";
+        if (loc.contains("đà nẵng") || loc.contains("da nang"))
+            return "Da Nang";
+        return "Ho Chi Minh City";
+    }
 
     private void loadReviews() {
         if (event == null || event.getId() == null) return;
@@ -465,7 +609,9 @@ public class EventDetailActivity extends AppCompatActivity {
                     reviewAdapter.submit(reviews);
 
                     int count = reviews.size();
-                    binding.tvReviewCount.setText(getString(R.string.review_count_fmt, count));
+                    binding.tvReviewCount.setText(
+                            getString(R.string.review_count_fmt, count)
+                    );
 
                     double total = 0;
                     for (Review r : reviews) {
@@ -478,22 +624,24 @@ public class EventDetailActivity extends AppCompatActivity {
                     );
 
                     if (count == 0) {
-                        binding.recyclerReviews.setVisibility(android.view.View.GONE);
-                        binding.tvEmptyReviews.setVisibility(android.view.View.VISIBLE);
+                        binding.recyclerReviews.setVisibility(View.GONE);
+                        binding.tvEmptyReviews.setVisibility(View.VISIBLE);
                     } else {
-                        binding.recyclerReviews.setVisibility(android.view.View.VISIBLE);
-                        binding.tvEmptyReviews.setVisibility(android.view.View.GONE);
+                        binding.recyclerReviews.setVisibility(View.VISIBLE);
+                        binding.tvEmptyReviews.setVisibility(View.GONE);
                     }
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(this, "Không tải được đánh giá: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this,
+                                        "Không tải được đánh giá: " + e.getMessage(),
+                                        Toast.LENGTH_SHORT)
+                                .show()
                 );
     }
 
     // ================== ĐẶT VÉ ==================
 
     private void showBuyTicketDialog() {
-
         final int available = (event.getAvailableSeats() == null ? 0 : event.getAvailableSeats());
 
         if (available <= 0) {
@@ -501,7 +649,7 @@ public class EventDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Xác định đơn giá: ưu tiên giá min từ ticketTypes, nếu không có thì dùng event.getPrice()
+        // Xác định đơn giá
         final double unitPrice;
         if (minTicketPrice != null && minTicketPrice > 0) {
             unitPrice = minTicketPrice;
@@ -511,7 +659,6 @@ public class EventDetailActivity extends AppCompatActivity {
             unitPrice = 0d;
         }
 
-        // Inflate view custom
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_buy_ticket, null);
         TextView tvEventTitle = dialogView.findViewById(R.id.tvEventTitle);
         TextView tvUnitPrice = dialogView.findViewById(R.id.tvUnitPrice);
@@ -522,16 +669,14 @@ public class EventDetailActivity extends AppCompatActivity {
 
         NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
-        // Đơn giá hiển thị
         String unitPriceStr;
         if (unitPrice <= 0) {
             unitPriceStr = getString(R.string.free);
         } else {
-            unitPriceStr = nf.format(unitPrice) + " ₫";  // ✅ format đúng: truyền vào double
+            unitPriceStr = nf.format(unitPrice) + " ₫";
         }
         tvUnitPrice.setText(unitPriceStr);
 
-        // Mặc định 1 vé
         edtQuantity.setText("1");
         if (unitPrice <= 0) {
             tvTotalPrice.setText(getString(R.string.free));
@@ -539,7 +684,6 @@ public class EventDetailActivity extends AppCompatActivity {
             tvTotalPrice.setText(nf.format(unitPrice) + " ₫");
         }
 
-        // Cập nhật tổng tiền khi user đổi số vé
         edtQuantity.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -555,8 +699,8 @@ public class EventDetailActivity extends AppCompatActivity {
                 } else if (unitPrice <= 0) {
                     tvTotalPrice.setText(getString(R.string.free));
                 } else {
-                    double total = q * unitPrice;                 // ✅ Number
-                    tvTotalPrice.setText(nf.format(total) + " ₫"); // ✅ truyền Number vào format
+                    double total = q * unitPrice;
+                    tvTotalPrice.setText(nf.format(total) + " ₫");
                 }
             }
         });
@@ -595,7 +739,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 .setNegativeButton("Huỷ", null)
                 .show();
     }
-
 
     private void placeOrder(int quantity) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -642,8 +785,6 @@ public class EventDetailActivity extends AppCompatActivity {
                     .setMessage(msg)
                     .setPositiveButton("OK", null)
                     .show();
-
-            // listener realtime sẽ tự update availableSeats
         }).addOnFailureListener(e -> {
             binding.btnBuyTicket.setEnabled(true);
             String msg = e.getMessage();
@@ -655,16 +796,78 @@ public class EventDetailActivity extends AppCompatActivity {
         });
     }
 
-    private abstract static class SimpleTextWatcher implements android.text.TextWatcher {
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+    private void showRateDialog() {
+        if (event == null || event.getId() == null) {
+            Toast.makeText(this, "Chưa có thông tin sự kiện", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        @Override
-        public void afterTextChanged(android.text.Editable s) {
-        }
+        View dialogView = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_rate_review, null);
+
+        android.widget.RatingBar rb = dialogView.findViewById(R.id.dialogRatingBar);
+        EditText et = dialogView.findViewById(R.id.etDialogComment);
+
+        new AlertDialog.Builder(this, R.style.RatingDialogTheme)
+                .setTitle("Đánh giá sự kiện")
+                .setView(dialogView)
+                .setPositiveButton("Gửi", (dialog, which) -> {
+                    float rating = rb.getRating();
+                    String content = et.getText().toString().trim();
+                    if (rating <= 0f) {
+                        Toast.makeText(this, "Vui lòng chọn số sao", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    submitReview(rating, content);
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 
+    private void submitReview(float rating, String content) {
+        if (event == null || event.getId() == null) {
+            Toast.makeText(this, "Thiếu thông tin sự kiện để gửi đánh giá", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String author = "Tôi";
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
+                author = user.getDisplayName();
+            } else if (user.getEmail() != null) {
+                author = user.getEmail();
+            }
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("author", author);
+        data.put("rating", rating);
+        data.put("content", content);
+        data.put("createdAt", FieldValue.serverTimestamp());
+
+        db.collection("events")
+                .document(event.getId())
+                .collection("reviews")
+                .add(data)
+                .addOnSuccessListener(r -> {
+                    Toast.makeText(this, "Đã gửi đánh giá!", Toast.LENGTH_SHORT).show();
+                    loadReviews();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this,
+                                        "Lỗi gửi đánh giá: " + e.getMessage(),
+                                        Toast.LENGTH_SHORT)
+                                .show()
+                );
+    }
+
+    private abstract static class SimpleTextWatcher implements android.text.TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+        @Override
+        public void afterTextChanged(android.text.Editable s) {}
+    }
 
     // ================== MENU BACK ==================
 
@@ -682,9 +885,9 @@ public class EventDetailActivity extends AppCompatActivity {
         public String author;
         public String content;
         public Double rating;
+        public Timestamp createdAt;
 
-        public Review() {
-        }
+        public Review() {}
     }
 
     // ================== ADAPTER LOẠI VÉ (CHỈ HIỂN THỊ) ==================
@@ -765,8 +968,4 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         }
     }
-
-
-
-
 }

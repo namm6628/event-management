@@ -46,14 +46,12 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/tvIntroHeader"
                 app:layout_constraintDimensionRatio="1:1">
-                <!-- 1:1 = vuông, tương đương 4:4 -->
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="80dp"
                     android:layout_gravity="bottom"
                     android:background="@drawable/bg_cover_gradient" />
-
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/ivCover"
@@ -154,6 +152,7 @@
                                 android:textColor="@color/text_primary" />
 
                         </LinearLayout>
+
                         <!-- Địa chỉ chi tiết (dòng dưới địa điểm) -->
                         <TextView
                             android:id="@+id/tvAddressDetail"
@@ -235,6 +234,77 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- ====== BLOCK DỰ BÁO THỜI TIẾT (THÊM MỚI) ====== -->
+            <!-- ====== BLOCK DỰ BÁO THỜI TIẾT (DARK/LIGHT + SKELETON) ====== -->
+            <LinearLayout
+                android:id="@+id/layoutWeatherContainer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:padding="12dp"
+                android:background="?attr/colorSurfaceVariant"
+                android:foreground="?attr/selectableItemBackground"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:elevation="2dp"
+                app:layout_constraintTop_toBottomOf="@id/cardIntro"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <!-- 🔹 Skeleton loading -->
+                    <LinearLayout
+                        android:id="@+id/layoutSkeletonWeather"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:background="@drawable/bg_skeleton_rounded" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="14dp"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_skeleton_rounded" />
+                    </LinearLayout>
+
+                    <!-- 🔹 Nội dung thật -->
+                    <LinearLayout
+                        android:id="@+id/layoutWeather"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:visibility="invisible">
+
+                        <ImageView
+                            android:id="@+id/ivWeatherIcon"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/outline_cloud_24"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:id="@+id/tvWeather"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Đang tải dự báo..."
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </FrameLayout>
+            </LinearLayout>
+
+
             <!-- ====== KHUNG LOẠI VÉ ====== -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardTicketTypesWrapper"
@@ -245,7 +315,7 @@
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:cardBackgroundColor="@color/bg_card"
-                app:layout_constraintTop_toBottomOf="@id/cardIntro"
+                app:layout_constraintTop_toBottomOf="@id/layoutWeatherContainer"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
@@ -357,6 +427,7 @@
             </LinearLayout>
 
             <!-- ====== REVIEW ====== -->
+            <!-- ====== REVIEW HEADER ====== -->
             <LinearLayout
                 android:id="@+id/layoutReviewHeader"
                 android:layout_width="0dp"
@@ -368,6 +439,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
+                <!-- Tiêu đề -->
                 <TextView
                     android:id="@+id/tvReviewTitle"
                     android:layout_width="wrap_content"
@@ -377,15 +449,34 @@
                     android:textSize="18sp"
                     android:textColor="@color/text_secondary" />
 
+                <!-- Số lượng review -->
                 <TextView
                     android:id="@+id/tvReviewCount"
                     android:layout_width="wrap_content"
-                    android:layout_height="24dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="0"
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp" />
+
+                <!-- Đẩy nút viết đánh giá qua phải -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Nút viết đánh giá (sát mép phải) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWriteReview"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Viết đánh giá"
+                    android:textColor="?attr/colorPrimary"
+                    android:padding="0dp"
+                    android:minWidth="0dp" />
             </LinearLayout>
+
 
             <LinearLayout
                 android:id="@+id/layoutAverageRating"

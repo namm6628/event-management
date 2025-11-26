@@ -54,6 +54,23 @@
         <item name="chipStrokeWidth">0dp</item>
     </style>
 
+    <style name="RatingBarTheme" parent="">
+        <item name="colorControlActivated">@color/rating_yellow</item>
+    </style>
+
+    <style name="RatingDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/dialog_scale_in</item>
+        <item name="android:windowExitAnimation">@anim/dialog_fade_out</item>
+    </style>
+
+    <style name="RatingDialogTheme"
+        parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/RatingDialogAnimation</item>
+    </style>
+
+
+
 
 
 

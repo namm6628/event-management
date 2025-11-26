@@ -2,9 +2,9 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:background="@android:color/white"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
 
     <!-- Toolbar -->
     <androidx.appcompat.widget.Toolbar
@@ -25,7 +25,8 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingTop="12dp"
-        android:paddingBottom="4dp" />
+        android:paddingBottom="4dp"
+        android:textColor="@color/empty_ticket_text" />
 
     <TextView
         android:id="@+id/tvSubHeader"
@@ -33,10 +34,10 @@
         android:layout_height="wrap_content"
         android:text="Các đơn đặt vé cho sự kiện này"
         android:textSize="13sp"
-        android:textColor="#777777"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="8dp"
+        android:textColor="@color/empty_ticket_text" />
 
     <!-- 🔹 3 nút thao tác: CSV – Excel – Import -->
     <LinearLayout
@@ -60,10 +61,9 @@
             android:textAllCaps="false"
             android:textSize="14sp" />
 
-        <!-- spacing nhỏ giữa nút -->
         <Space
             android:layout_width="8dp"
-            android:layout_height="1dp"/>
+            android:layout_height="1dp" />
 
         <!-- Nút Excel -->
         <com.google.android.material.button.MaterialButton
@@ -78,7 +78,7 @@
 
         <Space
             android:layout_width="8dp"
-            android:layout_height="1dp"/>
+            android:layout_height="1dp" />
 
         <!-- Nút Import -->
         <com.google.android.material.button.MaterialButton
@@ -93,10 +93,8 @@
 
     </LinearLayout>
 
-
     <ProgressBar
         android:id="@+id/progress"
-        style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Large"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -109,10 +107,10 @@
         android:layout_height="wrap_content"
         android:text="Chưa có ai đặt vé cho sự kiện này."
         android:textSize="14sp"
-        android:textColor="#777777"
         android:gravity="center"
         android:padding="24dp"
-        android:visibility="gone" />
+        android:visibility="gone"
+        android:textColor="@color/empty_ticket_text" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerAttendees"

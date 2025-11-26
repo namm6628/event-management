@@ -2,15 +2,16 @@ package com.example.myapplication.attendee.detail;
 
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.databinding.ItemReviewBinding;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Adapter hiển thị danh sách đánh giá (Review).
@@ -20,7 +21,8 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
 
     private final List<EventDetailActivity.Review> items = new ArrayList<>();
 
-    public ReviewAdapter() {}
+    public ReviewAdapter() {
+    }
 
     public void submit(List<EventDetailActivity.Review> list) {
         items.clear();
@@ -28,10 +30,14 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
         notifyDataSetChanged();
     }
 
-    @NonNull @Override
+    @NonNull
+    @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemReviewBinding b = ItemReviewBinding.inflate(
-                LayoutInflater.from(parent.getContext()), parent, false);
+                LayoutInflater.from(parent.getContext()),
+                parent,
+                false
+        );
         return new VH(b);
     }
 
@@ -40,34 +46,47 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
         EventDetailActivity.Review r = items.get(position);
         if (r == null) return;
 
-        // Tên người review (layout dùng tvReviewerName)
-        h.b.tvReviewerName.setText(r.author == null ? "Ẩn danh" : r.author);
+        // 1. Tên người review
+        h.b.tvReviewerName.setText(
+                (r.author == null || r.author.trim().isEmpty())
+                        ? "Ẩn danh"
+                        : r.author
+        );
 
-        // Nội dung
-        h.b.tvReviewContent.setText(r.content == null ? "" : r.content);
+        // 2. Nội dung
+        h.b.tvReviewContent.setText(
+                r.content == null ? "" : r.content
+        );
 
-        // Rating (model dùng Double); set rating an toàn
+        // 3. Số sao
         if (r.rating != null) {
             try {
                 h.b.ratingBar.setRating(r.rating.floatValue());
-            } catch (Exception ex) {
+            } catch (Exception ignored) {
                 h.b.ratingBar.setRating(0f);
             }
         } else {
             h.b.ratingBar.setRating(0f);
         }
 
-        // Thời gian: nếu model có createdAt thì bạn có thể hiển thị ở đây.
-        // Hiện tại model Review (trong EventDetailActivity) không khai báo createdAt,
-        // nên tạm để trống hoặc hiển thị giá trị mặc định.
-        h.b.tvReviewTime.setText(""); // hoặc "—"
+        // 4. Thời gian tạo review (createdAt)
+        if (r.createdAt != null) {
+            SimpleDateFormat sdf =
+                    new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+            h.b.tvReviewTime.setText(sdf.format(r.createdAt.toDate()));
+        } else {
+            h.b.tvReviewTime.setText("Vừa xong");
+        }
     }
 
     @Override
-    public int getItemCount() { return items.size(); }
+    public int getItemCount() {
+        return items.size();
+    }
 
     static class VH extends RecyclerView.ViewHolder {
         final ItemReviewBinding b;
+
         VH(@NonNull ItemReviewBinding binding) {
             super(binding.getRoot());
             this.b = binding;

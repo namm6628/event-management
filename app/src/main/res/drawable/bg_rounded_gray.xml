@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Nền xám nhạt kiểu card -->
+    <solid android:color="#F5F5F5" />
+
+    <!-- Bo góc mềm -->
+    <corners android:radius="12dp" />
+
+    <!-- Viền mảnh cho đẹp, không quá đậm -->
+    <stroke
+        android:width="1dp"
+        android:color="#E0E0E0" />
+
+    <!-- Padding bên trong cho text/icon đỡ dính mép -->
+    <padding
+        android:left="8dp"
+        android:top="6dp"
+        android:right="8dp"
+        android:bottom="6dp" />
+</shape>
