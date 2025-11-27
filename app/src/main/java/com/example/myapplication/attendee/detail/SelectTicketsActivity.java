@@ -40,9 +40,12 @@ public class SelectTicketsActivity extends AppCompatActivity {
     private RecyclerView recyclerTickets;
     private TextView tvSummary;
     private MaterialButton btnContinue;
+    private MaterialToolbar toolbar;
     private TicketSelectAdapter adapter;
 
     private String eventId;
+    private String eventTitle = "Sự kiện";
+
     private int totalQuantity = 0;
     private double totalPrice = 0d;
 
@@ -58,7 +61,8 @@ public class SelectTicketsActivity extends AppCompatActivity {
             return;
         }
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         recyclerTickets = findViewById(R.id.recyclerTickets);
@@ -75,7 +79,28 @@ public class SelectTicketsActivity extends AppCompatActivity {
 
         btnContinue.setOnClickListener(v -> onClickContinue());
 
+        // Lấy thêm title sự kiện cho toolbar
+        loadEventInfo();
         loadTickets();
+    }
+
+    // ================== LOAD EVENT INFO (title thanh toolbar) ==================
+
+    private void loadEventInfo() {
+        db.collection("events")
+                .document(eventId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        String t = doc.getString("title");
+                        if (t != null && !t.isEmpty()) {
+                            eventTitle = t;
+                            if (getSupportActionBar() != null) {
+                                getSupportActionBar().setTitle(eventTitle);
+                            }
+                        }
+                    }
+                });
     }
 
     // ================== LOAD TICKET TYPES ==================
@@ -127,12 +152,13 @@ public class SelectTicketsActivity extends AppCompatActivity {
             btnContinue.setText("Tiếp tục");
             btnContinue.setEnabled(false);
         } else {
-            String qtyStr = "x" + qty + " vé";
             String priceStr = total <= 0
                     ? getString(R.string.free)
                     : nf.format(total) + " đ";
-            tvSummary.setText(qtyStr);
-            btnContinue.setText("Tiếp tục - " + priceStr);
+
+            // Style giống bạn t: "N vé • xxx đ" + nút "Tiếp tục (xxx đ)"
+            tvSummary.setText(qty + " vé • " + priceStr);
+            btnContinue.setText("Tiếp tục (" + priceStr + ")");
             btnContinue.setEnabled(true);
         }
     }

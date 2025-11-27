@@ -28,6 +28,7 @@ import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
 import com.example.myapplication.databinding.ActivityEventDetailBinding;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -37,6 +38,7 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.Transaction;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -465,41 +467,53 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                     ticketTypeAdapter.submit(list);
 
-                    // 👉 TÍNH GIÁ MIN TỪ ticketTypes
-                    if (list.isEmpty()) {
-                        Double p = event.getPrice();
-                        String priceText = (p == null || p == 0d)
-                                ? getString(R.string.free)
-                                : NumberFormat
-                                .getNumberInstance(new Locale("vi", "VN"))
-                                .format(p) + "₫";
-                        binding.tvPrice.setText(priceText);
-                        binding.tvBottomPrice.setText(priceText);
-                        minTicketPrice = p;
-                    } else {
+                    // Tính lại giá min để hiện thị (code cũ)
+                    if(!list.isEmpty()) {
                         double min = Double.MAX_VALUE;
-                        boolean hasPaidTicket = false;
-
-                        for (TicketTypeAdapter.TicketType t : list) {
-                            if (t.price != null && t.price > 0) {
-                                hasPaidTicket = true;
-                                if (t.price < min) min = t.price;
-                            }
-                        }
-
-                        if (!hasPaidTicket) {
-                            binding.tvPrice.setText(getString(R.string.free));
-                            binding.tvBottomPrice.setText(getString(R.string.free));
-                            minTicketPrice = 0d;
-                        } else {
+                        for(TicketTypeAdapter.TicketType t : list) if(t.price!=null && t.price < min) min = t.price;
+                        if(min < Double.MAX_VALUE) {
                             minTicketPrice = min;
-                            String formatted = NumberFormat
-                                    .getNumberInstance(new Locale("vi", "VN"))
-                                    .format(minTicketPrice) + " ₫";
-                            binding.tvPrice.setText("Giá từ: " + formatted);
-                            binding.tvBottomPrice.setText(formatted);
-                            binding.tvBottomFromLabel.setVisibility(View.VISIBLE);
+                            String s = NumberFormat.getNumberInstance(new Locale("vi","VN")).format(min)+" ₫";
+                            binding.tvBottomPrice.setText(s);
                         }
+                    }
+                });
+    }
+
+    private void placeQuickOrderDialog(int available) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_buy_ticket, null);
+        EditText edtQuantity = dialogView.findViewById(R.id.edtQuantity);
+        TextView tvPrice = dialogView.findViewById(R.id.tvUnitPrice);
+        tvPrice.setText(binding.tvBottomPrice.getText());
+
+        new AlertDialog.Builder(this)
+                .setTitle("Đặt vé nhanh")
+                .setView(dialogView)
+                .setPositiveButton("Tiếp tục", (dialog, which) -> {
+                    String s = edtQuantity.getText().toString();
+                    try {
+                        int quantity = Integer.parseInt(s);
+                        if (quantity > 0 && quantity <= available) {
+
+                            // [CHỖ NÀY ĐƯỢC SỬA]
+                            // Thay vì gọi placeOrder() lưu DB luôn, ta chuyển sang PaymentActivity
+
+                            double unitPrice = (minTicketPrice != null) ? minTicketPrice :
+                                    (event.getPrice() != null ? event.getPrice() : 0);
+                            double total = unitPrice * quantity;
+
+                            Intent intent = new Intent(EventDetailActivity.this, PaymentActivity.class);
+                            intent.putExtra("eventId", event.getId());
+                            intent.putExtra("eventTitle", event.getTitle());
+                            intent.putExtra("quantity", quantity);
+                            intent.putExtra("totalPrice", total);
+                            startActivity(intent);
+
+                        } else {
+                            Toast.makeText(this, "Số lượng không hợp lệ", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Lỗi nhập số lượng", Toast.LENGTH_SHORT).show();
                     }
                 });
     }

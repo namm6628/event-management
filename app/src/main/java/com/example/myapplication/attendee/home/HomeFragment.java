@@ -376,11 +376,11 @@ public class HomeFragment extends Fragment {
         void onEventClick(Event event);
     }
 
-    static class EventsAdapter extends ListAdapter<Event, EventsAdapter.VH> {
+    public static class EventsAdapter extends ListAdapter<Event, EventsAdapter.VH> {
 
         private final OnEventClickListener clickListener;
 
-        protected EventsAdapter(OnEventClickListener listener) {
+        public EventsAdapter(OnEventClickListener listener) {
             super(DIFF);
             this.clickListener = listener;
         }

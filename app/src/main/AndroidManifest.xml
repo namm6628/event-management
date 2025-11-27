@@ -99,8 +99,9 @@
             android:name=".organizer.OrganizerBroadcastActivity"
             android:exported="false" />
 
-
-
+        <activity
+            android:name=".attendee.detail.PaymentActivity"
+            android:theme="@style/Theme.MyApplication" />
 
 
 
