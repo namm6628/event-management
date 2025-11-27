@@ -1,28 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="8dp">
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="12dp">
 
+    <!-- Tên loại vé bên trái -->
     <TextView
         android:id="@+id/tvTicketName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:text="VIP"
         android:textStyle="bold"
         android:textSize="14sp" />
 
-    <TextView
-        android:id="@+id/tvTicketPrice"
+    <!-- Cột bên phải: giá + trạng thái vé -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textAlignment="viewEnd" />
+        android:orientation="vertical"
+        android:gravity="end">
 
-    <TextView
-        android:id="@+id/tvTicketQuota"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:textSize="13sp" />
+        <TextView
+            android:id="@+id/tvTicketPrice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="5.000.000 ₫"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- Hết vé -->
+        <TextView
+            android:id="@+id/tvTicketQuota"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Hết vé"
+            android:textColor="@android:color/holo_red_dark"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
 </LinearLayout>

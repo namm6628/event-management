@@ -51,4 +51,17 @@
     <color name="rating_yellow">#FFC107</color>
 
 
+
+    <color name="bottom_nav_active">@color/mint_primary</color>   <!-- xanh cho tab đang chọn -->
+    <color name="bottom_nav_inactive">#80FFFFFF</color>  <!-- xám nhạt cho tab còn lại -->
+    <color name="bottom_nav_bg">#171717</color>   <!-- nền thanh -->
+
+    <color name="star_yellow">#FFC107</color>
+    <color name="star_gray">#DDDDDD</color>
+
+
+
+
+
+
 </resources>

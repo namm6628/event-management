@@ -121,5 +121,36 @@ public class Event implements Serializable {
     public void setHasVideo(boolean hasVideo) {
         this.hasVideo = hasVideo;
     }
+
+    // ============ Helper ============
+
+    /**
+     * Trả về true nếu sự kiện đã kết thúc (so với thời gian hiện tại)
+     * Ưu tiên so sánh endTime, nếu không có thì fallback về startTime.
+     */
+    public boolean isEnded() {
+        Timestamp end = getEndTime();
+        java.util.Date now = new java.util.Date();
+
+        if (end != null) {
+            return end.toDate().before(now);
+        }
+
+        Timestamp start = getStartTime();
+        if (start != null) {
+            // Nếu không khai báo endTime thì coi như qua giờ bắt đầu là "đã diễn ra"
+            return start.toDate().before(now);
+        }
+
+        return false;
+    }
+
+    /** Hết vé nếu availableSeats <= 0 (và đã set trên event) */
+    public boolean isSoldOut() {
+        Integer avail = getAvailableSeats();
+        return avail != null && avail <= 0;
+    }
+
+
     // Bạn có thể override equals/hashCode nếu muốn dùng trong DiffUtil theo id
 }

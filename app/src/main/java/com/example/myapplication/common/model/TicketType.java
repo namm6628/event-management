@@ -96,4 +96,11 @@ public class TicketType implements Serializable {
     public int getRemainingQuota() {
         return quota - sold;
     }
+
+    // tiện cho check hết vé chưa
+    @Exclude
+    public boolean isSoldOut() {
+        return getRemainingQuota() <= 0;
+    }
+
 }

@@ -10,9 +10,9 @@
     <ImageView
         android:layout_width="72dp"
         android:layout_height="72dp"
+        android:contentDescription="@string/app_name"
         android:src="@drawable/ic_check_circle"
-        app:tint="@color/mint_primary"
-    android:contentDescription="@string/app_name" />
+        app:tint="@color/mint_primary" />
 
     <TextView
         android:id="@+id/tvTitle"

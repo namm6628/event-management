@@ -39,15 +39,16 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.shape.RelativeCornerSize;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
-
-import androidx.navigation.fragment.NavHostFragment;
-import com.example.myapplication.auth.AuthManager;
-import com.google.firebase.auth.FirebaseAuth;
-
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProfileFragment extends Fragment {
 
@@ -63,9 +64,33 @@ public class ProfileFragment extends Fragment {
     private View btnGoOrg;
     private View btnRequestOrg;
 
+    // --- Firestore: Sự kiện yêu thích ---
+    private FirebaseFirestore db;
+    private View containerFavoriteEventsView;
+    private View btnToggleFavoriteEventsView;
+    private TextView tvEmptyFavoriteEvents;
+    private boolean favoritesExpanded = false;
+    private final List<FavoriteEvent> favoriteEvents = new ArrayList<>();
+    private static final int FAVORITES_COLLAPSED_LIMIT = 2;
+
+    private static class FavoriteEvent {
+        String id;
+        String title;
+
+        String location;
+
+        FavoriteEvent(String id, String title, String location) {
+            this.id = id;
+            this.title = title;
+            this.location = location;
+        }
+    }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        db = FirebaseFirestore.getInstance();
 
         // Chọn ảnh từ thư viện: COPY về storage riêng của app rồi lưu URI FileProvider
         pickImage = registerForActivityResult(new ActivityResultContracts.GetContent(), src -> {
@@ -147,24 +172,16 @@ public class ProfileFragment extends Fragment {
             );
         }
 
-        View btnGoOrg = v.findViewById(R.id.btnGoOrganizer);
-        if (btnGoOrg != null) {
-            btnGoOrg.setOnClickListener(x ->
-                    NavHostFragment.findNavController(this)
-                            .navigate(R.id.organizerHomeFragment)
-            );
-        }
-
         switchDarkMode = v.findViewById(R.id.switchDarkMode);
 
         SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
 
-// Lấy trạng thái NIGHT hiện tại của app (đang áp dụng thật sự)
+        // Lấy trạng thái NIGHT hiện tại của app (đang áp dụng thật sự)
         boolean currentlyDark =
                 (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                         == Configuration.UI_MODE_NIGHT_YES;
 
-// Tránh callback bị gọi khi setChecked programmatically
+        // Tránh callback bị gọi khi setChecked programmatically
         if (switchDarkMode != null) {
             switchDarkMode.setOnCheckedChangeListener(null);
             switchDarkMode.setChecked(currentlyDark);
@@ -184,7 +201,6 @@ public class ProfileFragment extends Fragment {
                 }
             });
         }
-
 
         ShapeableImageView av = v.findViewById(R.id.imgAvatar);
         if (av != null) {
@@ -223,14 +239,34 @@ public class ProfileFragment extends Fragment {
             });
         }
 
-        updateUi(v); // lần đầu
+        // --- Favorite events views ---
+        containerFavoriteEventsView = v.findViewById(R.id.containerFavoriteEvents);
+        btnToggleFavoriteEventsView = v.findViewById(R.id.btnToggleFavoriteEvents);
+        tvEmptyFavoriteEvents = v.findViewById(R.id.tvEmptyFavoriteEvents);
+
+        if (btnToggleFavoriteEventsView != null) {
+            btnToggleFavoriteEventsView.setOnClickListener(view -> {
+                favoritesExpanded = !favoritesExpanded;
+                if (btnToggleFavoriteEventsView instanceof TextView) {
+                    ((TextView) btnToggleFavoriteEventsView)
+                            .setText(favoritesExpanded ? "Ẩn bớt" : "Xem thêm");
+                }
+                renderFavoriteEventsUi();
+            });
+        }
+
+        updateUi(v);        // lần đầu
+        refreshFavoriteEvents(v); // load favorite events lần đầu
     }
 
     @Override
     public void onResume() {
         super.onResume();
         View v = getView();
-        if (v != null) updateUi(v);
+        if (v != null) {
+            updateUi(v);
+            refreshFavoriteEvents(v); // quay lại màn hình thì reload follow
+        }
 
         if (btnGoOrg != null) {
             btnGoOrg.setVisibility(View.GONE);
@@ -250,8 +286,6 @@ public class ProfileFragment extends Fragment {
                 btnRequestOrg.setVisibility(isOrganizer ? View.GONE : View.VISIBLE);
             }
         });
-
-
     }
 
     /* -------------------------- UI logic -------------------------- */
@@ -297,7 +331,11 @@ public class ProfileFragment extends Fragment {
 
             setupExpandable(root, R.id.rowProfile,        R.id.panelProfile,  R.id.chevronProfile);
             setupExpandable(root, R.id.rowPaymentMethods, R.id.panelPayment,  R.id.chevronPayment);
-            setupExpandable(root, R.id.rowMyTickets,      R.id.panelTickets,  R.id.chevronTickets);
+
+            // Favorite events: nút xem thêm luôn bật, text tùy số lượng
+            if (btnToggleFavoriteEventsView != null) {
+                btnToggleFavoriteEventsView.setVisibility(View.VISIBLE);
+            }
 
         } else {
             if (tvName != null)  tvName.setText("Khách mới");
@@ -310,12 +348,36 @@ public class ProfileFragment extends Fragment {
 
             View.OnClickListener ask = v ->
                     toast("Vui lòng đăng nhập để xem mục này");
-            int[] rows = { R.id.rowProfile, R.id.rowPaymentMethods, R.id.rowMyTickets };
-            for (int id : rows) { View r = root.findViewById(id); if (r != null) r.setOnClickListener(ask); }
-            int[] panels = { R.id.panelProfile, R.id.panelPayment, R.id.panelTickets };
-            for (int id : panels) { View p = root.findViewById(id); if (p != null) p.setVisibility(View.GONE); }
-            int[] chevs = { R.id.chevronProfile, R.id.chevronPayment, R.id.chevronTickets };
-            for (int id : chevs) { ImageView c = root.findViewById(id); if (c != null) c.setRotation(0f); }
+            int[] rows = { R.id.rowProfile, R.id.rowPaymentMethods };
+            for (int id : rows) {
+                View r = root.findViewById(id);
+                if (r != null) r.setOnClickListener(ask);
+            }
+            int[] panels = { R.id.panelProfile, R.id.panelPayment };
+            for (int id : panels) {
+                View p = root.findViewById(id);
+                if (p != null) p.setVisibility(View.GONE);
+            }
+            int[] chevs = { R.id.chevronProfile, R.id.chevronPayment };
+            for (int id : chevs) {
+                ImageView c = root.findViewById(id);
+                if (c != null) c.setRotation(0f);
+            }
+
+            // Favorite events khi chưa login
+            favoriteEvents.clear();
+            favoritesExpanded = false;
+            if (btnToggleFavoriteEventsView instanceof TextView) {
+                ((TextView) btnToggleFavoriteEventsView).setText("Xem thêm");
+            }
+            if (tvEmptyFavoriteEvents != null) {
+                tvEmptyFavoriteEvents.setText("Đăng nhập để xem sự kiện theo dõi.");
+                tvEmptyFavoriteEvents.setVisibility(View.VISIBLE);
+            }
+            if (btnToggleFavoriteEventsView != null) {
+                btnToggleFavoriteEventsView.setVisibility(View.GONE);
+            }
+            renderFavoriteEventsUi();
         }
     }
 
@@ -346,7 +408,6 @@ public class ProfileFragment extends Fragment {
         dlg.show();
     }
 
-
     private void setupExpandable(@NonNull View root,
                                  @IdRes int rowId,
                                  @IdRes int panelId,
@@ -372,6 +433,125 @@ public class ProfileFragment extends Fragment {
             chev.animate().rotation(show ? 90f : 0f).setDuration(180).start();
         }
     }
+
+    /* --------- Sự kiện yêu thích: Firestore + UI --------- */
+
+    private void refreshFavoriteEvents(@NonNull View root) {
+        if (!AuthManager.isLoggedIn(requireContext())) return;
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+        String uid = user.getUid();
+
+        db.collection("users")
+                .document(uid)
+                .collection("favoriteEvents")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    favoriteEvents.clear();
+
+                    if (snap.isEmpty()) {
+                        if (tvEmptyFavoriteEvents != null) {
+                            tvEmptyFavoriteEvents.setText("Bạn chưa theo dõi sự kiện nào.");
+                            tvEmptyFavoriteEvents.setVisibility(View.VISIBLE);
+                        }
+                        if (btnToggleFavoriteEventsView != null) {
+                            btnToggleFavoriteEventsView.setVisibility(View.GONE);
+                        }
+                        renderFavoriteEventsUi();
+                        return;
+                    }
+
+                    if (tvEmptyFavoriteEvents != null) {
+                        tvEmptyFavoriteEvents.setVisibility(View.GONE);
+                    }
+
+                    for (DocumentSnapshot d : snap.getDocuments()) {
+                        String eventId = d.getId();               // doc ID = eventId
+                        String title = d.getString("title");
+                        String location = d.getString("location");
+
+                        if (title == null) title = "(Không có tên)";
+                        if (location == null) location = "";
+
+                        favoriteEvents.add(new FavoriteEvent(eventId, title, location));
+                    }
+
+                    // Nút xem thêm
+                    if (btnToggleFavoriteEventsView != null) {
+                        btnToggleFavoriteEventsView.setVisibility(
+                                favoriteEvents.size() > FAVORITES_COLLAPSED_LIMIT
+                                        ? View.VISIBLE
+                                        : View.GONE
+                        );
+                    }
+
+                    renderFavoriteEventsUi();
+                })
+                .addOnFailureListener(e -> {
+                    toast("Không tải được danh sách sự kiện yêu thích");
+                    favoriteEvents.clear();
+                    renderFavoriteEventsUi();
+                });
+    }
+
+
+
+    private void renderFavoriteEventsUi() {
+        if (containerFavoriteEventsView == null) return;
+        if (!(containerFavoriteEventsView instanceof ViewGroup)) return;
+
+        ViewGroup container = (ViewGroup) containerFavoriteEventsView;
+        container.removeAllViews();
+
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+
+        if (favoriteEvents.isEmpty()) {
+            if (tvEmptyFavoriteEvents != null) {
+                tvEmptyFavoriteEvents.setVisibility(View.VISIBLE);
+            }
+            return;
+        }
+
+        if (tvEmptyFavoriteEvents != null) {
+            tvEmptyFavoriteEvents.setVisibility(View.GONE);
+        }
+
+        int max = favoritesExpanded
+                ? favoriteEvents.size()
+                : Math.min(FAVORITES_COLLAPSED_LIMIT, favoriteEvents.size());
+
+        for (int i = 0; i < max; i++) {
+            FavoriteEvent fe = favoriteEvents.get(i);
+
+            View row = inflater.inflate(R.layout.item_favorite_event_profile, container, false);
+
+            TextView tvTitle = row.findViewById(R.id.tvEventTitle);
+            TextView tvLocation = row.findViewById(R.id.tvEventLocation);
+
+            if (tvTitle != null) {
+                tvTitle.setText(fe.title);
+            }
+
+            if (tvLocation != null) {
+                if (fe.location == null || fe.location.trim().isEmpty()) {
+                    tvLocation.setVisibility(View.GONE);
+                } else {
+                    tvLocation.setText(fe.location);
+                    tvLocation.setVisibility(View.VISIBLE);
+                }
+            }
+
+            // TODO: nếu muốn click mở EventDetail thì thêm điều hướng ở đây
+            row.setOnClickListener(v -> {
+                // NavHostFragment.findNavController(this)
+                //        .navigate(...);
+            });
+
+            container.addView(row);
+        }
+    }
+
 
     /* --------- Menu avatar & bottom sheet chọn nguồn ảnh --------- */
 

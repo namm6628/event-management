@@ -28,16 +28,15 @@ import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
 import com.example.myapplication.databinding.ActivityEventDetailBinding;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.Transaction;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -79,11 +78,31 @@ public class EventDetailActivity extends AppCompatActivity {
     private ImageView ivWeatherIcon;
     private TextView tvWeather;
 
+    private FirebaseUser currentUser;
+    private String currentUserId;
+
+    // Reviews
+    private boolean reviewsExpanded = false;
+    private static final int REVIEWS_COLLAPSED_LIMIT = 3;
+    private final List<Review> allReviews = new ArrayList<>();
+
+    // Recommended events
+    private final List<RecommendedEvent> recommendedList = new ArrayList<>();
+    private RecommendedAdapter recommendedAdapter;
+
+    // trạng thái user đã theo dõi (favorite) event này chưa
+    private boolean isFavorite = false;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityEventDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            currentUserId = currentUser.getUid();
+        }
 
         // Khởi tạo Volley
         volleyQueue = Volley.newRequestQueue(this);
@@ -127,7 +146,7 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.tvToggleTicketTypes.setOnClickListener(v -> {
             if (binding.recyclerTicketTypes.getVisibility() == View.VISIBLE) {
                 binding.recyclerTicketTypes.setVisibility(View.GONE);
-                binding.tvToggleTicketTypes.setText("Hiện loại vé");
+                binding.tvToggleTicketTypes.setText("Xem loại vé");
             } else {
                 binding.recyclerTicketTypes.setVisibility(View.VISIBLE);
                 binding.tvToggleTicketTypes.setText("Ẩn loại vé");
@@ -178,16 +197,10 @@ public class EventDetailActivity extends AppCompatActivity {
             startActivity(Intent.createChooser(intent, getString(R.string.share_event)));
         });
 
-        // Follow toggle
-        binding.btnFollow.setOnClickListener(v -> {
-            boolean selected = !binding.btnFollow.isChecked();
-            binding.btnFollow.setChecked(selected);
-            Snackbar.make(
-                    binding.getRoot(),
-                    getString(selected ? R.string.followed : R.string.unfollowed),
-                    Snackbar.LENGTH_SHORT
-            ).show();
-        });
+        // Nút Theo dõi → toggle favorite
+        binding.btnFollow.setOnClickListener(v -> toggleFavorite());
+        // text mặc định
+        updateFollowButtonUi();
 
         // Mở bản đồ
         binding.btnOpenMap.setOnClickListener(v -> {
@@ -213,8 +226,44 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.recyclerReviews.setLayoutManager(new LinearLayoutManager(this));
         binding.recyclerReviews.setAdapter(reviewAdapter);
 
+        // Nút "Xem thêm" đánh giá
+        binding.btnMoreReviews.setOnClickListener(v -> {
+            reviewsExpanded = !reviewsExpanded;
+            renderReviewsUi();
+        });
+
+        // Recommended events Recycler
+        recommendedAdapter = new RecommendedAdapter();
+        binding.recyclerRecommendedEvents.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        );
+        binding.recyclerRecommendedEvents.setAdapter(recommendedAdapter);
+
         // Nút Đặt vé
         binding.btnBuyTicket.setOnClickListener(v -> {
+            if (event == null) {
+                Toast.makeText(this, "Chưa tải xong dữ liệu sự kiện", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (isEventEnded(event)) {
+                Toast.makeText(
+                        this,
+                        "Sự kiện đã kết thúc, không thể đặt vé nữa.",
+                        Toast.LENGTH_SHORT
+                ).show();
+                return;
+            }
+
+            if (event.isSoldOut()) {
+                Toast.makeText(
+                        this,
+                        "Sự kiện đã hết vé.",
+                        Toast.LENGTH_SHORT
+                ).show();
+                return;
+            }
+
             if (eventId == null || eventId.isEmpty()) {
                 Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
                 return;
@@ -283,9 +332,9 @@ public class EventDetailActivity extends AppCompatActivity {
 
         eventListener = db.collection("events")
                 .document(eventId)
-                .addSnapshotListener((doc, e) -> {
-                    if (e != null) {
-                        Toast.makeText(this, "Lỗi tải sự kiện: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                .addSnapshotListener((doc, ex) -> {
+                    if (ex != null) {
+                        Toast.makeText(this, "Lỗi tải sự kiện: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     if (doc == null || !doc.exists()) {
@@ -364,8 +413,22 @@ public class EventDetailActivity extends AppCompatActivity {
                     binding.tvBottomPrice.setText(priceText);
 
                     loadTicketTypes();
-                    loadWeatherForecast(event);   // 🔹 gọi dự báo thời tiết
+                    loadWeatherForecast(event);
                     loadReviews();
+
+                    updateBuyButtonState();
+
+                    // Luôn hiển thị list loại vé, chỉ làm mờ item nếu event kết thúc
+                    binding.recyclerTicketTypes.setVisibility(View.VISIBLE);
+                    binding.tvToggleTicketTypes.setVisibility(View.VISIBLE);
+
+                    // báo cho adapter biết event đã kết thúc chưa để set alpha item
+                    ticketTypeAdapter.setEventEnded(isEventEnded(event));
+
+                    // Sau khi đã có event → kiểm tra trạng thái favorite ban đầu
+                    checkFavoriteState();
+                    loadRecommendedEvents();
+
                 });
     }
 
@@ -384,9 +447,17 @@ public class EventDetailActivity extends AppCompatActivity {
         db.collection("events")
                 .document(event.getId())
                 .collection("ticketTypes")
-                .get()
-                .addOnSuccessListener(snap -> {
+                .addSnapshotListener((snap, ex) -> {
+                    if (ex != null) {
+                        Toast.makeText(this,
+                                "Không tải được loại vé: " + ex.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (snap == null) return;
+
                     List<TicketTypeAdapter.TicketType> list = new ArrayList<>();
+
                     for (DocumentSnapshot d : snap.getDocuments()) {
                         TicketTypeAdapter.TicketType t =
                                 d.toObject(TicketTypeAdapter.TicketType.class);
@@ -430,13 +501,136 @@ public class EventDetailActivity extends AppCompatActivity {
                             binding.tvBottomFromLabel.setVisibility(View.VISIBLE);
                         }
                     }
+                });
+    }
+
+    /** Cập nhật text nút Follow theo isFavorite */
+    private void updateFollowButtonUi() {
+        if (binding == null) return;
+        binding.btnFollow.setText(isFavorite ? "Bỏ theo dõi" : "Theo dõi");
+    }
+
+    /** Check xem user hiện tại đã favorite event này chưa */
+    private void checkFavoriteState() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || eventId == null) {
+            isFavorite = false;
+            updateFollowButtonUi();
+            return;
+        }
+
+        String uid = user.getUid();
+
+        db.collection("users")
+                .document(uid)
+                .collection("favoriteEvents")
+                .document(eventId)        // dùng eventId làm id doc
+                .get()
+                .addOnSuccessListener(doc -> {
+                    isFavorite = doc.exists();
+                    updateFollowButtonUi();
                 })
-                .addOnFailureListener(e ->
+                .addOnFailureListener(e -> {
+                    isFavorite = false;
+                    updateFollowButtonUi();
+                });
+    }
+
+    private void loadRecommendedEvents() {
+        // Nếu chưa có event thì thôi
+        if (event == null) return;
+
+        db.collection("events")
+                .limit(20)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    recommendedList.clear();
+                    for (DocumentSnapshot d : snap.getDocuments()) {
+                        if (d.getId().equals(event.getId())) continue; // bỏ sự kiện hiện tại
+
+                        Event e = d.toObject(Event.class);
+                        if (e == null) continue;
+
+                        RecommendedEvent re = new RecommendedEvent();
+                        re.id = d.getId();
+                        re.title = e.getTitle();
+                        re.location = e.getLocation();
+                        re.thumbnail = e.getThumbnail();
+
+                        recommendedList.add(re);
+                    }
+
+                    if (recommendedList.isEmpty()) {
+                        binding.layoutRecommended.setVisibility(View.GONE);
+                    } else {
+                        binding.layoutRecommended.setVisibility(View.VISIBLE);
+                        recommendedAdapter.notifyDataSetChanged();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // lỗi thì ẩn luôn section
+                    binding.layoutRecommended.setVisibility(View.GONE);
+                });
+    }
+
+    /** Toggle follow / unfollow và lưu Firestore */
+    private void toggleFavorite() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "Bạn cần đăng nhập để theo dõi", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (event == null || event.getId() == null) {
+            Toast.makeText(this, "Chưa có thông tin sự kiện", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String uid = user.getUid();
+
+        DocumentReference favRef = db.collection("users")
+                .document(uid)
+                .collection("favoriteEvents")
+                .document(event.getId());
+
+        if (!isFavorite) {
+            // → Thêm vào yêu thích
+            Map<String, Object> data = new HashMap<>();
+            data.put("eventId", event.getId());
+            data.put("title", event.getTitle());
+            data.put("thumbnail", event.getThumbnail());
+            data.put("location", event.getLocation());
+            data.put("createdAt", FieldValue.serverTimestamp());
+
+            favRef.set(data)
+                    .addOnSuccessListener(unused -> {
+                        isFavorite = true;
+                        updateFollowButtonUi();
                         Toast.makeText(this,
-                                        "Không tải được loại vé: " + e.getMessage(),
-                                        Toast.LENGTH_SHORT)
-                                .show()
-                );
+                                "Đã thêm vào sự kiện yêu thích",
+                                Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this,
+                                "Lỗi: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    });
+
+        } else {
+            // → Bỏ yêu thích
+            favRef.delete()
+                    .addOnSuccessListener(unused -> {
+                        isFavorite = false;
+                        updateFollowButtonUi();
+                        Toast.makeText(this,
+                                "Đã bỏ theo dõi sự kiện",
+                                Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this,
+                                "Lỗi: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    });
+        }
     }
 
     // =============== WEATHER HELPERS ===============
@@ -493,7 +687,7 @@ public class EventDetailActivity extends AppCompatActivity {
         if (tvWeather != null) {
             String text = String.format(
                     Locale.getDefault(),
-                    "Dự báo: %.0f°C, %s",
+                    "Dự báo thời tiết: %.0f°C, %s",
                     tempC,
                     description
             );
@@ -570,7 +764,7 @@ public class EventDetailActivity extends AppCompatActivity {
                         } else {
                             showWeatherError("Không tìm thấy mốc thời gian phù hợp");
                         }
-                    } catch (JSONException e) {
+                    } catch (JSONException ex) {
                         showWeatherError("Không đọc được dữ liệu thời tiết");
                     }
                 },
@@ -606,194 +800,68 @@ public class EventDetailActivity extends AppCompatActivity {
                         Review r = d.toObject(Review.class);
                         if (r != null) reviews.add(r);
                     }
-                    reviewAdapter.submit(reviews);
 
-                    int count = reviews.size();
-                    binding.tvReviewCount.setText(
-                            getString(R.string.review_count_fmt, count)
-                    );
-
-                    double total = 0;
-                    for (Review r : reviews) {
-                        if (r.rating != null) total += r.rating;
-                    }
-                    double avg = count > 0 ? total / count : 0;
-                    binding.ratingAverage.setRating((float) avg);
-                    binding.tvAverageRating.setText(
-                            String.format(Locale.getDefault(), "%.1f/5", avg)
-                    );
-
-                    if (count == 0) {
-                        binding.recyclerReviews.setVisibility(View.GONE);
-                        binding.tvEmptyReviews.setVisibility(View.VISIBLE);
-                    } else {
-                        binding.recyclerReviews.setVisibility(View.VISIBLE);
-                        binding.tvEmptyReviews.setVisibility(View.GONE);
-                    }
+                    // cập nhật list gốc & render lại UI
+                    allReviews.clear();
+                    allReviews.addAll(reviews);
+                    renderReviewsUi();
                 })
-                .addOnFailureListener(e ->
+                .addOnFailureListener(ex ->
                         Toast.makeText(this,
-                                        "Không tải được đánh giá: " + e.getMessage(),
+                                        "Không tải được đánh giá: " + ex.getMessage(),
                                         Toast.LENGTH_SHORT)
                                 .show()
                 );
     }
 
-    // ================== ĐẶT VÉ ==================
+    /** Render lại UI cho phần review (ẩn/bớt, xem thêm, điểm TB, số lượng) */
+    private void renderReviewsUi() {
+        int count = allReviews.size();
 
-    private void showBuyTicketDialog() {
-        final int available = (event.getAvailableSeats() == null ? 0 : event.getAvailableSeats());
+        // Cập nhật tổng số đánh giá
+        binding.tvReviewCount.setText(
+                getString(R.string.review_count_fmt, count)
+        );
 
-        if (available <= 0) {
-            Toast.makeText(this, "Sự kiện đã hết vé", Toast.LENGTH_SHORT).show();
+        // Không có review
+        if (count == 0) {
+            binding.recyclerReviews.setVisibility(View.GONE);
+            binding.tvEmptyReviews.setVisibility(View.VISIBLE);
+            binding.btnMoreReviews.setVisibility(View.GONE);
+            binding.ratingAverage.setRating(0f);
+            binding.tvAverageRating.setText("0.0/5");
             return;
         }
 
-        // Xác định đơn giá
-        final double unitPrice;
-        if (minTicketPrice != null && minTicketPrice > 0) {
-            unitPrice = minTicketPrice;
-        } else if (event.getPrice() != null && event.getPrice() > 0) {
-            unitPrice = event.getPrice();
+        binding.recyclerReviews.setVisibility(View.VISIBLE);
+        binding.tvEmptyReviews.setVisibility(View.GONE);
+
+        // Tính average (dựa trên TẤT CẢ review)
+        double total = 0;
+        for (Review r : allReviews) {
+            if (r.rating != null) total += r.rating;
+        }
+        double avg = count > 0 ? total / count : 0;
+        binding.ratingAverage.setRating((float) avg);
+        binding.tvAverageRating.setText(
+                String.format(Locale.getDefault(), "%.1f/5", avg)
+        );
+
+        // List hiển thị: 3 cái đầu hoặc tất cả
+        int max = reviewsExpanded
+                ? count
+                : Math.min(REVIEWS_COLLAPSED_LIMIT, count);
+
+        List<Review> shown = new ArrayList<>(allReviews.subList(0, max));
+        reviewAdapter.submit(shown);
+
+        // Nút "Xem thêm / Ẩn bớt"
+        if (count > REVIEWS_COLLAPSED_LIMIT) {
+            binding.btnMoreReviews.setVisibility(View.VISIBLE);
+            binding.btnMoreReviews.setText(reviewsExpanded ? "Ẩn đánh giá" : "Xem thêm đánh giá");
         } else {
-            unitPrice = 0d;
+            binding.btnMoreReviews.setVisibility(View.GONE);
         }
-
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_buy_ticket, null);
-        TextView tvEventTitle = dialogView.findViewById(R.id.tvEventTitle);
-        TextView tvUnitPrice = dialogView.findViewById(R.id.tvUnitPrice);
-        TextView tvTotalPrice = dialogView.findViewById(R.id.tvTotalPrice);
-        EditText edtQuantity = dialogView.findViewById(R.id.edtQuantity);
-
-        tvEventTitle.setText(event.getTitle() == null ? "" : event.getTitle());
-
-        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-
-        String unitPriceStr;
-        if (unitPrice <= 0) {
-            unitPriceStr = getString(R.string.free);
-        } else {
-            unitPriceStr = nf.format(unitPrice) + " ₫";
-        }
-        tvUnitPrice.setText(unitPriceStr);
-
-        edtQuantity.setText("1");
-        if (unitPrice <= 0) {
-            tvTotalPrice.setText(getString(R.string.free));
-        } else {
-            tvTotalPrice.setText(nf.format(unitPrice) + " ₫");
-        }
-
-        edtQuantity.addTextChangedListener(new SimpleTextWatcher() {
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String txt = s.toString().trim();
-                int q = 0;
-                try {
-                    q = Integer.parseInt(txt);
-                } catch (NumberFormatException ignored) {
-                }
-
-                if (q <= 0) {
-                    tvTotalPrice.setText("0 ₫");
-                } else if (unitPrice <= 0) {
-                    tvTotalPrice.setText(getString(R.string.free));
-                } else {
-                    double total = q * unitPrice;
-                    tvTotalPrice.setText(nf.format(total) + " ₫");
-                }
-            }
-        });
-
-        new AlertDialog.Builder(this)
-                .setTitle("Xác nhận đặt vé")
-                .setView(dialogView)
-                .setPositiveButton("Đặt vé", (dialog, which) -> {
-
-                    String s = edtQuantity.getText().toString().trim();
-                    if (s.isEmpty()) {
-                        Toast.makeText(this, "Vui lòng nhập số vé", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    int quantity;
-                    try {
-                        quantity = Integer.parseInt(s);
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(this, "Số vé không hợp lệ", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    if (quantity <= 0) {
-                        Toast.makeText(this, "Số vé phải > 0", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    if (quantity > available) {
-                        Toast.makeText(this, "Không đủ vé, tối đa " + available, Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    placeOrder(quantity);
-                })
-                .setNegativeButton("Huỷ", null)
-                .show();
-    }
-
-    private void placeOrder(int quantity) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null || event == null || event.getId() == null) {
-            Toast.makeText(this, "Thiếu thông tin đặt vé", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String userId = user.getUid();
-        String eventDocId = event.getId();
-
-        binding.btnBuyTicket.setEnabled(false);
-
-        db.runTransaction((Transaction.Function<Void>) transaction -> {
-            var eventRef = db.collection("events").document(eventDocId);
-            var snapshot = transaction.get(eventRef);
-
-            Integer avail = snapshot.getLong("availableSeats") != null
-                    ? snapshot.getLong("availableSeats").intValue()
-                    : 0;
-
-            if (avail < quantity) {
-                throw new RuntimeException("Không đủ vé, còn " + avail);
-            }
-
-            var ordersRef = db.collection("orders").document();
-            Map<String, Object> orderData = new HashMap<>();
-            orderData.put("userId", userId);
-            orderData.put("eventId", eventDocId);
-            orderData.put("quantity", quantity);
-            orderData.put("createdAt", FieldValue.serverTimestamp());
-
-            transaction.set(ordersRef, orderData);
-            transaction.update(eventRef, "availableSeats", avail - quantity);
-
-            return null;
-        }).addOnSuccessListener(unused -> {
-            binding.btnBuyTicket.setEnabled(true);
-
-            String msg = "Bạn đã đặt " + quantity + " vé cho sự kiện \""
-                    + (event.getTitle() == null ? "" : event.getTitle()) + "\"";
-            new AlertDialog.Builder(this)
-                    .setTitle("Đặt vé thành công")
-                    .setMessage(msg)
-                    .setPositiveButton("OK", null)
-                    .show();
-        }).addOnFailureListener(e -> {
-            binding.btnBuyTicket.setEnabled(true);
-            String msg = e.getMessage();
-            if (msg != null && msg.startsWith("Không đủ vé")) {
-                Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-            } else {
-                Toast.makeText(this, "Lỗi đặt vé: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        });
     }
 
     private void showRateDialog() {
@@ -815,7 +883,7 @@ public class EventDetailActivity extends AppCompatActivity {
                     float rating = rb.getRating();
                     String content = et.getText().toString().trim();
                     if (rating <= 0f) {
-                        Toast.makeText(this, "Vui lòng chọn số sao", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Bạn chưa chọn số sao", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     submitReview(rating, content);
@@ -854,9 +922,9 @@ public class EventDetailActivity extends AppCompatActivity {
                     Toast.makeText(this, "Đã gửi đánh giá!", Toast.LENGTH_SHORT).show();
                     loadReviews();
                 })
-                .addOnFailureListener(e ->
+                .addOnFailureListener(ex ->
                         Toast.makeText(this,
-                                        "Lỗi gửi đánh giá: " + e.getMessage(),
+                                        "Lỗi gửi đánh giá: " + ex.getMessage(),
                                         Toast.LENGTH_SHORT)
                                 .show()
                 );
@@ -890,6 +958,14 @@ public class EventDetailActivity extends AppCompatActivity {
         public Review() {}
     }
 
+    // Model sự kiện gợi ý
+    private static class RecommendedEvent {
+        String id;
+        String title;
+        String location;
+        String thumbnail;
+    }
+
     // ================== ADAPTER LOẠI VÉ (CHỈ HIỂN THỊ) ==================
     private static class TicketTypeAdapter extends
             RecyclerView.Adapter<TicketTypeAdapter.VH> {
@@ -904,10 +980,17 @@ public class EventDetailActivity extends AppCompatActivity {
         }
 
         private final List<TicketType> data = new ArrayList<>();
+        private boolean eventEnded = false;   // flag sự kiện đã kết thúc
 
         public void submit(List<TicketType> list) {
             data.clear();
             if (list != null) data.addAll(list);
+            notifyDataSetChanged();
+        }
+
+        // gọi từ Activity sau khi biết event đã kết thúc hay chưa
+        public void setEventEnded(boolean ended) {
+            this.eventEnded = ended;
             notifyDataSetChanged();
         }
 
@@ -921,7 +1004,7 @@ public class EventDetailActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull VH holder, int position) {
-            holder.bind(data.get(position));
+            holder.bind(data.get(position), eventEnded);
         }
 
         @Override
@@ -931,15 +1014,17 @@ public class EventDetailActivity extends AppCompatActivity {
 
         static class VH extends RecyclerView.ViewHolder {
             TextView tvName, tvPrice, tvQuota;
+            View root;
 
             VH(@NonNull View itemView) {
                 super(itemView);
-                tvName  = itemView.findViewById(R.id.tvTicketName);
-                tvPrice = itemView.findViewById(R.id.tvTicketPrice);
-                tvQuota = itemView.findViewById(R.id.tvTicketQuota);
+                root   = itemView;
+                tvName = itemView.findViewById(R.id.tvTicketName);
+                tvPrice= itemView.findViewById(R.id.tvTicketPrice);
+                tvQuota= itemView.findViewById(R.id.tvTicketQuota);
             }
 
-            void bind(TicketType t) {
+            void bind(TicketType t, boolean eventEnded) {
                 tvName.setText(t.name == null ? "Loại vé" : t.name);
 
                 String priceStr;
@@ -955,17 +1040,99 @@ public class EventDetailActivity extends AppCompatActivity {
                 long quota = t.quota == null ? 0 : t.quota;
                 long sold  = t.sold == null ? 0 : t.sold;
                 long avail = quota - sold;
+                boolean soldOut = quota > 0 && avail <= 0;
 
-                if (quota > 0 && avail <= 0) {
+                // Chỉ hiện "Hết vé" khi hết – KHÔNG hiện "Còn xx vé"
+                if (soldOut) {
                     tvQuota.setVisibility(View.VISIBLE);
                     tvQuota.setText("Hết vé");
-                    tvQuota.setTextColor(
-                            itemView.getResources().getColor(android.R.color.holo_red_dark)
-                    );
                 } else {
                     tvQuota.setVisibility(View.GONE);
                 }
+
+                // Làm mờ dòng nếu event kết thúc hoặc vé đó hết
+                if (eventEnded || soldOut) {
+                    root.setAlpha(0.4f);
+                } else {
+                    root.setAlpha(1f);
+                }
             }
+        }
+    }
+
+    // ================== ADAPTER SỰ KIỆN GỢI Ý ==================
+    private class RecommendedAdapter extends RecyclerView.Adapter<RecommendedAdapter.VH> {
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_recommended_event, parent, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            holder.bind(recommendedList.get(position));
+        }
+
+        @Override
+        public int getItemCount() {
+            return recommendedList.size();
+        }
+
+        class VH extends RecyclerView.ViewHolder {
+            ImageView imgThumb;
+            TextView tvTitle, tvLocation;
+
+            VH(@NonNull View itemView) {
+                super(itemView);
+                imgThumb = itemView.findViewById(R.id.imgThumb);
+                tvTitle = itemView.findViewById(R.id.tvTitle);
+                tvLocation = itemView.findViewById(R.id.tvLocation);
+            }
+
+            void bind(RecommendedEvent e) {
+                tvTitle.setText(e.title != null ? e.title : "");
+                tvLocation.setText(e.location != null ? e.location : "");
+
+                Glide.with(imgThumb.getContext())
+                        .load(e.thumbnail)
+                        .centerCrop()
+                        .placeholder(R.drawable.sample_event)
+                        .error(R.drawable.sample_event)
+                        .into(imgThumb);
+
+                itemView.setOnClickListener(v -> {
+                    Intent i = new Intent(EventDetailActivity.this, EventDetailActivity.class);
+                    i.putExtra(EXTRA_EVENT_ID, e.id);
+                    startActivity(i);
+                });
+            }
+        }
+    }
+
+    // ============ Helper ============
+
+    private boolean isEventEnded(@Nullable Event e) {
+        return e != null && e.isEnded();
+    }
+
+    private void updateBuyButtonState() {
+        if (binding == null || event == null) return;
+
+        if (isEventEnded(event)) {
+            binding.btnBuyTicket.setText("Sự kiện đã kết thúc");
+            binding.btnBuyTicket.setAlpha(0.6f);
+            binding.btnBuyTicket.setEnabled(false);
+        } else if (event.isSoldOut()) {
+            binding.btnBuyTicket.setText("Đã hết vé");
+            binding.btnBuyTicket.setAlpha(0.6f);
+            binding.btnBuyTicket.setEnabled(false);
+        } else {
+            binding.btnBuyTicket.setText("Đặt vé");
+            binding.btnBuyTicket.setAlpha(1f);
+            binding.btnBuyTicket.setEnabled(true);
         }
     }
 }

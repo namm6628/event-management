@@ -42,8 +42,10 @@
             android:layout_marginTop="4dp"
             android:numStars="5"
             android:stepSize="0.5"
-            android:rating="4"
-            android:isIndicator="true" />
+            android:isIndicator="true"
+            android:progressTint="@color/star_yellow"
+            android:secondaryProgressTint="@color/star_yellow"
+            android:progressBackgroundTint="@color/star_gray" />
 
         <!-- Nội dung đánh giá -->
         <TextView

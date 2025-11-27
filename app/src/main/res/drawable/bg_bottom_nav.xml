@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- nền mint -->
-    <solid android:color="@color/mint_primary" />
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
 
-    <!-- bo góc trên nhẹ -->
+    <!-- nền tối cho thanh -->
+    <solid android:color="@color/bottom_nav_bg" />
+
+    <!-- bo nhẹ góc trên cho cảm giác “floating” -->
     <corners
-        android:topLeftRadius="18dp"
-        android:topRightRadius="18dp" />
+        android:topLeftRadius="16dp"
+        android:topRightRadius="16dp" />
 
-    <!-- padding để icon không dính viền -->
     <padding
-        android:left="8dp"
         android:top="4dp"
-        android:right="8dp"
-        android:bottom="8dp" />
+        android:bottom="4dp" />
 </shape>

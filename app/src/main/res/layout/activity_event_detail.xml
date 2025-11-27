@@ -234,8 +234,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- ====== BLOCK DỰ BÁO THỜI TIẾT (THÊM MỚI) ====== -->
-            <!-- ====== BLOCK DỰ BÁO THỜI TIẾT (DARK/LIGHT + SKELETON) ====== -->
+            <!-- ====== BLOCK DỰ BÁO THỜI TIẾT ====== -->
             <LinearLayout
                 android:id="@+id/layoutWeatherContainer"
                 android:layout_width="0dp"
@@ -255,7 +254,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <!-- 🔹 Skeleton loading -->
+                    <!-- Skeleton loading -->
                     <LinearLayout
                         android:id="@+id/layoutSkeletonWeather"
                         android:layout_width="match_parent"
@@ -276,7 +275,7 @@
                             android:background="@drawable/bg_skeleton_rounded" />
                     </LinearLayout>
 
-                    <!-- 🔹 Nội dung thật -->
+                    <!-- Nội dung thật -->
                     <LinearLayout
                         android:id="@+id/layoutWeather"
                         android:layout_width="match_parent"
@@ -303,7 +302,6 @@
                     </LinearLayout>
                 </FrameLayout>
             </LinearLayout>
-
 
             <!-- ====== KHUNG LOẠI VÉ ====== -->
             <androidx.cardview.widget.CardView
@@ -426,7 +424,6 @@
                     app:backgroundTint="@color/mint_primary" />
             </LinearLayout>
 
-            <!-- ====== REVIEW ====== -->
             <!-- ====== REVIEW HEADER ====== -->
             <LinearLayout
                 android:id="@+id/layoutReviewHeader"
@@ -459,13 +456,13 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp" />
 
-                <!-- Đẩy nút viết đánh giá qua phải -->
+                <!-- Spacer -->
                 <View
                     android:layout_width="0dp"
                     android:layout_height="0dp"
                     android:layout_weight="1" />
 
-                <!-- Nút viết đánh giá (sát mép phải) -->
+                <!-- Nút viết đánh giá -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnWriteReview"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -477,7 +474,7 @@
                     android:minWidth="0dp" />
             </LinearLayout>
 
-
+            <!-- ====== ĐIỂM TRUNG BÌNH ====== -->
             <LinearLayout
                 android:id="@+id/layoutAverageRating"
                 android:layout_width="0dp"
@@ -509,6 +506,24 @@
                     android:textColor="@color/text_secondary" />
             </LinearLayout>
 
+            <!-- Nút xem thêm review -->
+            <TextView
+                android:id="@+id/btnMoreReviews"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Xem thêm"
+                android:textStyle="bold"
+                android:textColor="@color/sp_green_dark"
+                android:textAllCaps="false"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/layoutAverageRating"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <!-- Text khi không có review -->
             <TextView
                 android:id="@+id/tvEmptyReviews"
                 android:layout_width="0dp"
@@ -519,19 +534,50 @@
                 android:text="@string/no_reviews"
                 android:textColor="@color/text_secondary"
                 android:visibility="gone"
-                app:layout_constraintTop_toBottomOf="@id/layoutAverageRating"
+                app:layout_constraintTop_toBottomOf="@id/btnMoreReviews"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
+            <!-- Danh sách review -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerReviews"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
-                app:layout_constraintTop_toBottomOf="@id/tvEmptyReviews"
+                app:layout_constraintTop_toBottomOf="@id/btnMoreReviews"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- ========== Có thể bạn cũng thích ========== -->
+            <LinearLayout
+                android:id="@+id/layoutRecommended"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/recyclerReviews"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <TextView
+                    android:id="@+id/tvRecommendedTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Có thể bạn cũng thích"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textColor="@color/sp_green_dark"
+                    android:layout_marginBottom="8dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerRecommendedEvents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:overScrollMode="never" />
+            </LinearLayout>
+            <!-- ========== END RECOMMENDED ========== -->
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
@@ -545,7 +591,7 @@
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:paddingVertical="10dp"
-        android:background="@android:color/white"
+        android:background="@drawable/bg_bottom_nav"
         android:elevation="8dp">
 
         <LinearLayout
@@ -561,7 +607,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/ticket_from_label"
                 android:textSize="12sp"
-                android:textColor="@color/text_secondary" />
+                android:textColor="@android:color/white" />
 
             <TextView
                 android:id="@+id/tvBottomPrice"
@@ -570,7 +616,7 @@
                 android:text="0₫"
                 android:textStyle="bold"
                 android:textSize="16sp"
-                android:textColor="@android:color/black" />
+                android:textColor="@android:color/white" />
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton

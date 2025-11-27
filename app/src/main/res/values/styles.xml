@@ -69,6 +69,12 @@
         <item name="android:windowAnimationStyle">@style/RatingDialogAnimation</item>
     </style>
 
+    <style name="Widget.TicketMate.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
+        <!-- Tắt cái nền viên thuốc khi selected -->
+        <item name="itemActiveIndicatorStyle">@null</item>
+    </style>
+
+
 
 
 

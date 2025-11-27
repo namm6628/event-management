@@ -101,17 +101,12 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         }
         h.tvDate.setText(dateText);
 
-
-
-        // Price / Status
+        // ✅ Price / Status
         String priceLabel;
-        boolean isPast = false;
-        if (ts != null) {
-            isPast = ts.toDate().before(new Date());
-        }
-
-        if (isPast) {
+        if (e.isEnded()) {
             priceLabel = "Sự kiện đã kết thúc";
+        } else if (e.isSoldOut()) {
+            priceLabel = "Đã hết vé";
         } else {
             Double p = e.getPrice();
             if (p == null || p <= 0) {
@@ -125,7 +120,8 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         }
         h.tvPrice.setText(priceLabel);
 
-        // Thumbnail với Glide
+
+        // Thumbnail ...
         Glide.with(h.itemView.getContext())
                 .load(e.getThumbnail())
                 .placeholder(R.drawable.sample_event)
@@ -133,9 +129,9 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
                 .centerCrop()
                 .into(h.ivThumb);
 
-        // Click item
         h.itemView.setOnClickListener(v -> {
             if (onItemClick != null) onItemClick.onClick(e);
         });
     }
+
 }
