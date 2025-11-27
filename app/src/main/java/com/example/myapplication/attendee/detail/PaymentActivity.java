@@ -1,8 +1,12 @@
 package com.example.myapplication.attendee.detail;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.View;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -38,6 +42,9 @@ public class PaymentActivity extends AppCompatActivity {
     private ArrayList<HashMap<String, Object>> selectedTickets;
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private View cardSplitBill;
+    private TextView tvSplitInfo;
+    private View btnShareBill;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -61,6 +68,9 @@ public class PaymentActivity extends AppCompatActivity {
         tvTicketType = findViewById(R.id.tvTicketType);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+        cardSplitBill = findViewById(R.id.cardSplitBill);
+        tvSplitInfo = findViewById(R.id.tvSplitInfo);
+        btnShareBill = findViewById(R.id.btnShareBill);
 
         tvEventName = findViewById(R.id.tvEventName);
         tvQuantity = findViewById(R.id.tvQuantity);
@@ -80,9 +90,47 @@ public class PaymentActivity extends AppCompatActivity {
         if (totalPrice == 0) priceStr = "Miễn phí";
         tvTotalPrice.setText(priceStr);
         tvTotalPriceInfo.setText(priceStr);
+        setupSplitBill();
 
         // 4. Sự kiện nút Thanh toán
         btnConfirmPayment.setOnClickListener(v -> processPayment());
+    }
+
+    private void setupSplitBill() {
+        // Chỉ hiện nếu mua > 1 vé và có tiền
+        if (quantity > 1 && totalPrice > 0) {
+            cardSplitBill.setVisibility(View.VISIBLE);
+
+            // 1. Tính tiền mỗi người
+            double pricePerPerson = totalPrice / quantity;
+            String priceStr = NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(pricePerPerson) + " ₫";
+
+            tvSplitInfo.setText("Tổng: " + quantity + " người. Mỗi người: " + priceStr);
+
+            // 2. Xử lý nút Share
+            btnShareBill.setOnClickListener(v -> {
+                String msg = "Alo mọi người ơi! 📢\n" +
+                        "Mình đang đặt vé đi sự kiện: " + eventTitle + "\n" +
+                        "Tổng tiền: " + NumberFormat.getNumberInstance(new Locale("vi", "VN")).format(totalPrice) + "đ (" + quantity + " vé)\n" +
+                        "👉 Chia ra mỗi người: " + priceStr + "\n" +
+                        "Mọi người chuyển khoản cho mình sớm nhé! 💸";
+
+                // Copy vào clipboard
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("Bill Info", msg);
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(this, "Đã sao chép nội dung!", Toast.LENGTH_SHORT).show();
+
+                // Mở menu chia sẻ
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_TEXT, msg);
+                startActivity(Intent.createChooser(shareIntent, "Gửi yêu cầu thanh toán qua:"));
+            });
+
+        } else {
+            cardSplitBill.setVisibility(View.GONE);
+        }
     }
 
     private void processPayment() {
@@ -149,14 +197,20 @@ public class PaymentActivity extends AppCompatActivity {
     }
 
     private void showSuccessDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("Thanh toán thành công!")
-                .setMessage("Bạn đã đặt vé thành công. Vé đã được gửi vào mục 'Vé của tôi'.")
-                .setPositiveButton("OK", (d, w) -> {
-                    // Quay về màn hình trước
-                    finish();
-                })
-                .setCancelable(false)
-                .show();
+        // [THAY ĐỔI] - Chuyển sang màn hình OrderSuccessActivity
+        Intent intent = new Intent(this, OrderSuccessActivity.class);
+
+        // Truyền dữ liệu cần thiết để hiển thị
+        // Lưu ý: orderId lấy ở đâu?
+        // Trong code saveOrderToFirestore cũ, bạn chưa lấy được ID của order vừa tạo.
+        // Hãy sửa lại saveOrderToFirestore một chút để lấy ID.
+
+        // Ở đây tạm thời mình truyền ID giả hoặc để trống nếu chưa lấy được
+        intent.putExtra("ORDER_ID", "ORDER_" + System.currentTimeMillis());
+        intent.putExtra("TOTAL_QTY", quantity);
+        intent.putExtra("TOTAL_PRICE", totalPrice);
+
+        startActivity(intent);
+        finish(); // Đóng PaymentActivity để không back lại được
     }
 }
