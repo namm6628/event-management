@@ -82,19 +82,31 @@ public class EventRemoteDataSource {
      * ⚠️ Nhiều khả năng Firestore sẽ yêu cầu composite index cho:
      *   startTime (ASC) + availableSeats (DESC) [+ category]
      */
+//    public Task<QuerySnapshot> loadForYouEvents(int limit, String userInterest) {
+//        Date now = new Date();
+//
+//        Query q = db.collection("events")
+//                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now))
+//                .orderBy("startTime", Query.Direction.ASCENDING);
+//
+//        if (userInterest != null && !userInterest.isEmpty()) {
+//            // Người dùng đã có “sở thích” -> lọc category
+//            q = q.whereEqualTo("category", userInterest)
+//                    .orderBy("availableSeats", Query.Direction.DESCENDING);
+//        } else {
+//            // Người mới -> ưu tiên sự kiện còn nhiều chỗ
+//            q = q.orderBy("availableSeats", Query.Direction.DESCENDING);
+//        }
+//
+//        return q.limit(limit).get();
+//    }
     public Task<QuerySnapshot> loadForYouEvents(int limit, String userInterest) {
-        Date now = new Date();
-
-        Query q = db.collection("events")
-                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now))
-                .orderBy("startTime", Query.Direction.ASCENDING);
+        // [SỬA TẠM] - Bỏ hết điều kiện thời gian, chỉ lọc theo tên category
+        Query q = db.collection("events");
 
         if (userInterest != null && !userInterest.isEmpty()) {
-            // Người dùng đã có “sở thích” -> lọc category
-            q = q.whereEqualTo("category", userInterest)
-                    .orderBy("availableSeats", Query.Direction.DESCENDING);
+            q = q.whereEqualTo("category", userInterest);
         } else {
-            // Người mới -> ưu tiên sự kiện còn nhiều chỗ
             q = q.orderBy("availableSeats", Query.Direction.DESCENDING);
         }
 
