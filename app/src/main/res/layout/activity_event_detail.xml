@@ -456,7 +456,7 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp" />
 
-                <!-- Spacer -->
+                <!-- Đẩy nút viết đánh giá qua phải -->
                 <View
                     android:layout_width="0dp"
                     android:layout_height="0dp"
@@ -474,7 +474,7 @@
                     android:minWidth="0dp" />
             </LinearLayout>
 
-            <!-- ====== ĐIỂM TRUNG BÌNH ====== -->
+            <!-- Average rating -->
             <LinearLayout
                 android:id="@+id/layoutAverageRating"
                 android:layout_width="0dp"
@@ -521,9 +521,10 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:visibility="gone"
                 app:layout_constraintTop_toBottomOf="@id/layoutAverageRating"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
-            <!-- Text khi không có review -->
+            <!-- Text khi chưa có review -->
             <TextView
                 android:id="@+id/tvEmptyReviews"
                 android:layout_width="0dp"
@@ -545,7 +546,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
-                app:layout_constraintTop_toBottomOf="@id/btnMoreReviews"
+                app:layout_constraintTop_toBottomOf="@id/tvEmptyReviews"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
@@ -555,7 +556,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="20dp"
                 android:visibility="gone"
                 app:layout_constraintTop_toBottomOf="@id/recyclerReviews"
                 app:layout_constraintStart_toStartOf="parent"

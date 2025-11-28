@@ -28,7 +28,6 @@ import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
 import com.example.myapplication.databinding.ActivityEventDetailBinding;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -38,7 +37,6 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.Transaction;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -55,16 +53,14 @@ public class EventDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
 
-    // API Key OpenWeatherMap (đổi thành key của bạn)
     private static final String WEATHER_API_KEY = "d217750b1e400fc2300711ab107183f2";
 
-    // Volley queue để gọi API thời tiết
     private RequestQueue volleyQueue;
 
     private ActivityEventDetailBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private ReviewAdapter reviewAdapter;
-    private Event event; // sẽ được set sau khi fetch xong
+    private Event event;
 
     private String eventId;
     private ListenerRegistration eventListener;
@@ -87,12 +83,14 @@ public class EventDetailActivity extends AppCompatActivity {
     private boolean reviewsExpanded = false;
     private static final int REVIEWS_COLLAPSED_LIMIT = 3;
     private final List<Review> allReviews = new ArrayList<>();
+    private Review currentUserReview = null;
+    private String currentUserReviewDocId = null;
 
     // Recommended events
     private final List<RecommendedEvent> recommendedList = new ArrayList<>();
     private RecommendedAdapter recommendedAdapter;
 
-    // trạng thái user đã theo dõi (favorite) event này chưa
+    // Favorite state
     private boolean isFavorite = false;
 
     @Override
@@ -102,24 +100,19 @@ public class EventDetailActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser != null) {
-            currentUserId = currentUser.getUid();
-        }
+        if (currentUser != null) currentUserId = currentUser.getUid();
 
-        // Khởi tạo Volley
         volleyQueue = Volley.newRequestQueue(this);
 
-        // Link weather views từ layout
         layoutWeatherContainer = binding.layoutWeatherContainer;
         layoutSkeletonWeather = binding.layoutSkeletonWeather;
         layoutWeather = binding.layoutWeather;
         ivWeatherIcon = binding.ivWeatherIcon;
         tvWeather = binding.tvWeather;
 
-        // Mặc định thu gọn mô tả
+        // Mô tả thu gọn
         binding.tvDescription.setMaxLines(4);
         binding.tvDescription.setEllipsize(android.text.TextUtils.TruncateAt.END);
-
         binding.tvDescriptionToggle.setOnClickListener(v -> {
             isDescriptionExpanded = !isDescriptionExpanded;
             if (isDescriptionExpanded) {
@@ -133,29 +126,28 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-        binding.btnWriteReview.setOnClickListener(v -> showRateDialog());
+        // Viết đánh giá
+        binding.btnWriteReview.setOnClickListener(v -> onWriteReviewClicked());
 
-        // Adapter loại vé
+        // Ticket types
         ticketTypeAdapter = new TicketTypeAdapter();
         binding.recyclerTicketTypes.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
         );
         binding.recyclerTicketTypes.setAdapter(ticketTypeAdapter);
-
         binding.tvTicketDateTime.setText(getString(R.string.ticket_info_header));
 
-        // Toggle ẩn/hiện loại vé
         binding.tvToggleTicketTypes.setOnClickListener(v -> {
             if (binding.recyclerTicketTypes.getVisibility() == View.VISIBLE) {
                 binding.recyclerTicketTypes.setVisibility(View.GONE);
-                binding.tvToggleTicketTypes.setText("Xem loại vé");
+                binding.tvToggleTicketTypes.setText("Hiện loại vé");
             } else {
                 binding.recyclerTicketTypes.setVisibility(View.VISIBLE);
                 binding.tvToggleTicketTypes.setText("Ẩn loại vé");
             }
         });
 
-        // Lấy eventId từ Intent
+        // Lấy eventId
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
 
         // Toolbar
@@ -185,6 +177,7 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.tvEmptyReviews.setVisibility(View.VISIBLE);
         binding.ratingAverage.setRating(0f);
         binding.tvAverageRating.setText("0.0/5");
+        binding.btnMoreReviews.setVisibility(View.GONE);
 
         // Share
         binding.btnShare.setOnClickListener(v -> {
@@ -199,12 +192,11 @@ public class EventDetailActivity extends AppCompatActivity {
             startActivity(Intent.createChooser(intent, getString(R.string.share_event)));
         });
 
-        // Nút Theo dõi → toggle favorite
+        // Follow
         binding.btnFollow.setOnClickListener(v -> toggleFavorite());
-        // text mặc định
         updateFollowButtonUi();
 
-        // Mở bản đồ
+        // Map
         binding.btnOpenMap.setOnClickListener(v -> {
             String q = null;
             if (event != null) {
@@ -223,25 +215,25 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-        // Reviews
+        // Reviews adapter
         reviewAdapter = new ReviewAdapter();
         binding.recyclerReviews.setLayoutManager(new LinearLayoutManager(this));
         binding.recyclerReviews.setAdapter(reviewAdapter);
 
-        // Nút "Xem thêm" đánh giá
+        // Xem thêm review
         binding.btnMoreReviews.setOnClickListener(v -> {
             reviewsExpanded = !reviewsExpanded;
             renderReviewsUi();
         });
 
-        // Recommended events Recycler
+        // Recommended
         recommendedAdapter = new RecommendedAdapter();
         binding.recyclerRecommendedEvents.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         );
         binding.recyclerRecommendedEvents.setAdapter(recommendedAdapter);
 
-        // Nút Đặt vé
+        // Đặt vé
         binding.btnBuyTicket.setOnClickListener(v -> {
             if (event == null) {
                 Toast.makeText(this, "Chưa tải xong dữ liệu sự kiện", Toast.LENGTH_SHORT).show();
@@ -417,20 +409,15 @@ public class EventDetailActivity extends AppCompatActivity {
                     loadTicketTypes();
                     loadWeatherForecast(event);
                     loadReviews();
-
                     updateBuyButtonState();
 
-                    // Luôn hiển thị list loại vé, chỉ làm mờ item nếu event kết thúc
                     binding.recyclerTicketTypes.setVisibility(View.VISIBLE);
                     binding.tvToggleTicketTypes.setVisibility(View.VISIBLE);
 
-                    // báo cho adapter biết event đã kết thúc chưa để set alpha item
                     ticketTypeAdapter.setEventEnded(isEventEnded(event));
 
-                    // Sau khi đã có event → kiểm tra trạng thái favorite ban đầu
                     checkFavoriteState();
                     loadRecommendedEvents();
-
                 });
     }
 
@@ -467,64 +454,51 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                     ticketTypeAdapter.submit(list);
 
-                    // Tính lại giá min để hiện thị (code cũ)
-                    if(!list.isEmpty()) {
+                    if (list.isEmpty()) {
+                        Double p = event.getPrice();
+                        String priceText = (p == null || p == 0d)
+                                ? getString(R.string.free)
+                                : NumberFormat
+                                .getNumberInstance(new Locale("vi", "VN"))
+                                .format(p) + "₫";
+                        binding.tvPrice.setText(priceText);
+                        binding.tvBottomPrice.setText(priceText);
+                        minTicketPrice = p;
+                    } else {
                         double min = Double.MAX_VALUE;
-                        for(TicketTypeAdapter.TicketType t : list) if(t.price!=null && t.price < min) min = t.price;
-                        if(min < Double.MAX_VALUE) {
-                            minTicketPrice = min;
-                            String s = NumberFormat.getNumberInstance(new Locale("vi","VN")).format(min)+" ₫";
-                            binding.tvBottomPrice.setText(s);
+                        boolean hasPaidTicket = false;
+
+                        for (TicketTypeAdapter.TicketType t : list) {
+                            if (t.price != null && t.price > 0) {
+                                hasPaidTicket = true;
+                                if (t.price < min) min = t.price;
+                            }
                         }
-                    }
-                });
-    }
 
-    private void placeQuickOrderDialog(int available) {
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_buy_ticket, null);
-        EditText edtQuantity = dialogView.findViewById(R.id.edtQuantity);
-        TextView tvPrice = dialogView.findViewById(R.id.tvUnitPrice);
-        tvPrice.setText(binding.tvBottomPrice.getText());
-
-        new AlertDialog.Builder(this)
-                .setTitle("Đặt vé nhanh")
-                .setView(dialogView)
-                .setPositiveButton("Tiếp tục", (dialog, which) -> {
-                    String s = edtQuantity.getText().toString();
-                    try {
-                        int quantity = Integer.parseInt(s);
-                        if (quantity > 0 && quantity <= available) {
-
-                            // [CHỖ NÀY ĐƯỢC SỬA]
-                            // Thay vì gọi placeOrder() lưu DB luôn, ta chuyển sang PaymentActivity
-
-                            double unitPrice = (minTicketPrice != null) ? minTicketPrice :
-                                    (event.getPrice() != null ? event.getPrice() : 0);
-                            double total = unitPrice * quantity;
-
-                            Intent intent = new Intent(EventDetailActivity.this, PaymentActivity.class);
-                            intent.putExtra("eventId", event.getId());
-                            intent.putExtra("eventTitle", event.getTitle());
-                            intent.putExtra("quantity", quantity);
-                            intent.putExtra("totalPrice", total);
-                            startActivity(intent);
-
+                        if (!hasPaidTicket) {
+                            binding.tvPrice.setText(getString(R.string.free));
+                            binding.tvBottomPrice.setText(getString(R.string.free));
+                            minTicketPrice = 0d;
                         } else {
-                            Toast.makeText(this, "Số lượng không hợp lệ", Toast.LENGTH_SHORT).show();
+                            minTicketPrice = min;
+                            String formatted = NumberFormat
+                                    .getNumberInstance(new Locale("vi", "VN"))
+                                    .format(minTicketPrice) + " ₫";
+                            binding.tvPrice.setText("Giá từ: " + formatted);
+                            binding.tvBottomPrice.setText(formatted);
+                            binding.tvBottomFromLabel.setVisibility(View.VISIBLE);
                         }
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Lỗi nhập số lượng", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
 
-    /** Cập nhật text nút Follow theo isFavorite */
+    // ======= FOLLOW =======
+
     private void updateFollowButtonUi() {
         if (binding == null) return;
         binding.btnFollow.setText(isFavorite ? "Bỏ theo dõi" : "Theo dõi");
     }
 
-    /** Check xem user hiện tại đã favorite event này chưa */
     private void checkFavoriteState() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || eventId == null) {
@@ -538,7 +512,7 @@ public class EventDetailActivity extends AppCompatActivity {
         db.collection("users")
                 .document(uid)
                 .collection("favoriteEvents")
-                .document(eventId)        // dùng eventId làm id doc
+                .document(eventId)
                 .get()
                 .addOnSuccessListener(doc -> {
                     isFavorite = doc.exists();
@@ -551,7 +525,6 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     private void loadRecommendedEvents() {
-        // Nếu chưa có event thì thôi
         if (event == null) return;
 
         db.collection("events")
@@ -560,7 +533,7 @@ public class EventDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(snap -> {
                     recommendedList.clear();
                     for (DocumentSnapshot d : snap.getDocuments()) {
-                        if (d.getId().equals(event.getId())) continue; // bỏ sự kiện hiện tại
+                        if (d.getId().equals(event.getId())) continue;
 
                         Event e = d.toObject(Event.class);
                         if (e == null) continue;
@@ -581,13 +554,9 @@ public class EventDetailActivity extends AppCompatActivity {
                         recommendedAdapter.notifyDataSetChanged();
                     }
                 })
-                .addOnFailureListener(e -> {
-                    // lỗi thì ẩn luôn section
-                    binding.layoutRecommended.setVisibility(View.GONE);
-                });
+                .addOnFailureListener(e -> binding.layoutRecommended.setVisibility(View.GONE));
     }
 
-    /** Toggle follow / unfollow và lưu Firestore */
     private void toggleFavorite() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -607,7 +576,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 .document(event.getId());
 
         if (!isFavorite) {
-            // → Thêm vào yêu thích
             Map<String, Object> data = new HashMap<>();
             data.put("eventId", event.getId());
             data.put("title", event.getTitle());
@@ -623,14 +591,11 @@ public class EventDetailActivity extends AppCompatActivity {
                                 "Đã thêm vào sự kiện yêu thích",
                                 Toast.LENGTH_SHORT).show();
                     })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this,
-                                "Lỗi: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                    });
+                    .addOnFailureListener(e -> Toast.makeText(this,
+                            "Lỗi: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show());
 
         } else {
-            // → Bỏ yêu thích
             favRef.delete()
                     .addOnSuccessListener(unused -> {
                         isFavorite = false;
@@ -639,11 +604,9 @@ public class EventDetailActivity extends AppCompatActivity {
                                 "Đã bỏ theo dõi sự kiện",
                                 Toast.LENGTH_SHORT).show();
                     })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this,
-                                "Lỗi: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                    });
+                    .addOnFailureListener(e -> Toast.makeText(this,
+                            "Lỗi: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show());
         }
     }
 
@@ -694,22 +657,19 @@ public class EventDetailActivity extends AppCompatActivity {
 
     private void bindWeather(String description, double tempC) {
         if (ivWeatherIcon != null) {
-            // Tạm thời dùng 1 icon chung, sau này nếu có icon riêng mưa/nắng thì map thêm
             ivWeatherIcon.setImageResource(R.drawable.outline_cloud_24);
         }
 
         if (tvWeather != null) {
             String text = String.format(
                     Locale.getDefault(),
-                    "Dự báo thời tiết: %.0f°C, %s",
+                    "Dự báo: %.0f°C, %s",
                     tempC,
                     description
             );
             tvWeather.setText(text);
         }
     }
-
-    // =============== DỰ BÁO THỜI TIẾT CHO SỰ KIỆN ===============
 
     private void loadWeatherForecast(Event event) {
         if (tvWeather == null) return;
@@ -728,7 +688,6 @@ public class EventDetailActivity extends AppCompatActivity {
 
         long eventTimeMillis = event.getStartTime().toDate().getTime();
 
-        // API free chỉ dự báo 5 ngày tới
         long fiveDaysMs = 5L * 24 * 3600 * 1000;
         if (eventTimeMillis > System.currentTimeMillis() + fiveDaysMs) {
             showWeatherError("Sự kiện còn quá xa để dự báo thời tiết");
@@ -800,8 +759,13 @@ public class EventDetailActivity extends AppCompatActivity {
         return "Ho Chi Minh City";
     }
 
+    // ================== REVIEWS ==================
+
     private void loadReviews() {
         if (event == null || event.getId() == null) return;
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = user != null ? user.getUid() : null;
 
         db.collection("events").document(event.getId())
                 .collection("reviews")
@@ -809,15 +773,23 @@ public class EventDetailActivity extends AppCompatActivity {
                 .limit(50)
                 .get()
                 .addOnSuccessListener(snap -> {
-                    List<Review> reviews = new ArrayList<>();
+                    allReviews.clear();
+                    currentUserReview = null;
+                    currentUserReviewDocId = null;
+
                     for (DocumentSnapshot d : snap.getDocuments()) {
                         Review r = d.toObject(Review.class);
-                        if (r != null) reviews.add(r);
+                        if (r == null) continue;
+                        r.id = d.getId();
+                        allReviews.add(r);
+
+                        if (uid != null && uid.equals(r.userId)) {
+                            currentUserReview = r;
+                            currentUserReviewDocId = r.id;
+                        }
                     }
 
-                    // cập nhật list gốc & render lại UI
-                    allReviews.clear();
-                    allReviews.addAll(reviews);
+                    reviewsExpanded = false;
                     renderReviewsUi();
                 })
                 .addOnFailureListener(ex ->
@@ -828,16 +800,13 @@ public class EventDetailActivity extends AppCompatActivity {
                 );
     }
 
-    /** Render lại UI cho phần review (ẩn/bớt, xem thêm, điểm TB, số lượng) */
     private void renderReviewsUi() {
         int count = allReviews.size();
 
-        // Cập nhật tổng số đánh giá
         binding.tvReviewCount.setText(
                 getString(R.string.review_count_fmt, count)
         );
 
-        // Không có review
         if (count == 0) {
             binding.recyclerReviews.setVisibility(View.GONE);
             binding.tvEmptyReviews.setVisibility(View.VISIBLE);
@@ -850,7 +819,6 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.recyclerReviews.setVisibility(View.VISIBLE);
         binding.tvEmptyReviews.setVisibility(View.GONE);
 
-        // Tính average (dựa trên TẤT CẢ review)
         double total = 0;
         for (Review r : allReviews) {
             if (r.rating != null) total += r.rating;
@@ -861,7 +829,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 String.format(Locale.getDefault(), "%.1f/5", avg)
         );
 
-        // List hiển thị: 3 cái đầu hoặc tất cả
         int max = reviewsExpanded
                 ? count
                 : Math.min(REVIEWS_COLLAPSED_LIMIT, count);
@@ -869,13 +836,80 @@ public class EventDetailActivity extends AppCompatActivity {
         List<Review> shown = new ArrayList<>(allReviews.subList(0, max));
         reviewAdapter.submit(shown);
 
-        // Nút "Xem thêm / Ẩn bớt"
         if (count > REVIEWS_COLLAPSED_LIMIT) {
             binding.btnMoreReviews.setVisibility(View.VISIBLE);
-            binding.btnMoreReviews.setText(reviewsExpanded ? "Ẩn đánh giá" : "Xem thêm đánh giá");
+            binding.btnMoreReviews.setText(reviewsExpanded ? "Ẩn bớt" : "Xem thêm");
         } else {
             binding.btnMoreReviews.setVisibility(View.GONE);
         }
+    }
+
+    /** CLICK "VIẾT ĐÁNH GIÁ" – đã chỉnh đúng logic như cậu yêu cầu */
+    private void onWriteReviewClicked() {
+        if (event == null || event.getId() == null) {
+            Toast.makeText(this, "Chưa có thông tin sự kiện", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "Bạn cần đăng nhập để đánh giá", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Nếu sự kiện CHƯA kết thúc
+        if (!isEventEnded(event)) {
+            checkUserCanReview(can -> {
+                if (!can) {
+                    // chưa mua vé + sk chưa kết thúc
+                    Toast.makeText(this,
+                            "Bạn chưa mua vé sự kiện này",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    // đã mua vé nhưng sk chưa kết thúc
+                    Toast.makeText(this,
+                            "Bạn chỉ có thể đánh giá khi sự kiện kết thúc",
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
+            return;
+        }
+
+        // Sự kiện ĐÃ kết thúc
+        checkUserCanReview(can -> {
+            if (!can) {
+                // sk đã kết thúc nhưng chưa mua vé
+                Toast.makeText(this,
+                        "Bạn chưa mua vé sự kiện này",
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                // đã mua vé & sk kết thúc → cho đánh giá / sửa đánh giá
+                showRateDialog();
+            }
+        });
+    }
+
+    /** Kiểm tra user đã mua vé event này chưa */
+    private void checkUserCanReview(CheckCallback callback) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || eventId == null) {
+            callback.onResult(false);
+            return;
+        }
+
+        String uid = user.getUid();
+
+        db.collection("orders")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("eventId", eventId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(snap -> callback.onResult(!snap.isEmpty()))
+                .addOnFailureListener(e -> callback.onResult(false));
+    }
+
+    private interface CheckCallback {
+        void onResult(boolean ok);
     }
 
     private void showRateDialog() {
@@ -890,14 +924,27 @@ public class EventDetailActivity extends AppCompatActivity {
         android.widget.RatingBar rb = dialogView.findViewById(R.id.dialogRatingBar);
         EditText et = dialogView.findViewById(R.id.etDialogComment);
 
+        // Prefill khi đã có review
+        if (currentUserReview != null) {
+            if (currentUserReview.rating != null) {
+                rb.setRating(currentUserReview.rating.floatValue());
+            }
+            if (currentUserReview.content != null) {
+                et.setText(currentUserReview.content);
+                et.setSelection(currentUserReview.content.length());
+            }
+        }
+
         new AlertDialog.Builder(this, R.style.RatingDialogTheme)
-                .setTitle("Đánh giá sự kiện")
+                .setTitle(currentUserReview == null
+                        ? "Đánh giá sự kiện"
+                        : "Chỉnh sửa đánh giá")
                 .setView(dialogView)
                 .setPositiveButton("Gửi", (dialog, which) -> {
                     float rating = rb.getRating();
                     String content = et.getText().toString().trim();
                     if (rating <= 0f) {
-                        Toast.makeText(this, "Bạn chưa chọn số sao", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Vui lòng chọn số sao", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     submitReview(rating, content);
@@ -906,49 +953,72 @@ public class EventDetailActivity extends AppCompatActivity {
                 .show();
     }
 
+    /** Tạo mới hoặc cập nhật review của user hiện tại */
     private void submitReview(float rating, String content) {
         if (event == null || event.getId() == null) {
             Toast.makeText(this, "Thiếu thông tin sự kiện để gửi đánh giá", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String author = "Tôi";
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
-                author = user.getDisplayName();
-            } else if (user.getEmail() != null) {
-                author = user.getEmail();
-            }
+        if (user == null) {
+            Toast.makeText(this, "Bạn cần đăng nhập để đánh giá", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String author;
+        if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
+            author = user.getDisplayName();
+        } else if (user.getEmail() != null) {
+            author = user.getEmail();
+        } else {
+            author = "Tôi";
         }
 
         Map<String, Object> data = new HashMap<>();
         data.put("author", author);
         data.put("rating", rating);
         data.put("content", content);
+        data.put("userId", user.getUid());
         data.put("createdAt", FieldValue.serverTimestamp());
 
-        db.collection("events")
-                .document(event.getId())
-                .collection("reviews")
-                .add(data)
-                .addOnSuccessListener(r -> {
-                    Toast.makeText(this, "Đã gửi đánh giá!", Toast.LENGTH_SHORT).show();
-                    loadReviews();
-                })
-                .addOnFailureListener(ex ->
-                        Toast.makeText(this,
-                                        "Lỗi gửi đánh giá: " + ex.getMessage(),
-                                        Toast.LENGTH_SHORT)
-                                .show()
-                );
+        if (currentUserReviewDocId != null) {
+            db.collection("events")
+                    .document(event.getId())
+                    .collection("reviews")
+                    .document(currentUserReviewDocId)
+                    .set(data)
+                    .addOnSuccessListener(r -> {
+                        Toast.makeText(this, "Đã cập nhật đánh giá!", Toast.LENGTH_SHORT).show();
+                        loadReviews();
+                    })
+                    .addOnFailureListener(ex ->
+                            Toast.makeText(this,
+                                            "Lỗi gửi đánh giá: " + ex.getMessage(),
+                                            Toast.LENGTH_SHORT)
+                                    .show()
+                    );
+        } else {
+            db.collection("events")
+                    .document(event.getId())
+                    .collection("reviews")
+                    .add(data)
+                    .addOnSuccessListener(r -> {
+                        Toast.makeText(this, "Đã gửi đánh giá!", Toast.LENGTH_SHORT).show();
+                        loadReviews();
+                    })
+                    .addOnFailureListener(ex ->
+                            Toast.makeText(this,
+                                            "Lỗi gửi đánh giá: " + ex.getMessage(),
+                                            Toast.LENGTH_SHORT)
+                                    .show()
+                    );
+        }
     }
 
     private abstract static class SimpleTextWatcher implements android.text.TextWatcher {
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-        @Override
-        public void afterTextChanged(android.text.Editable s) {}
+        @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+        @Override public void afterTextChanged(android.text.Editable s) {}
     }
 
     // ================== MENU BACK ==================
@@ -962,12 +1032,14 @@ public class EventDetailActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // Model review (tối giản)
+    // Model review
     public static class Review {
+        public String id;
         public String author;
         public String content;
         public Double rating;
         public Timestamp createdAt;
+        public String userId;
 
         public Review() {}
     }
@@ -980,7 +1052,7 @@ public class EventDetailActivity extends AppCompatActivity {
         String thumbnail;
     }
 
-    // ================== ADAPTER LOẠI VÉ (CHỈ HIỂN THỊ) ==================
+    // ================== ADAPTER LOẠI VÉ ==================
     private static class TicketTypeAdapter extends
             RecyclerView.Adapter<TicketTypeAdapter.VH> {
 
@@ -994,7 +1066,7 @@ public class EventDetailActivity extends AppCompatActivity {
         }
 
         private final List<TicketType> data = new ArrayList<>();
-        private boolean eventEnded = false;   // flag sự kiện đã kết thúc
+        private boolean eventEnded = false;
 
         public void submit(List<TicketType> list) {
             data.clear();
@@ -1002,7 +1074,6 @@ public class EventDetailActivity extends AppCompatActivity {
             notifyDataSetChanged();
         }
 
-        // gọi từ Activity sau khi biết event đã kết thúc hay chưa
         public void setEventEnded(boolean ended) {
             this.eventEnded = ended;
             notifyDataSetChanged();
@@ -1056,7 +1127,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 long avail = quota - sold;
                 boolean soldOut = quota > 0 && avail <= 0;
 
-                // Chỉ hiện "Hết vé" khi hết – KHÔNG hiện "Còn xx vé"
                 if (soldOut) {
                     tvQuota.setVisibility(View.VISIBLE);
                     tvQuota.setText("Hết vé");
@@ -1064,7 +1134,6 @@ public class EventDetailActivity extends AppCompatActivity {
                     tvQuota.setVisibility(View.GONE);
                 }
 
-                // Làm mờ dòng nếu event kết thúc hoặc vé đó hết
                 if (eventEnded || soldOut) {
                     root.setAlpha(0.4f);
                 } else {
