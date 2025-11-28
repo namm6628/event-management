@@ -13,16 +13,19 @@ import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
-import com.example.myapplication.attendee.ticket.TicketNavigationHost;  // 👈 thêm dòng này
+import com.example.myapplication.attendee.ticket.TicketNavigationHost;
 import com.example.myapplication.databinding.ActivityMainBinding;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-public class MainActivity extends AppCompatActivity implements TicketNavigationHost { // 👈 implement interface
+public class MainActivity extends AppCompatActivity implements TicketNavigationHost {
 
     private ActivityMainBinding binding;
     private AppBarConfiguration appBarConfiguration;
-    private NavController navController; // 👈 moved lên biến global
+    private NavController navController;
+
+    public static final String EXTRA_START_DEST = "EXTRA_START_DEST";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements TicketNavigationH
         }
         navController.setGraph(navGraph);
 
-        // Top-level destinations (không hiện back)
+        // Top-level destinations
         appBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.homeFragment,
                 R.id.exploreFragment,
@@ -71,8 +74,9 @@ public class MainActivity extends AppCompatActivity implements TicketNavigationH
 
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
 
-        // Bottom nav
-        NavigationUI.setupWithNavController(binding.bottomNav, navController);
+        // Bottom nav + navController
+        BottomNavigationView bottomNav = binding.bottomNav;
+        NavigationUI.setupWithNavController(bottomNav, navController);
 
         // Ẩn bottom nav khi login / register
         navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
@@ -83,18 +87,22 @@ public class MainActivity extends AppCompatActivity implements TicketNavigationH
                 binding.bottomNav.setVisibility(View.VISIBLE);
             }
         });
+
+        // 👉 Chỉ override tab nếu:
+        // - ĐÃ login
+        // - Intent có EXTRA_START_DEST (ví dụ từ OrderSuccessActivity)
+        int requestedDest = getIntent().getIntExtra(EXTRA_START_DEST, -1);
+        if (currentUser != null && requestedDest != -1) {
+            bottomNav.setSelectedItemId(requestedDest);
+        }
     }
 
-    // 🔥 Hàm xử lý nút "Mua vé ngay"
+    // Xử lý nút "Mua vé ngay" ở ticket tab (đi sang Explore)
     @Override
     public void onBuyTicketClicked() {
         if (navController == null) return;
-
-        // Chọn tab Explore ở bottom nav
+        // Chỉ cần setSelectedItemId, NavigationUI sẽ tự navigate
         binding.bottomNav.setSelectedItemId(R.id.exploreFragment);
-
-        // Điều hướng sang ExploreFragment
-        navController.navigate(R.id.exploreFragment);
     }
 
     @Override

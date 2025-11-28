@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/tvTicketName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Vé VIP"
+        android:textStyle="bold"
+        android:textSize="14sp"/>
+
+    <TextView
+        android:id="@+id/tvTicketPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="500.000 ₫"
+        android:textSize="13sp"
+        android:paddingTop="2dp"/>
+
+    <TextView
+        android:id="@+id/tvTicketQuota"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Số lượng: 100"
+        android:textSize="12sp"
+        android:paddingTop="2dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSetupSeats"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sơ đồ ghế"
+        android:layout_marginTop="6dp"/>
+
+</LinearLayout>

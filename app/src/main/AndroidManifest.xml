@@ -103,6 +103,22 @@
             android:name=".attendee.detail.PaymentActivity"
             android:theme="@style/Theme.MyApplication" />
 
+        <activity
+            android:name=".attendee.detail.SeatSelectionActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".organizer.SeatLayoutConfigActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".attendee.detail.SelectTicketQuantityActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+
+
+
 
 
 

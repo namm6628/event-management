@@ -67,6 +67,11 @@ public class EventDetailActivity extends AppCompatActivity {
 
     private TicketTypeAdapter ticketTypeAdapter;
     private Double minTicketPrice = null;
+
+    // Trạng thái loại vé / sơ đồ ghế
+    private boolean hasSeatLayoutForEvent = false;
+    private boolean ticketTypesLoaded = false;
+
     private boolean isDescriptionExpanded = false;
 
     // Weather UI
@@ -233,7 +238,7 @@ public class EventDetailActivity extends AppCompatActivity {
         );
         binding.recyclerRecommendedEvents.setAdapter(recommendedAdapter);
 
-        // Đặt vé
+        // Đặt vé: nếu có sơ đồ ghế → chọn ghế, nếu không → chọn loại vé
         binding.btnBuyTicket.setOnClickListener(v -> {
             if (event == null) {
                 Toast.makeText(this, "Chưa tải xong dữ liệu sự kiện", Toast.LENGTH_SHORT).show();
@@ -258,15 +263,45 @@ public class EventDetailActivity extends AppCompatActivity {
                 return;
             }
 
-            if (eventId == null || eventId.isEmpty()) {
-                Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
+            if (!ticketTypesLoaded) {
+                Toast.makeText(
+                        this,
+                        "Đang tải thông tin vé, vui lòng thử lại sau giây lát.",
+                        Toast.LENGTH_SHORT
+                ).show();
                 return;
             }
 
-            Intent i = new Intent(EventDetailActivity.this, SelectTicketsActivity.class);
-            i.putExtra(SelectTicketsActivity.EXTRA_EVENT_ID, eventId);
-            startActivity(i);
+            // 1) Có sơ đồ ghế → mở màn chọn ghế
+            if (hasSeatLayoutForEvent) {
+                int quantity = 1;  // hiện tại mỗi lần đặt 1 ghế, sau này muốn cho chọn nhiều thì mở rộng
+
+                double pricePerTicket = 0d;
+                if (minTicketPrice != null) {
+                    pricePerTicket = minTicketPrice;
+                } else if (event.getPrice() != null) {
+                    pricePerTicket = event.getPrice();
+                }
+                double totalPrice = pricePerTicket * quantity;
+
+                String defaultTicketName = "Vé tham dự";
+
+                openSeatSelection(
+                        eventId,
+                        event.getTitle(),
+                        quantity,
+                        totalPrice,
+                        defaultTicketName,
+                        defaultTicketName
+                );
+            } else {
+                // 2) Không dùng sơ đồ ghế → qua màn chọn loại vé / số lượng
+                // Nếu bạn vẫn muốn hiện toast thì thêm dòng bên trên:
+                // Toast.makeText(this,"Sự kiện này không dùng sơ đồ ghế, chuyển sang chọn loại vé",Toast.LENGTH_SHORT).show();
+                openTicketQuantitySelection();
+            }
         });
+
     }
 
     // ===================== ORGANIZER HELPER =====================
@@ -348,8 +383,7 @@ public class EventDetailActivity extends AppCompatActivity {
                         if (event.getId() == null || event.getId().isEmpty()) {
                             event.setId(doc.getId());
                         }
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception ignored) {}
 
                     // Ảnh
                     String thumb = event.getThumbnail();
@@ -386,8 +420,7 @@ public class EventDetailActivity extends AppCompatActivity {
                             } else {
                                 timeText = startHour + ", " + day;
                             }
-                        } catch (Exception ignored) {
-                        }
+                        } catch (Exception ignored) {}
                     }
                     binding.tvTime.setText(timeText);
                     binding.tvTicketDateTime.setText(timeText);
@@ -446,12 +479,24 @@ public class EventDetailActivity extends AppCompatActivity {
                     if (snap == null) return;
 
                     List<TicketTypeAdapter.TicketType> list = new ArrayList<>();
+                    boolean detectedSeatLayout = false;   // <== check có field seats hay không
 
                     for (DocumentSnapshot d : snap.getDocuments()) {
                         TicketTypeAdapter.TicketType t =
                                 d.toObject(TicketTypeAdapter.TicketType.class);
                         if (t != null) list.add(t);
+
+                        // kiểm tra xem ticket type này có cấu hình ghế không
+                        java.util.List<String> seats =
+                                (java.util.List<String>) d.get("seats");
+                        if (seats != null && !seats.isEmpty()) {
+                            detectedSeatLayout = true;
+                        }
                     }
+
+                    ticketTypesLoaded = true;
+                    hasSeatLayoutForEvent = detectedSeatLayout;
+
                     ticketTypeAdapter.submit(list);
 
                     if (list.isEmpty()) {
@@ -491,6 +536,7 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                 });
     }
+
 
     // ======= FOLLOW =======
 
@@ -844,7 +890,7 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    /** CLICK "VIẾT ĐÁNH GIÁ" – đã chỉnh đúng logic như cậu yêu cầu */
+    // CLICK "VIẾT ĐÁNH GIÁ" giữ nguyên như bạn gửi (đã check event kết thúc + đã mua vé)
     private void onWriteReviewClicked() {
         if (event == null || event.getId() == null) {
             Toast.makeText(this, "Chưa có thông tin sự kiện", Toast.LENGTH_SHORT).show();
@@ -853,43 +899,36 @@ public class EventDetailActivity extends AppCompatActivity {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            Toast.makeText(this, "Bạn cần đăng nhập để đánh giá", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Bạn cần đăng nhập để viết đánh giá", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Nếu sự kiện CHƯA kết thúc
         if (!isEventEnded(event)) {
             checkUserCanReview(can -> {
                 if (!can) {
-                    // chưa mua vé + sk chưa kết thúc
                     Toast.makeText(this,
-                            "Bạn chưa mua vé sự kiện này",
+                            "Bạn chưa mua vé cho sự kiện này",
                             Toast.LENGTH_SHORT).show();
                 } else {
-                    // đã mua vé nhưng sk chưa kết thúc
                     Toast.makeText(this,
-                            "Bạn chỉ có thể đánh giá khi sự kiện kết thúc",
+                            "Bạn chỉ có thể viết đánh giá khi sự kiện kết thúc",
                             Toast.LENGTH_SHORT).show();
                 }
             });
             return;
         }
 
-        // Sự kiện ĐÃ kết thúc
         checkUserCanReview(can -> {
             if (!can) {
-                // sk đã kết thúc nhưng chưa mua vé
                 Toast.makeText(this,
-                        "Bạn chưa mua vé sự kiện này",
+                        "Bạn chưa mua vé cho sự kiện này",
                         Toast.LENGTH_SHORT).show();
             } else {
-                // đã mua vé & sk kết thúc → cho đánh giá / sửa đánh giá
                 showRateDialog();
             }
         });
     }
 
-    /** Kiểm tra user đã mua vé event này chưa */
     private void checkUserCanReview(CheckCallback callback) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || eventId == null) {
@@ -924,7 +963,6 @@ public class EventDetailActivity extends AppCompatActivity {
         android.widget.RatingBar rb = dialogView.findViewById(R.id.dialogRatingBar);
         EditText et = dialogView.findViewById(R.id.etDialogComment);
 
-        // Prefill khi đã có review
         if (currentUserReview != null) {
             if (currentUserReview.rating != null) {
                 rb.setRating(currentUserReview.rating.floatValue());
@@ -953,7 +991,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 .show();
     }
 
-    /** Tạo mới hoặc cập nhật review của user hiện tại */
     private void submitReview(float rating, String content) {
         if (event == null || event.getId() == null) {
             Toast.makeText(this, "Thiếu thông tin sự kiện để gửi đánh giá", Toast.LENGTH_SHORT).show();
@@ -1020,8 +1057,6 @@ public class EventDetailActivity extends AppCompatActivity {
         @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
         @Override public void afterTextChanged(android.text.Editable s) {}
     }
-
-    // ================== MENU BACK ==================
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -1213,9 +1248,45 @@ public class EventDetailActivity extends AppCompatActivity {
             binding.btnBuyTicket.setAlpha(0.6f);
             binding.btnBuyTicket.setEnabled(false);
         } else {
-            binding.btnBuyTicket.setText("Đặt vé");
+            // Đổi text dựa vào có sơ đồ ghế hay không
+            if (event.hasSeatLayout()) {
+                binding.btnBuyTicket.setText("Chọn chỗ ngồi");
+            } else {
+                binding.btnBuyTicket.setText("Chọn vé");
+            }
             binding.btnBuyTicket.setAlpha(1f);
             binding.btnBuyTicket.setEnabled(true);
         }
     }
+
+    /** Mở màn chọn ghế */
+    private void openSeatSelection(String eventId,
+                                   String eventTitle,
+                                   int quantity,
+                                   double totalPrice,
+                                   String ticketType,
+                                   String ticketNames) {
+        Intent intent = new Intent(this, SeatSelectionActivity.class);
+        intent.putExtra("eventId", eventId);
+        intent.putExtra("eventTitle", eventTitle);
+        intent.putExtra("quantity", 0);
+        intent.putExtra("totalPrice", 0d);
+        intent.putExtra("ticketType", ticketType);
+        intent.putExtra("ticketNames", ticketNames);
+
+
+        intent.putExtra("maxSeats", 10);
+        startActivity(intent);
+    }
+
+    /** Mở màn chọn loại vé / số lượng (event KHÔNG có sơ đồ)**/
+
+    private void openTicketQuantitySelection() {
+        Intent i = new Intent(this, SelectTicketQuantityActivity.class);
+        i.putExtra("eventId", eventId);
+        i.putExtra("eventTitle", event != null ? event.getTitle() : "");
+        startActivity(i);
+    }
+
+
 }

@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
+    android:width="80dp"
+    android:height="80dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
 
-    <!-- Vòng tròn màu xanh -->
+    <!-- Vòng tròn xanh -->
     <path
         android:fillColor="@color/mint_primary"
         android:pathData="M12,2
                           C6.48,2 2,6.48 2,12
                           C2,17.52 6.48,22 12,22
                           C17.52,22 22,17.52 22,12
-                          C22,6.48 17.52,2 12,2z" />
+                          C22,6.48 17.52,2 12,2z"/>
 
-    <!-- Dấu tick màu trắng -->
+    <!-- Tick trắng to rõ -->
     <path
-        android:fillColor="@android:color/black"
-        android:pathData="M11,17
-                          l-5,-5
-                          l1.41,-1.41
-                          L11,14.17
-                          l7.59,-7.59
-                          L20,8
-                          z" />
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="0"
+        android:pathData="M9.0,16.2
+                          L5.5,12.7
+                          L6.9,11.3
+                          L9.0,13.4
+                          L17.1,5.3
+                          L18.5,6.7
+                          z"/>
 </vector>

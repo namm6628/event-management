@@ -41,11 +41,15 @@ public class Event implements Serializable {
     private Double lat;              // optional
     private Double lng;              // optional
 
+    private Boolean hasSeatLayout;
+
     public Event() {}
 
     // getters/setters...
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public Boolean getHasSeatLayout() {
+        return hasSeatLayout;}
 
     @Nullable public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -81,6 +85,9 @@ public class Event implements Serializable {
     @Nullable
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public void setHasSeatLayout(Boolean hasSeatLayout) {
+        this.hasSeatLayout = hasSeatLayout;}
 
 
     public String getArtist() { return artist; }
@@ -120,6 +127,11 @@ public class Event implements Serializable {
     @com.google.firebase.firestore.PropertyName("hasVideo")
     public void setHasVideo(boolean hasVideo) {
         this.hasVideo = hasVideo;
+    }
+
+    @com.google.firebase.firestore.Exclude
+    public boolean hasSeatLayout() {
+        return Boolean.TRUE.equals(hasSeatLayout);
     }
 
     // ============ Helper ============

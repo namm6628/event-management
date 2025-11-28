@@ -30,6 +30,7 @@ import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Vé ĐÃ KẾT THÚC:
@@ -56,6 +57,7 @@ public class PastTicketsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        // Reuse layout giống Upcoming
         View v = inflater.inflate(R.layout.fragment_upcoming_tickets, container, false);
 
         rvTickets = v.findViewById(R.id.rvTickets);
@@ -111,8 +113,8 @@ public class PastTicketsFragment extends Fragment {
         long nowMillis = System.currentTimeMillis();
 
         db.collection("orders")
-                .whereEqualTo("userId", uid)   // TODO: field nếu khác
-                .whereEqualTo("status", "paid")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("status", "PAID") // khớp với Firestore
                 .get()
                 .addOnSuccessListener(orderSnap -> {
                     if (orderSnap.isEmpty()) {
@@ -140,7 +142,6 @@ public class PastTicketsFragment extends Fragment {
 
                             Timestamp startTs = e.getStartTime();
                             Timestamp endTs = e.getEndTime();
-
                             if (startTs == null) return;
 
                             long start = startTs.toDate().getTime();
@@ -148,87 +149,74 @@ public class PastTicketsFragment extends Fragment {
                                     ? endTs.toDate().getTime()
                                     : start + 2 * 60 * 60 * 1000;
 
-                            // SỰ KIỆN SẮP DIỄN RA
+                            // CHỈ LẤY EVENT ĐÃ KẾT THÚC
                             if (end > nowMillis) return;
 
+                            // ===== Map tickets từ order =====
                             List<?> ticketsArr = (List<?>) orderDoc.get("tickets");
+
                             if (ticketsArr == null || ticketsArr.isEmpty()) {
-                                // fallback: 1 vé / order
+                                // Fallback: 1 dòng / order
                                 TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
                                 item.orderId = orderDoc.getId();
                                 item.eventId = eventId;
                                 item.title = e.getTitle();
-                                item.venue = e.getLocation();
-                                item.addressDetail = e.getAddressDetail();
+
                                 item.startTimeMillis = start;
                                 item.endTimeMillis = end;
 
+                                item.venue = e.getLocation();
+                                item.addressDetail = e.getAddressDetail();
+
+                                // Dùng tổng số vé / tổng tiền nếu có
+                                Number totalTicketsNum = (Number) orderDoc.get("totalTickets");
+                                Number totalAmountNum = (Number) orderDoc.get("totalAmount");
+
+                                long totalTickets = totalTicketsNum != null ? totalTicketsNum.longValue() : 1L;
+                                long totalAmount = totalAmountNum != null ? totalAmountNum.longValue() : 0L;
+
+                                item.ticketQuantity = totalTickets;
+                                item.ticketPrice = (totalTickets > 0)
+                                        ? totalAmount / totalTickets
+                                        : totalAmount;
+
+                                String ticketType = orderDoc.getString("ticketType");
+                                item.ticketTypeName = ticketType;
+
                                 Double price = e.getPrice();
-                                item.ticketPrice = price != null ? price.longValue() : 0L;
-                                item.ticketQuantity = 1;
-                                item.ticketTypeName = null;
+                                item.minPrice = price != null ? price.longValue() : 0L;
 
                                 result.add(item);
                             } else {
-                                // 1 TicketItem cho mỗi LOẠI vé trong array
+                                // 1 dòng / vé trong tickets array
                                 for (Object obj : ticketsArr) {
-                                    if (!(obj instanceof java.util.Map)) continue;
-                                    java.util.Map<?,?> tk = (java.util.Map<?,?>) obj;
-
-                                    String typeName = (String) tk.get("name");
-                                    Number qNum = (Number) tk.get("quantity");
-                                    Number pNum = (Number) tk.get("price");
+                                    if (!(obj instanceof Map)) continue;
+                                    Map<?, ?> tk = (Map<?, ?>) obj;
 
                                     TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
                                     item.orderId = orderDoc.getId();
                                     item.eventId = eventId;
                                     item.title = e.getTitle();
-                                    item.venue = e.getLocation();
-                                    item.addressDetail = e.getAddressDetail();
+
                                     item.startTimeMillis = start;
                                     item.endTimeMillis = end;
 
+                                    item.venue = e.getLocation();
+                                    item.addressDetail = e.getAddressDetail();
+
+                                    String typeName = (String) tk.get("type");
+                                    Number pNum = (Number) tk.get("price");
+
                                     item.ticketTypeName = typeName;
-                                    item.ticketQuantity = qNum != null ? qNum.longValue() : 0L;
+                                    item.ticketQuantity = 1L;
                                     item.ticketPrice = pNum != null ? pNum.longValue() : 0L;
+
+                                    Double price = e.getPrice();
+                                    item.minPrice = price != null ? price.longValue() : 0L;
 
                                     result.add(item);
                                 }
                             }
-
-                            TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
-                            item.orderId = orderDoc.getId();
-                            item.eventId = eventId;
-                            item.title = e.getTitle();
-
-                            // ======= Thời gian =======
-                            item.startTimeMillis = start;
-                            item.endTimeMillis = end;
-
-                            // ======= Venue =======
-                            item.venue = e.getLocation();          // hoặc e.getVenue() nếu getter tên khác
-                            item.addressDetail = e.getAddressDetail(); // địa chỉ chi tiết (nếu có)
-
-                            // ======= Lấy loại vé & giá vé đúng trong order =======
-                            List<Object> tickets = (List<Object>) orderDoc.get("tickets");
-                            if (tickets != null && !tickets.isEmpty()) {
-                                Object first = tickets.get(0);
-                                if (first instanceof java.util.Map) {
-                                    java.util.Map<String,Object> map = (java.util.Map<String,Object>) first;
-
-                                    item.ticketTypeName = (String) map.get("name");
-
-                                    if (map.get("price") instanceof Number) {
-                                        item.ticketPrice = ((Number) map.get("price")).longValue();
-                                    }
-                                }
-                            }
-
-                            // ======= Giá min của sự kiện =======
-                            Double price = e.getPrice();
-                            item.minPrice = price != null ? price.longValue() : 0L;
-
-                            result.add(item);
                         });
 
                     }
@@ -239,6 +227,7 @@ public class PastTicketsFragment extends Fragment {
                                     showEmptyBig();
                                     loadSuggestions();
                                 } else {
+                                    // Đã kết thúc: sort mới nhất -> cũ nhất
                                     Collections.sort(result,
                                             (a, b) -> Long.compare(b.endTimeMillis, a.endTimeMillis));
                                     ticketAdapter.submitList(result);

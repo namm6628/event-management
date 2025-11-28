@@ -2,40 +2,72 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingVertical="4dp">
+    android:orientation="vertical"
+    android:padding="8dp">
 
-    <EditText
-        android:id="@+id/edtTicketName"
-        android:layout_width="1dp"
+    <!-- Dòng 1: Tên vé - Giá - Số vé -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="2"
-        android:hint="loại vé"
-        android:inputType="textCapSentences" />
+        android:orientation="horizontal">
 
-    <EditText
-        android:id="@+id/edtTicketPrice"
-        android:layout_width="0dp"
+        <EditText
+            android:id="@+id/edtTicketName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:hint="Tên loại vé" />
+
+        <EditText
+            android:id="@+id/edtTicketPrice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="numberDecimal"
+            android:hint="Giá" />
+
+        <EditText
+            android:id="@+id/edtTicketQuota"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="number"
+            android:hint="Số vé" />
+    </LinearLayout>
+
+    <!-- Dòng 2: Thông tin ghế + nút Xoá / Sơ đồ ghế -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:layout_marginStart="4dp"
-        android:hint="Giá"
-        android:inputType="number" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp">
 
-    <EditText
-        android:id="@+id/edtTicketQuota"
-        android:layout_width="20dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:layout_marginStart="4dp"
-        android:hint="Số lượng vé"
-        android:inputType="number" />
+        <!-- Hiển thị số ghế đã chọn -->
+        <TextView
+            android:id="@+id/tvSeatStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Chưa chọn ghế"
+            android:textSize="13sp"
+            android:textColor="@android:color/darker_gray" />
 
-    <TextView
-        android:id="@+id/btnRemoveRow"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginStart="4dp"
-        android:gravity="center"
-        android:text="✕" />
+        <TextView
+            android:id="@+id/btnRemoveRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Xóa"
+            android:textColor="@android:color/holo_red_dark"
+            android:padding="4dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSetupSeats"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sơ đồ ghế"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
 </LinearLayout>

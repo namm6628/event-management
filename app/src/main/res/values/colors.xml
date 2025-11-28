@@ -59,6 +59,16 @@
     <color name="star_yellow">#FFC107</color>
     <color name="star_gray">#DDDDDD</color>
 
+    <color name="seat_available">#FFB0BEC5</color>  <!-- xám/green nhạt -->
+    <color name="seat_selected">#FF4CAF50</color>   <!-- xanh lá -->
+    <color name="seat_booked">#FFE57373</color>     <!-- đỏ nhạt -->
+
+    <color name="seat_vip">#FFD54F</color>        <!-- vàng nhạt -->
+    <color name="seat_standard">#81C784</color>  <!-- xanh lá dịu -->
+    <color name="seat_economy">#90CAF9</color>   <!-- xanh dương nhạt -->
+
+
+
 
 
 

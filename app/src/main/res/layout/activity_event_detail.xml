@@ -627,6 +627,7 @@
             android:layout_height="match_parent"
             android:text="Đặt vé"
             android:textAllCaps="false"
+            android:textColor="@android:color/white"
             app:cornerRadius="999dp" />
     </LinearLayout>
 

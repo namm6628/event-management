@@ -3,6 +3,8 @@ package com.example.myapplication.common.model;
 import com.google.firebase.firestore.Exclude;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TicketType implements Serializable {
 
@@ -14,9 +16,13 @@ public class TicketType implements Serializable {
     private int quota;     // tổng số vé
     private int sold;      // đã bán
 
-    // Chỉ dùng trong app (UI chọn vé), KHÔNG lưu Firestore
+    // Chỉ dùng trong app (UI chọn vé, không lưu Firestore)
     @Exclude
     private int selectedQuantity = 0;
+
+    // ====== DANH SÁCH GHẾ ĐÃ CHỌN CHO LOẠI VÉ NÀY (CHỈ DÙNG TRONG APP) ======
+    @Exclude
+    private List<String> selectedSeatIds = new ArrayList<>();
 
     public TicketType() {
         // Firestore bắt buộc phải có constructor rỗng public
@@ -89,6 +95,17 @@ public class TicketType implements Serializable {
     @Exclude
     public void setSelectedQuantity(int selectedQuantity) {
         this.selectedQuantity = selectedQuantity;
+    }
+
+    // ------ GHẾ ĐÃ CHỌN CHO LOẠI VÉ NÀY ------
+    @Exclude
+    public List<String> getSelectedSeatIds() {
+        return selectedSeatIds;
+    }
+
+    @Exclude
+    public void setSelectedSeatIds(List<String> selectedSeatIds) {
+        this.selectedSeatIds = selectedSeatIds;
     }
 
     // tiện cho check còn vé không
