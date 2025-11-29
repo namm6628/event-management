@@ -1,9 +1,11 @@
 package com.example.myapplication.attendee.notification;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -26,7 +28,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class AttendeeNotificationsActivity extends AppCompatActivity {
+public class AttendeeNotificationsActivity extends AppCompatActivity
+        implements BroadcastAdapter.Listener {
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
@@ -35,10 +38,17 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
     private View layoutEmpty;
     private BroadcastAdapter adapter;
 
+    // giữ list hiện tại để cập nhật lại khi ẩn
+    private final List<EventBroadcast> currentList = new ArrayList<>();
+
+    private static final String PREF_NAME = "attendee_notifications_prefs";
+    private static final String KEY_HIDDEN_IDS = "hidden_broadcast_ids";
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_event_broadcast_list); // reuse layout
+        // reuse layout hiện tại
+        setContentView(R.layout.activity_event_broadcast_list);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle("Thông báo");
@@ -49,10 +59,27 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
 
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new BroadcastAdapter();
+        adapter.setListener(this);     // bật nút xoá cho người nhận
         rv.setAdapter(adapter);
 
         loadNotifications();
     }
+
+    // ===== SharedPreferences: lưu ID thông báo đã ẩn =====
+
+    private Set<String> getHiddenIds() {
+        SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        return new HashSet<>(prefs.getStringSet(KEY_HIDDEN_IDS, new HashSet<>()));
+    }
+
+    private void addHiddenId(@NonNull String id) {
+        SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        Set<String> set = new HashSet<>(prefs.getStringSet(KEY_HIDDEN_IDS, new HashSet<>()));
+        set.add(id);
+        prefs.edit().putStringSet(KEY_HIDDEN_IDS, set).apply();
+    }
+
+    // ===== Load thông báo =====
 
     private void loadNotifications() {
         if (auth.getCurrentUser() == null) {
@@ -63,8 +90,8 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
         }
 
         String uid = auth.getCurrentUser().getUid();
+        Set<String> hiddenIds = getHiddenIds();
 
-        // TODO: nếu field userId / status khác thì sửa ở đây
         db.collection("orders")
                 .whereEqualTo("userId", uid)
                 .whereEqualTo("status", "paid")
@@ -75,9 +102,10 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
                         return;
                     }
 
+                    // lấy list eventId của user đã mua vé
                     Set<String> eventIds = new HashSet<>();
                     for (DocumentSnapshot d : orderSnap) {
-                        String eventId = d.getString("eventId"); // TODO: đổi nếu field khác
+                        String eventId = d.getString("eventId");
                         if (eventId != null) eventIds.add(eventId);
                     }
 
@@ -105,6 +133,9 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
                                 for (Object o : results) {
                                     QuerySnapshot qs = (QuerySnapshot) o;
                                     for (DocumentSnapshot d : qs) {
+                                        // nếu user đã ẩn thông báo này thì bỏ qua
+                                        if (hiddenIds.contains(d.getId())) continue;
+
                                         EventBroadcast b = d.toObject(EventBroadcast.class);
                                         if (b != null) {
                                             b.setId(d.getId());
@@ -114,10 +145,13 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
                                     }
                                 }
 
+                                currentList.clear();
+                                currentList.addAll(list);
+
                                 if (list.isEmpty()) {
                                     showEmpty();
                                 } else {
-                                    adapter.submitList(list);
+                                    adapter.submitList(new ArrayList<>(list));
                                     layoutEmpty.setVisibility(View.GONE);
                                     rv.setVisibility(View.VISIBLE);
                                 }
@@ -137,5 +171,37 @@ public class AttendeeNotificationsActivity extends AppCompatActivity {
     private void showEmpty() {
         rv.setVisibility(View.GONE);
         layoutEmpty.setVisibility(View.VISIBLE);
+    }
+
+    // ===== Xử lý nút xoá trên từng card =====
+
+    @Override
+    public void onDismiss(@NonNull EventBroadcast b) {
+        String id = b.getId();
+        if (id == null || id.isEmpty()) {
+            Toast.makeText(this, "Thiếu ID thông báo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // lưu lại là đã ẩn
+        addHiddenId(id);
+
+        // xoá khỏi currentList theo id
+        for (int i = 0; i < currentList.size(); i++) {
+            EventBroadcast item = currentList.get(i);
+            if (id.equals(item.getId())) {
+                currentList.remove(i);
+                break;
+            }
+        }
+
+        // cập nhật lại adapter bằng list mới (ListAdapter sẽ diff)
+        adapter.submitList(new ArrayList<>(currentList));
+
+        if (currentList.isEmpty()) {
+            showEmpty();
+        }
+
+        Toast.makeText(this, "Đã ẩn thông báo", Toast.LENGTH_SHORT).show();
     }
 }

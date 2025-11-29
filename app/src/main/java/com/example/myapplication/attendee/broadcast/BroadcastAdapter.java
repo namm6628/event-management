@@ -3,6 +3,7 @@ package com.example.myapplication.attendee.broadcast;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -21,8 +22,27 @@ import java.util.concurrent.TimeUnit;
 
 public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapter.VH> {
 
+    // Listener để màn nhận thông báo ẩn từng cái
+    public interface Listener {
+        void onDismiss(@NonNull EventBroadcast b);
+    }
+
+    private Listener listener;
+
+    // constructor mặc định (không xoá được)
     public BroadcastAdapter() {
         super(DIFF);
+    }
+
+    // constructor có listener
+    public BroadcastAdapter(Listener listener) {
+        super(DIFF);
+        this.listener = listener;
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
+        // không cần notify vì chỉ đổi hành vi nút, không đổi dữ liệu
     }
 
     private static final DiffUtil.ItemCallback<EventBroadcast> DIFF =
@@ -63,12 +83,13 @@ public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapt
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.bind(getItem(position));
+        holder.bind(getItem(position), listener);
     }
 
     static class VH extends RecyclerView.ViewHolder {
 
         TextView tvEventTitle, tvBroadcastTitle, tvMessage, tvTime;
+        ImageButton btnDismiss;
 
         VH(@NonNull View itemView) {
             super(itemView);
@@ -76,9 +97,10 @@ public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapt
             tvBroadcastTitle = itemView.findViewById(R.id.tvBroadcastTitle);
             tvMessage = itemView.findViewById(R.id.tvMessage);
             tvTime = itemView.findViewById(R.id.tvTime);
+            btnDismiss = itemView.findViewById(R.id.btnDismiss);
         }
 
-        void bind(EventBroadcast b) {
+        void bind(EventBroadcast b, Listener listener) {
             // Tên sự kiện
             String event = b.getEventTitle();
             tvEventTitle.setText(
@@ -100,6 +122,17 @@ public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapt
                 tvTime.setText("");
             } else {
                 tvTime.setText(formatRelativeTime(ts.toDate()));
+            }
+
+            // Nút xoá: nếu không có listener (màn BTC) thì ẩn
+            if (btnDismiss != null) {
+                if (listener == null) {
+                    btnDismiss.setVisibility(View.GONE);
+                    btnDismiss.setOnClickListener(null);
+                } else {
+                    btnDismiss.setVisibility(View.VISIBLE);
+                    btnDismiss.setOnClickListener(v -> listener.onDismiss(b));
+                }
             }
         }
 

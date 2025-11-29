@@ -5,11 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorSurface"
-
     android:padding="16dp">
 
     <!-- ⭐ KHUNG THỐNG KÊ -->
-    <!-- ⭐ KHUNG THỐNG KÊ, FULL NGANG, KHÔNG BÓNG -->
     <LinearLayout
         android:id="@+id/cardStats"
         android:layout_width="match_parent"
@@ -38,8 +36,10 @@
                 android:layout_height="wrap_content"
                 android:text="Doanh thu: 0 đ"
                 android:layout_marginTop="8dp"
-                android:textColor="@android:color/black"
-                android:textSize="13sp"/>
+                android:textColor="?attr/colorPrimary"
+            android:textStyle="bold"
+            android:textSize="20sp"/>
+
 
             <TextView
                 android:id="@+id/tvTotalTickets"
@@ -60,6 +60,72 @@
                 android:textSize="13sp"/>
 
             <TextView
+                android:id="@+id/tvTotalEvents"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tổng số sự kiện đã tạo: 0"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/black"
+                android:textSize="13sp"/>
+
+            <!-- Doanh thu theo thời gian -->
+            <TextView
+                android:id="@+id/tvRevenueToday"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Doanh thu hôm nay: 0 đ"
+                android:layout_marginTop="6dp"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/tvRevenueMonth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Doanh thu tháng này: 0 đ"
+                android:layout_marginTop="2dp"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/tvEventsThisMonth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sự kiện diễn ra trong tháng này: 0"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/black"
+                android:textSize="13sp"/>
+
+            <!-- Hiệu suất & top event -->
+            <TextView
+                android:id="@+id/tvAvgFillRate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tỉ lệ lấp đầy TB: 0%"
+                android:layout_marginTop="6dp"
+                android:textColor="@android:color/black"
+                android:textSize="13sp"/>
+
+            <TextView
+                android:id="@+id/tvTopEvent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sự kiện bán chạy: Chưa có dữ liệu"
+                android:layout_marginTop="2dp"
+                android:textColor="@android:color/black"
+                android:textSize="13sp"/>
+
+            <!-- Trạng thái đơn hàng -->
+            <TextView
+                android:id="@+id/tvOrderStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Đơn đã thanh toán: 0 | Đang chờ: 0 | Khác: 0"
+                android:layout_marginTop="6dp"
+                android:textColor="@android:color/black"
+                android:textSize="13sp"/>
+
+            <TextView
                 android:id="@+id/tvAnalyticsHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -69,7 +135,6 @@
                 android:textSize="11sp"/>
         </LinearLayout>
     </LinearLayout>
-
 
     <!-- ⭐ 2 Ô DASHBOARD NẰM NGANG -->
     <LinearLayout
@@ -153,6 +218,39 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
+
+    <!-- 3 filter: Sắp diễn ra / Chuẩn bị diễn ra / Đã kết thúc -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/groupFilter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUpcoming"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Sắp diễn ra"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToday"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Chuẩn bị diễn ra"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnFinished"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Đã kết thúc"/>
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <!-- Text khi rỗng -->
     <TextView

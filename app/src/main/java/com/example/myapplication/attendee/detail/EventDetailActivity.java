@@ -1473,7 +1473,8 @@ public class EventDetailActivity extends AppCompatActivity {
         // Ảnh để xoay – cậu có thể đổi thành avatar của user nếu muốn
         String[] verifyImages = {
                 "https://firebasestorage.googleapis.com/v0/b/eventmanagement-8d9c4.firebasestorage.app/o/event1.jpg?alt=media&token=faeea74f-e925-4013-8ecc-3b0173bcf973",
-                "https://firebasestorage.googleapis.com/v0/b/eventmanagement-8d9c4.firebasestorage.app/o/event2.jpg?alt=media&token=a38e56de-5c40-4b11-bda8-e62634fd540c"
+                "https://firebasestorage.googleapis.com/v0/b/eventmanagement-8d9c4.firebasestorage.app/o/event2.jpg?alt=media&token=a38e56de-5c40-4b11-bda8-e62634fd540c",
+                "https://firebasestorage.googleapis.com/v0/b/eventmanagement-8d9c4.firebasestorage.app/o/z7273876249111_9112a04be27e80bd246e944147d2acfe.jpg?alt=media&token=d5ce97d1-c56f-4913-bcb7-701160a0d483"
         };
 
         String randomImg = verifyImages[new Random().nextInt(verifyImages.length)];

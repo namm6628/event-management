@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Xoay con mèo cho nó nhìn bạn rồi thả tay nhé!"
+            android:text="Xoay cho nó nhìn bạn rồi thả tay nhé!"
             android:textSize="14sp"/>
 
         <!-- Ảnh mèo -->

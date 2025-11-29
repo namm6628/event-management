@@ -15,18 +15,39 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Tên sự kiện -->
-        <TextView
-            android:id="@+id/tvEventTitle"
+        <!-- Hàng tiêu đề + nút xoá -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="EM XINH SAY HI CONCERT - ĐÊM 1"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnSurface"
-            />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <!-- Tiêu đề thông báo (chip nhỏ giống Ticketbox) -->
+            <!-- Tên sự kiện -->
+            <TextView
+                android:id="@+id/tvEventTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="EM XINH SAY HI CONCERT - ĐÊM 1"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <!-- Nút xoá thông báo (ẩn local) -->
+            <ImageButton
+                android:id="@+id/btnDismiss"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/delete"
+                android:padding="2dp"
+                android:focusable="false"
+                android:clickable="true"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_delete_24" />
+        </LinearLayout>
+
+        <!-- Tiêu đề thông báo -->
         <TextView
             android:id="@+id/tvBroadcastTitle"
             android:layout_width="wrap_content"
@@ -36,9 +57,7 @@
             android:paddingVertical="4dp"
             android:text="Thông báo từ BTC"
             android:textSize="12sp"
-            android:textColor="?attr/colorOnSurface"
-
-             />
+            android:textColor="?attr/colorOnSurface" />
 
         <!-- Nội dung -->
         <TextView
@@ -48,8 +67,7 @@
             android:layout_marginTop="8dp"
             android:text="Nội dung thông báo..."
             android:textSize="13sp"
-            android:textColor="?attr/colorOnSurface"
-            />
+            android:textColor="?attr/colorOnSurface" />
 
         <!-- Thời gian -->
         <TextView
