@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -43,6 +44,10 @@ public class CreateEventActivity extends AppCompatActivity {
     private TextView tvPickedDateTime;
     private ImageView ivPreview;
     private MaterialButton btnPickDateTime, btnPickImage, btnSave;
+
+    // 🔹 Marketing
+    private SwitchMaterial switchFeatured;
+    private EditText edtPromoTag;
 
     private Timestamp selectedStartTime;
     private Uri selectedImageUri;
@@ -83,6 +88,10 @@ public class CreateEventActivity extends AppCompatActivity {
         layoutTicketContainer = findViewById(R.id.layoutTicketContainer);
         btnAddTicketType      = findViewById(R.id.btnAddTicketType);
 
+        // 🔹 Marketing views
+        switchFeatured = findViewById(R.id.switchFeatured);   // SwitchMaterial trong layout
+        edtPromoTag    = findViewById(R.id.edtPromoTag);      // EditText cho text ưu đãi
+
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Tạo sự kiện mới");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -110,7 +119,6 @@ public class CreateEventActivity extends AppCompatActivity {
         }
 
         if (editingEventId != null) {
-            // load để sửa (chưa động vào sơ đồ ghế cũ – hiện tại bạn chưa lưu seats lên ticketTypes)
             loadEventForEdit(editingEventId);
             btnSave.setText("Cập nhật sự kiện");
         } else {
@@ -323,6 +331,10 @@ public class CreateEventActivity extends AppCompatActivity {
         String desc     = text(edtDescription);
         String sSeats   = text(edtTotalSeats);
 
+        // 🔹 Marketing
+        boolean isFeatured = switchFeatured != null && switchFeatured.isChecked();
+        String promoTag    = text(edtPromoTag);
+
         if (TextUtils.isEmpty(title)) {
             edtTitle.setError("Nhập tên sự kiện");
             return;
@@ -435,7 +447,7 @@ public class CreateEventActivity extends AppCompatActivity {
             ticket.put("price", price);
             ticket.put("quota", quota);
             ticket.put("sold", 0);
-            ticket.put("seats", seats); // <== lưu danh sách ghế ngay trong doc ticketTypes
+            ticket.put("seats", seats); // lưu danh sách ghế ngay trong doc ticketTypes
 
             ticketTypes.add(ticket);
 
@@ -485,7 +497,8 @@ public class CreateEventActivity extends AppCompatActivity {
                                                     title, artist, cat,
                                                     place, addrDtl, desc,
                                                     selectedStartTime, price, totalSeats,
-                                                    uri.toString(), ticketTypes
+                                                    uri.toString(), ticketTypes,
+                                                    isFeatured, promoTag
                                             )
                                     )
                                     .addOnFailureListener(e -> {
@@ -507,7 +520,8 @@ public class CreateEventActivity extends AppCompatActivity {
                     title, artist, cat,
                     place, addrDtl, desc,
                     selectedStartTime, price, totalSeats,
-                    null, ticketTypes
+                    null, ticketTypes,
+                    isFeatured, promoTag
             );
         }
     }
@@ -525,7 +539,9 @@ public class CreateEventActivity extends AppCompatActivity {
                                        double price,
                                        int totalSeats,
                                        @Nullable String thumbnailUrl,
-                                       List<Map<String, Object>> ticketTypes) {
+                                       List<Map<String, Object>> ticketTypes,
+                                       boolean isFeatured,
+                                       String promoTag) {
 
         Map<String, Object> data = new HashMap<>();
         data.put("title", title);
@@ -541,6 +557,13 @@ public class CreateEventActivity extends AppCompatActivity {
         data.put("availableSeats", totalSeats);
         data.put("status", "active");
         data.put("updatedAt", FieldValue.serverTimestamp());
+
+        // 🔹 Marketing fields
+        data.put("featured", isFeatured);
+        data.put("featuredBoostScore", isFeatured ? 10 : 0);
+        if (!TextUtils.isEmpty(promoTag)) {
+            data.put("promoTag", promoTag);
+        }
 
         if (editingEventId == null) {
             data.put("createdAt", FieldValue.serverTimestamp());
@@ -649,6 +672,16 @@ public class CreateEventActivity extends AppCompatActivity {
                         tvPickedDateTime.setText(sdf.format(ts.toDate()));
                     }
 
+                    // 🔹 Marketing: load lại
+                    if (switchFeatured != null) {
+                        Boolean featured = doc.getBoolean("featured");
+                        switchFeatured.setChecked(featured != null && featured);
+                    }
+                    if (edtPromoTag != null) {
+                        String promoTag = doc.getString("promoTag");
+                        if (promoTag != null) edtPromoTag.setText(promoTag);
+                    }
+
                     loadTicketTypesForEdit(eventId);
                 })
                 .addOnFailureListener(e -> {
@@ -680,8 +713,8 @@ public class CreateEventActivity extends AppCompatActivity {
                         Long quota    = d.getLong("quota");
 
                         addTicketRowWithData(name, price, quota);
-                        // Hiện tại bạn chưa lưu "seats" trong Firestore cũ,
-                        // nên khi edit event cũ thì sơ đồ ghế sẽ phải vẽ lại.
+                        // Nếu cần, có thể đọc thêm "seats" từ Firestore về và
+                        // push vào SeatLayoutConfigActivity, tuỳ bạn triển khai thêm.
                     }
                 })
                 .addOnFailureListener(e ->

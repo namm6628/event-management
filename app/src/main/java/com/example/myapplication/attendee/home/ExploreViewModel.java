@@ -23,13 +23,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class ExploreViewModel extends ViewModel {
 
     // ===== BE MỚI (Room + Paging) =====
     private EventRepository repo;
     private final MutableLiveData<List<Event>> allEvents = new MutableLiveData<>(new ArrayList<>());
-    private final MutableLiveData<String> categoryFilter = new MutableLiveData<>(null); // null = tất cả
+    private final MutableLiveData<String> categoryFilter = new MutableLiveData<>(null);
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
     private final MediatorLiveData<List<Event>> visibleEvents = new MediatorLiveData<>();
 
@@ -38,7 +39,7 @@ public class ExploreViewModel extends ViewModel {
     private boolean isLoading = false;
     private boolean isEndReached = false;
 
-    // ===== Danh sách ngang (BE cũ, dùng remote trực tiếp) =====
+    // ===== Danh sách ngang =====
     private static final int HORIZONTAL_PAGE_SIZE = 10;
     private final EventRemoteDataSource remote = new EventRemoteDataSource();
 
@@ -53,7 +54,6 @@ public class ExploreViewModel extends ViewModel {
     private final MutableLiveData<List<Event>> videoEventsBacking =
             new MutableLiveData<>(new ArrayList<>());
 
-    // Danh sách tên category động
     private final List<String> DYNAMIC_CATEGORY_NAMES = Arrays.asList(
             "Âm nhạc", "Hội thảo", "Sân khấu & nghệ thuật", "Thể thao", "Khác"
     );
@@ -109,23 +109,9 @@ public class ExploreViewModel extends ViewModel {
         }
     }
 
-    // ===== API cho Fragment =====
+    // ===== API =====
     public LiveData<List<Event>> getVisibleEvents() { return visibleEvents; }
     public LiveData<List<Event>> getEvents() { return visibleEvents; }
-
-    public void setSearchQuery(String q) {
-        searchQuery.setValue(q != null ? q : "");
-    }
-
-    public void setQuery(String q) { setSearchQuery(q); }
-
-    public void setCategoryFilter(String catOrNull) {
-        categoryFilter.setValue(catOrNull);
-        // đổi tab -> reset list
-        refresh();
-    }
-
-    public void setCategory(String category) { setCategoryFilter(category); }
 
     public LiveData<List<Event>> getTrendingEvents() { return trendingBacking; }
     public LiveData<List<Event>> getForYouEvents() { return forYouBacking; }
@@ -133,24 +119,25 @@ public class ExploreViewModel extends ViewModel {
     public LiveData<List<DynamicCategory>> getDynamicCategories() { return dynamicCategoriesBacking; }
     public LiveData<List<Event>> getVideoEvents() { return videoEventsBacking; }
 
-    // ===== Refresh / Paging =====
+    public void setSearchQuery(String q) {
+        searchQuery.setValue(q != null ? q : "");
+    }
 
-    /**
-     * Refresh có personalization (userInterest).
-     * HomeFragment có thể gọi refresh(lastInterest).
-     */
+    public void setCategoryFilter(String catOrNull) {
+        categoryFilter.setValue(catOrNull);
+        refresh();
+    }
+
+    // ===== Refresh / Paging =====
     public void refresh(String userInterest) {
         if (repo == null || isLoading) return;
         isLoading = true;
         isEndReached = false;
         lastVisible = null;
 
-        // Xoá local để tránh lẫn category
         repo.clearLocal();
 
         String cat = categoryFilter.getValue();
-
-        // Trang đầu list chính
         repo.loadFirstPage(cat, PAGE_SIZE)
                 .addOnSuccessListener(snap -> {
                     List<Event> first = EventRemoteDataSource.map(snap);
@@ -163,12 +150,10 @@ public class ExploreViewModel extends ViewModel {
                 })
                 .addOnFailureListener(e -> isLoading = false);
 
-        // 3 list AI + video + dynamic
         loadHorizontalLists(userInterest);
         loadDynamicCategories();
     }
 
-    /** Refresh mặc định (không truyền interest) */
     public void refresh() {
         refresh(null);
     }
@@ -193,7 +178,7 @@ public class ExploreViewModel extends ViewModel {
                 .addOnFailureListener(e -> isLoading = false);
     }
 
-    // ===== Nội bộ: filter client-side =====
+    // ===== FILTER =====
     private void setAllEvents(List<Event> events) {
         allEvents.setValue(events != null ? events : new ArrayList<>());
     }
@@ -205,6 +190,7 @@ public class ExploreViewModel extends ViewModel {
         return n.toLowerCase(Locale.ROOT).trim();
     }
 
+    /** ⭐ FINAL VERSION: applyFilters() có tích hợp featuredBoostScore */
     private void applyFilters() {
         List<Event> src = allEvents.getValue();
         if (src == null) src = new ArrayList<>();
@@ -214,15 +200,30 @@ public class ExploreViewModel extends ViewModel {
 
         List<Event> out = new ArrayList<>();
         for (Event e : src) {
+
+            // filter category
             String evCat = e.getCategory() != null ? e.getCategory() : "Khác";
             boolean catOk = (cat == null) || evCat.equals(cat);
+
+            // filter search
             String title = e.getTitle() != null ? e.getTitle() : "";
             boolean searchOk = q.isEmpty() || norm(title).contains(q);
+
             if (catOk && searchOk) out.add(e);
         }
 
+        // ⭐ SORT — ƯU TIÊN featuredBoostScore TRƯỚC
         try {
             Collections.sort(out, (a, b) -> {
+
+                int boostA = (a.getFeaturedBoostScore() == null) ? 0 : a.getFeaturedBoostScore();
+                int boostB = (b.getFeaturedBoostScore() == null) ? 0 : b.getFeaturedBoostScore();
+
+                if (boostA != boostB) {
+                    return Integer.compare(boostB, boostA); // desc
+                }
+
+                // fallback: sort theo thời gian
                 Timestamp ta = a.getStartTime();
                 Timestamp tb = b.getStartTime();
                 if (ta == null && tb == null) return 0;
@@ -235,55 +236,40 @@ public class ExploreViewModel extends ViewModel {
         visibleEvents.setValue(out);
     }
 
-    // ===== Danh sách ngang (AI) =====
-
+    // ===== Horizontal Lists & Dynamic Categories =====
     private void loadHorizontalLists(String userInterest) {
-        // Trending
+
         remote.loadTrendingEvents(HORIZONTAL_PAGE_SIZE)
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        trendingBacking.setValue(
-                                EventRemoteDataSource.map(task.getResult()));
-                    } else {
-                        trendingBacking.setValue(Collections.emptyList());
-                    }
+                    if (task.isSuccessful() && task.getResult() != null)
+                        trendingBacking.setValue(EventRemoteDataSource.map(task.getResult()));
+                    else trendingBacking.setValue(Collections.emptyList());
                 });
 
-        // For You (có interest)
         remote.loadForYouEvents(HORIZONTAL_PAGE_SIZE, userInterest)
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        forYouBacking.setValue(
-                                EventRemoteDataSource.map(task.getResult()));
-                    } else {
-                        forYouBacking.setValue(Collections.emptyList());
-                    }
+                    if (task.isSuccessful() && task.getResult() != null)
+                        forYouBacking.setValue(EventRemoteDataSource.map(task.getResult()));
+                    else forYouBacking.setValue(Collections.emptyList());
                 });
 
-        // Weekend
         remote.loadEventsForWeekend(HORIZONTAL_PAGE_SIZE)
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        weekendBacking.setValue(
-                                EventRemoteDataSource.map(task.getResult()));
-                    } else {
-                        weekendBacking.setValue(Collections.emptyList());
-                    }
+                    if (task.isSuccessful() && task.getResult() != null)
+                        weekendBacking.setValue(EventRemoteDataSource.map(task.getResult()));
+                    else weekendBacking.setValue(Collections.emptyList());
                 });
 
-        // Video
         remote.loadVideoEvents(HORIZONTAL_PAGE_SIZE)
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        videoEventsBacking.setValue(
-                                EventRemoteDataSource.map(task.getResult()));
-                    } else {
-                        videoEventsBacking.setValue(Collections.emptyList());
-                    }
+                    if (task.isSuccessful() && task.getResult() != null)
+                        videoEventsBacking.setValue(EventRemoteDataSource.map(task.getResult()));
+                    else videoEventsBacking.setValue(Collections.emptyList());
                 });
     }
 
     private void loadDynamicCategories() {
+
         List<Task<QuerySnapshot>> tasks = new ArrayList<>();
         for (String catName : DYNAMIC_CATEGORY_NAMES) {
             tasks.add(remote.loadFirstPage(catName, HORIZONTAL_PAGE_SIZE));
@@ -297,6 +283,7 @@ public class ExploreViewModel extends ViewModel {
 
             List<DynamicCategory> dynamicList = new ArrayList<>();
             List<Object> results = task.getResult();
+
             for (int i = 0; i < results.size(); i++) {
                 String catName = DYNAMIC_CATEGORY_NAMES.get(i);
                 QuerySnapshot snapshot = (QuerySnapshot) results.get(i);
@@ -305,6 +292,7 @@ public class ExploreViewModel extends ViewModel {
                     dynamicList.add(new DynamicCategory(catName, events));
                 }
             }
+
             dynamicCategoriesBacking.setValue(dynamicList);
         });
     }

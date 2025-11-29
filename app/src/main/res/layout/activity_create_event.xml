@@ -17,7 +17,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtTitle"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -27,7 +27,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtArtist"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -37,7 +37,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtCategory"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -53,8 +53,6 @@
                 android:maxLines="6" />
         </com.google.android.material.textfield.TextInputLayout>
 
-
-
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layoutPlace"
             android:layout_width="match_parent"
@@ -64,7 +62,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtPlace"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -76,10 +74,8 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtAddressDetail"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
-
-
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
@@ -89,7 +85,7 @@
                 android:id="@+id/edtTotalSeats"
                 android:inputType="number"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- KHUNG LOẠI VÉ -->
@@ -101,7 +97,6 @@
             android:text="Loại vé"
             android:textStyle="bold"
             android:textSize="16sp" />
-
 
         <LinearLayout
             android:id="@+id/layoutTicketContainer"
@@ -117,6 +112,36 @@
             android:text="Thêm loại vé"
             android:textAllCaps="false" />
 
+        <!-- 🔹 CÔNG CỤ MARKETING -->
+        <TextView
+            android:id="@+id/tvMarketingHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Công cụ marketing"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchFeatured"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đẩy sự kiện nổi bật trên bảng tin"
+            android:layout_marginTop="8dp"
+            app:useMaterialThemeColors="true" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutPromoTag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:hint="Nội dung ưu đãi hiển thị nổi bật (tuỳ chọn)">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtPromoTag"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <!-- 🔹 HẾT CÔNG CỤ MARKETING -->
 
         <TextView
             android:id="@+id/tvPickedDateTime"
@@ -140,13 +165,12 @@
             android:textSize="13sp"
             android:layout_marginTop="8dp" />
 
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPickImage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Chọn ảnh"
-            android:layout_marginTop="12dp"/>
+            android:layout_marginTop="12dp" />
 
         <ImageView
             android:id="@+id/ivPreview"
@@ -154,18 +178,14 @@
             android:layout_height="180dp"
             android:scaleType="centerCrop"
             android:layout_marginTop="8dp"
-            android:background="@android:color/darker_gray"/>
-
-
+            android:background="@android:color/darker_gray" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Lưu sự kiện"
-            android:layout_marginTop="16dp"/>
-
-
+            android:layout_marginTop="16dp" />
 
     </LinearLayout>
 </ScrollView>

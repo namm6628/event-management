@@ -11,6 +11,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
+        <!-- CỘT TRÁI -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -26,11 +27,36 @@
                 android:textSize="14sp" />
 
             <TextView
+                android:id="@+id/tvEarlyBird"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EARLY BIRD"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/bg_chip_earlybird"
+                android:textColor="@android:color/white"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/tvTicketPrice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 ₫"
                 android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvPromo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ưu đãi đặt sớm: còn 8/10 vé"
+                android:textSize="12sp"
+                android:textColor="@color/text_primary"
+                android:visibility="gone"
+                android:layout_marginTop="2dp" />
 
             <TextView
                 android:id="@+id/tvTicketRemain"
@@ -39,8 +65,10 @@
                 android:text="Còn lại: 0"
                 android:textSize="12sp"
                 android:textColor="@android:color/darker_gray" />
+
         </LinearLayout>
 
+        <!-- CỘT PHẢI: +/- -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -76,6 +104,7 @@
                 android:textSize="18sp"
                 android:background="@android:color/holo_green_dark"
                 android:textColor="@android:color/white" />
+
         </LinearLayout>
     </LinearLayout>
 

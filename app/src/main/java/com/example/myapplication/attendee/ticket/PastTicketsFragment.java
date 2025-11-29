@@ -184,6 +184,9 @@ public class PastTicketsFragment extends Fragment {
                                 String ticketType = orderDoc.getString("ticketType");
                                 item.ticketTypeName = ticketType;
 
+                                // không có list tickets riêng => thường không có ghế
+                                item.seatSummary = null;
+
                                 Double price = e.getPrice();
                                 item.minPrice = price != null ? price.longValue() : 0L;
 
@@ -212,6 +215,22 @@ public class PastTicketsFragment extends Fragment {
                                     item.ticketTypeName = typeName;
                                     item.ticketQuantity = 1L;
                                     item.ticketPrice = pNum != null ? pNum.longValue() : 0L;
+
+                                    // ✅ Dùng đúng field trong Firestore: label / seatId
+                                    String seatLabel = null;
+
+                                    Object labelObj = tk.get("label");
+                                    if (labelObj instanceof String && !((String) labelObj).isEmpty()) {
+                                        seatLabel = (String) labelObj;
+                                    } else {
+                                        Object seatIdObj = tk.get("seatId");
+                                        if (seatIdObj instanceof String && !((String) seatIdObj).isEmpty()) {
+                                            seatLabel = (String) seatIdObj;
+                                        }
+                                    }
+
+                                    item.seatSummary = seatLabel;  // có thể là "A5", "B1" hoặc null
+
 
                                     Double price = e.getPrice();
                                     item.minPrice = price != null ? price.longValue() : 0L;

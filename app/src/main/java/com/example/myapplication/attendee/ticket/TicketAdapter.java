@@ -102,15 +102,10 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
 
             // ===== Chips =====
             tvStatusChip.setText("Thành công");
-
-
             tvTicketTypeChip.setText("Vé điện tử");
 
-
             // Click vào chip "Vé điện tử" -> show QR
-            tvTicketTypeChip.setOnClickListener(v -> {
-                showQrDialog(v.getContext(), item);
-            });
+            tvTicketTypeChip.setOnClickListener(v -> showQrDialog(v.getContext(), item));
 
             // ===== Order code =====
             tvOrderCode.setText("Mã đơn hàng: " + item.orderId);
@@ -127,8 +122,8 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                     Date end = new Date(item.endTimeMillis);
                     timeText = tf.format(start) + " - " + tf.format(end) + ", " + df.format(start);
                 } else {
-                    timeText = new SimpleDateFormat("HH:mm, dd 'Tháng' MM, yyyy", new Locale("vi", "VN"))
-                            .format(start);
+                    timeText = new SimpleDateFormat("HH:mm, dd 'Tháng' MM, yyyy",
+                            new Locale("vi", "VN")).format(start);
                 }
             }
             tvTime.setText(timeText);
@@ -167,13 +162,30 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                 }
             }
 
-            // ===== Price =====
+            // ===== Price + seat =====
             NumberFormat nf = NumberFormat.getInstance(new Locale("vi", "VN"));
 
             if (item.ticketPrice > 0) {
-                String label = (item.ticketTypeName != null ? item.ticketTypeName + " – " : "");
-                tvPrice.setText(label + nf.format(item.ticketPrice) + " đ");
+                StringBuilder line = new StringBuilder();
+
+                // Tên loại vé
+                if (item.ticketTypeName != null && !item.ticketTypeName.isEmpty()) {
+                    line.append(item.ticketTypeName);
+                }
+
+                // Ghế (nếu có)
+                if (item.seatSummary != null && !item.seatSummary.isEmpty()) {
+                    if (line.length() > 0) line.append(" – ");
+                    line.append(item.seatSummary); // ví dụ "A1, A2"
+                }
+
+                // Giá
+                if (line.length() > 0) line.append(" – ");
+                line.append(nf.format(item.ticketPrice)).append(" đ");
+
+                tvPrice.setText(line.toString());
                 tvPrice.setVisibility(View.VISIBLE);
+
             } else if (item.minPrice > 0) {
                 tvPrice.setText("Từ " + nf.format(item.minPrice) + " đ");
                 tvPrice.setVisibility(View.VISIBLE);
@@ -219,7 +231,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
 
         AlertDialog dialog = builder.create();
         dialog.show();
-
     }
 
     // ================== Model ==================
@@ -235,6 +246,9 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
         public String ticketTypeName; // tên loại vé
         public long ticketPrice;      // giá đúng loại vé
         public long ticketQuantity;   // 3, 2, 1...
+
+        // tổng hợp ghế, ví dụ "A1, A2, B3"
+        public String seatSummary;
 
         public long startTimeMillis;
         public long endTimeMillis;
@@ -252,6 +266,7 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                     && safeEquals(venue, o.venue)
                     && safeEquals(addressDetail, o.addressDetail)
                     && safeEquals(ticketTypeName, o.ticketTypeName)
+                    && safeEquals(seatSummary, o.seatSummary)
                     && ticketPrice == o.ticketPrice
                     && ticketQuantity == o.ticketQuantity
                     && startTimeMillis == o.startTimeMillis

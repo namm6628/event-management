@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -18,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.myapplication.R;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -28,6 +30,7 @@ import com.google.firebase.firestore.WriteBatch;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -40,15 +43,26 @@ public class PaymentActivity extends AppCompatActivity {
 
     private String eventId, eventTitle, userId, ticketNames, ticketType;
     private int quantity;
-    private double totalPrice;
+    private double totalPrice;          // tạm tính ban đầu (sau early-bird)
+    private double discountAmount = 0;  // số tiền giảm từ mã
+    private double finalAmount = 0;     // số thực tế phải trả
+    private String appliedPromoCode = null;
+
     // Mỗi phần tử: { seatId, label, type, price }
     private ArrayList<HashMap<String, Object>> selectedTickets;
     private ArrayList<String> selectedSeatIds;
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+    // Group booking (chia tiền)
     private View cardSplitBill;
     private TextView tvSplitInfo;
     private View btnShareBill;
+
+    // Khuyến mãi
+    private EditText edtPromoCode;
+    private MaterialButton btnApplyPromo;
+    private TextView tvPromoInfo;
 
     private final NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
@@ -77,9 +91,15 @@ public class PaymentActivity extends AppCompatActivity {
         tvTicketType      = findViewById(R.id.tvTicketType);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+
         cardSplitBill     = findViewById(R.id.cardSplitBill);
         tvSplitInfo       = findViewById(R.id.tvSplitInfo);
         btnShareBill      = findViewById(R.id.btnShareBill);
+
+        // views khuyến mãi
+        edtPromoCode      = findViewById(R.id.edtPromoCode);
+        btnApplyPromo     = findViewById(R.id.btnApplyPromo);
+        tvPromoInfo       = findViewById(R.id.tvPromoInfo);
 
         tvEventName       = findViewById(R.id.tvEventName);
         tvQuantity        = findViewById(R.id.tvQuantity);
@@ -98,15 +118,43 @@ public class PaymentActivity extends AppCompatActivity {
             tvTicketType.setText("Vé tham dự");
         }
 
-        String priceStr = nf.format(totalPrice) + " ₫";
-        if (totalPrice == 0) priceStr = "Miễn phí";
-        tvTotalPrice.setText(priceStr);
-        tvTotalPriceInfo.setText(priceStr);
+        // Khởi tạo giá
+        discountAmount = 0;
+        finalAmount = totalPrice;
+        updatePriceViews();     // tạm tính / giảm / cần thanh toán
 
         setupSplitBill();
 
-        // 4. Sự kiện nút Thanh toán
+        // 4. Khuyến mãi: áp dụng mã
+        btnApplyPromo.setOnClickListener(v -> applyPromoCode());
+
+        // 5. Sự kiện nút Thanh toán
         btnConfirmPayment.setOnClickListener(v -> processPayment());
+    }
+
+    /** Cập nhật hiển thị tiền */
+    private void updatePriceViews() {
+        String baseStr = (totalPrice <= 0)
+                ? "Miễn phí"
+                : nf.format(totalPrice) + " ₫";
+
+        String discountStr = (discountAmount <= 0)
+                ? "0 ₫"
+                : "- " + nf.format(discountAmount) + " ₫";
+
+        String finalStr = (finalAmount <= 0)
+                ? "Miễn phí"
+                : nf.format(finalAmount) + " ₫";
+
+        // Text to, hiển thị số phải trả cuối cùng
+        tvTotalPrice.setText(finalStr);
+
+        // Text nhỏ chi tiết
+        tvTotalPriceInfo.setText(
+                "Tạm tính: " + baseStr +
+                        "\nGiảm: " + discountStr +
+                        "\nCần thanh toán: " + finalStr
+        );
     }
 
     /** Card "Đi nhóm? Chia tiền ngay!" */
@@ -203,6 +251,156 @@ public class PaymentActivity extends AppCompatActivity {
         return o == null ? "" : String.valueOf(o);
     }
 
+    // ================== ÁP DỤNG MÃ KHUYẾN MÃI ==================
+
+    private void applyPromoCode() {
+        if (totalPrice <= 0) {
+            Toast.makeText(this, "Đơn miễn phí không cần dùng mã giảm giá", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String raw = edtPromoCode != null ? edtPromoCode.getText().toString().trim() : "";
+        if (raw.isEmpty()) {
+            Toast.makeText(this, "Vui lòng nhập mã khuyến mãi", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final String code = raw.toUpperCase(Locale.ROOT);
+        btnApplyPromo.setEnabled(false);
+        tvPromoInfo.setText("Đang kiểm tra mã...");
+
+        db.collection("promotions")
+                .document(code)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    btnApplyPromo.setEnabled(true);
+
+                    if (!doc.exists()) {
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        tvPromoInfo.setText("Mã không hợp lệ hoặc không tồn tại.");
+                        updatePriceViews();
+                        return;
+                    }
+
+                    Boolean active = doc.getBoolean("active");
+                    if (active != null && !active) {
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        tvPromoInfo.setText("Mã đã bị khóa / ngừng áp dụng.");
+                        updatePriceViews();
+                        return;
+                    }
+
+                    Timestamp expiry = doc.getTimestamp("expiry");
+                    if (expiry != null && expiry.toDate().before(new Date())) {
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        tvPromoInfo.setText("Mã đã hết hạn.");
+                        updatePriceViews();
+                        return;
+                    }
+
+                    String eventLimit = doc.getString("eventId");
+                    if (eventLimit != null && !eventLimit.isEmpty()
+                            && !eventLimit.equals(eventId)) {
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        tvPromoInfo.setText("Mã này không áp dụng cho sự kiện này.");
+                        updatePriceViews();
+                        return;
+                    }
+
+                    Double minAmount = getDoubleField(doc, "minAmount");
+                    if (minAmount != null && totalPrice < minAmount) {
+                        tvPromoInfo.setText("Đơn tối thiểu " + nf.format(minAmount) + " ₫ mới áp dụng được mã này.");
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        updatePriceViews();
+                        return;
+                    }
+
+                    Long minTickets = doc.getLong("minTickets");
+                    if (minTickets != null && quantity < minTickets) {
+                        tvPromoInfo.setText("Cần mua ít nhất " + minTickets + " vé để dùng mã này.");
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        updatePriceViews();
+                        return;
+                    }
+
+                    String type = doc.getString("type");
+                    Double value = getDoubleField(doc, "value");
+                    if (type == null || value == null || value <= 0) {
+                        tvPromoInfo.setText("Mã khuyến mãi cấu hình không hợp lệ.");
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        updatePriceViews();
+                        return;
+                    }
+
+                    double discount = 0d;
+
+                    if ("PERCENT".equalsIgnoreCase(type)) {
+                        discount = totalPrice * (value / 100.0);
+                    } else if ("AMOUNT".equalsIgnoreCase(type)) {
+                        discount = value;
+                    } else if ("COMBO".equalsIgnoreCase(type)) {
+                        // combo: giảm thẳng một khoản nếu đủ minTickets
+                        discount = value;
+                    }
+
+                    Double maxDiscount = getDoubleField(doc, "maxDiscount");
+                    if (maxDiscount != null && discount > maxDiscount) {
+                        discount = maxDiscount;
+                    }
+
+                    if (discount > totalPrice) {
+                        discount = totalPrice;
+                    }
+
+                    if (discount <= 0) {
+                        tvPromoInfo.setText("Mã này không tạo ra ưu đãi cho đơn hiện tại.");
+                        appliedPromoCode = null;
+                        discountAmount = 0;
+                        finalAmount = totalPrice;
+                        updatePriceViews();
+                        return;
+                    }
+
+                    // OK
+                    appliedPromoCode = code;
+                    discountAmount = discount;
+                    finalAmount = totalPrice - discountAmount;
+
+                    tvPromoInfo.setText("Đã áp dụng mã " + code
+                            + " – giảm " + nf.format(discountAmount) + " ₫.");
+                    updatePriceViews();
+                })
+                .addOnFailureListener(e -> {
+                    btnApplyPromo.setEnabled(true);
+                    Toast.makeText(this,
+                            "Lỗi kiểm tra mã: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                    tvPromoInfo.setText("Không áp dụng được mã.");
+                });
+    }
+
+    private Double getDoubleField(DocumentSnapshot doc, String field) {
+        Object v = doc.get(field);
+        if (v instanceof Number) {
+            return ((Number) v).doubleValue();
+        }
+        return null;
+    }
+
     // ================== Xử lý thanh toán ==================
 
     private void processPayment() {
@@ -244,7 +442,7 @@ public class PaymentActivity extends AppCompatActivity {
                     }
 
                     // 👇 LẤY OWNER CỦA SỰ KIỆN
-                    String ownerId = snapshot.getString("ownerId");   // 👈 rất quan trọng cho thống kê
+                    String ownerId = snapshot.getString("ownerId");   // cho thống kê
 
                     // 1. Trừ vé
                     transaction.update(eventRef, "availableSeats", available - quantity);
@@ -254,22 +452,30 @@ public class PaymentActivity extends AppCompatActivity {
                     order.put("eventId", eventId);
                     order.put("userId", userId);
 
-                    // 👇 GẮN THÊM ownerId ĐỂ ORGANIZER ĐỌC & THỐNG KÊ
                     if (ownerId != null) {
-                        order.put("ownerId", ownerId);               // 👈 field mới
+                        order.put("ownerId", ownerId);
                     }
 
-                    // các field mà rules yêu cầu
+                    // Số tiền phải trả cuối cùng
+                    double payable = finalAmount > 0 ? finalAmount : totalPrice;
+
                     order.put("totalTickets", quantity);      // int > 0
-                    order.put("totalAmount", totalPrice);     // number >= 0
+                    order.put("totalAmount", payable);        // number >= 0
                     order.put("createdAt", FieldValue.serverTimestamp());
                     order.put("status", "PAID");
 
+                    // Info khuyến mãi
+                    order.put("originalAmount", totalPrice);
+                    order.put("discountAmount", discountAmount);
+                    if (appliedPromoCode != null) {
+                        order.put("promoCode", appliedPromoCode);
+                    }
+
                     // OPTIONAL: khởi tạo trạng thái check-in
-                    order.put("checkedIn", false);            // 👈 cho QR check-in
+                    order.put("checkedIn", false);
                     order.put("checkedInAt", null);
 
-                    // các field thêm tuỳ ý – rules cho phép vì không check keys()
+                    // các field thêm tuỳ ý – rules cho phép
                     order.put("eventTitle", eventTitle);
                     order.put("paymentMethod", method);
                     order.put("quantity", quantity);
@@ -282,7 +488,7 @@ public class PaymentActivity extends AppCompatActivity {
                         order.put("ticketType", ticketType);
                     }
                     if (selectedTickets != null) {
-                        order.put("tickets", selectedTickets); // trùng tên rule luôn
+                        order.put("tickets", selectedTickets);
                     }
                     if (selectedSeatIds != null && !selectedSeatIds.isEmpty()) {
                         order.put("seats", selectedSeatIds);
@@ -302,8 +508,6 @@ public class PaymentActivity extends AppCompatActivity {
                     Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
-
-
 
     private void resetPaymentUi() {
         btnConfirmPayment.setText("Thanh toán ngay");
@@ -331,22 +535,17 @@ public class PaymentActivity extends AppCompatActivity {
         Intent intent = new Intent(this, OrderSuccessActivity.class);
         intent.putExtra("ORDER_ID", orderId);
         intent.putExtra("TOTAL_QTY", quantity);
-        intent.putExtra("TOTAL_PRICE", totalPrice);
+        intent.putExtra("TOTAL_PRICE", finalAmount > 0 ? finalAmount : totalPrice);
         startActivity(intent);
         finish();
     }
 
     private void showSuccessDialog(String orderId) {
-        // Sau khi thanh toán thành công -> chuyển sang màn OrderSuccessActivity
         Intent intent = new Intent(this, OrderSuccessActivity.class);
-
         intent.putExtra("ORDER_ID", orderId);
         intent.putExtra("TOTAL_QTY", quantity);
-        intent.putExtra("TOTAL_PRICE", totalPrice);
-
+        intent.putExtra("TOTAL_PRICE", finalAmount > 0 ? finalAmount : totalPrice);
         startActivity(intent);
-        // Không cho back về màn thanh toán nữa
         finish();
     }
-
 }

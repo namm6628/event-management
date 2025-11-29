@@ -18,9 +18,9 @@ import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.io.Serializable;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -30,7 +30,7 @@ import java.util.Locale;
 public class SelectTicketQuantityActivity extends AppCompatActivity {
 
     // Truyền sang PaymentActivity
-    public static final String EXTRA_SELECTED_TICKETS = "selectedTickets";
+    public static final String EXTRA_SELECTED_TICKETS = "selectedTickets"; // giữ cho rõ key
     public static final String EXTRA_TOTAL_AMOUNT     = "totalPrice";
 
     private String eventId;
@@ -123,11 +123,15 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
         for (TicketType t : ticketTypes) {
             int qty = t.getSelectedQuantity();
-            if (qty > 0 && t.getPrice() > 0) {
+            if (qty <= 0) continue;
+
+            double unitPrice = t.getEffectivePrice(false); // chỉ early-bird
+
+            if (unitPrice > 0) {
                 totalQty += qty;
-                totalAmount += t.getPrice() * qty;
-            } else if (qty > 0 && t.getPrice() == 0d) {
-                totalQty += qty;
+                totalAmount += unitPrice * qty;
+            } else {
+                totalQty += qty; // vé miễn phí
             }
         }
 
@@ -144,22 +148,34 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
     private void onContinueClicked() {
         int totalQty = 0;
         double totalAmount = 0d;
-        ArrayList<SelectedTicket> selected = new ArrayList<>();
+
+        // list đơn giản để PaymentActivity dùng cho card "chia tiền"
+        ArrayList<HashMap<String, Object>> selectedForPayment = new ArrayList<>();
+        StringBuilder ticketNamesBuilder = new StringBuilder();
 
         for (TicketType t : ticketTypes) {
             int qty = t.getSelectedQuantity();
             if (qty <= 0) continue;
 
-            totalQty += qty;
-            double price = t.getPrice();
-            totalAmount += price * qty;
+            double unitPrice = t.getEffectivePrice(false); // dùng giá đã áp dụng (early-bird)
 
-            SelectedTicket st = new SelectedTicket();
-            st.ticketTypeId = t.getId();
-            st.name = t.getName();
-            st.price = price;
-            st.quantity = qty;
-            selected.add(st);
+            totalQty += qty;
+            totalAmount += unitPrice * qty;
+
+            // build chuỗi "VIP x2 • Thường x1"
+            if (ticketNamesBuilder.length() > 0) {
+                ticketNamesBuilder.append(" • ");
+            }
+            ticketNamesBuilder.append(t.getName() == null ? "Vé" : t.getName())
+                    .append(" x").append(qty);
+
+            // map truyền sang PaymentActivity
+            HashMap<String, Object> m = new HashMap<>();
+            m.put("label", "");                 // không có ghế cụ thể
+            m.put("type", t.getName());         // tên loại vé
+            m.put("price", unitPrice);          // giá sau ưu đãi
+            m.put("quantity", qty);
+            selectedForPayment.add(m);
         }
 
         if (totalQty <= 0) {
@@ -167,20 +183,16 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
             return;
         }
 
+        String ticketNames = ticketNamesBuilder.toString();
+
         Intent i = new Intent(this, PaymentActivity.class);
         i.putExtra("eventId", eventId);
         i.putExtra("eventTitle", eventTitle);
-        i.putExtra(EXTRA_TOTAL_AMOUNT, totalAmount);
-        i.putExtra(EXTRA_SELECTED_TICKETS, selected); // Serializable
+        i.putExtra("quantity", totalQty);              // PaymentActivity đang đọc key này
+        i.putExtra("ticketNames", ticketNames);        // để hiển thị "VIP x2 • ..."
+        i.putExtra(EXTRA_TOTAL_AMOUNT, totalAmount);   // = "totalPrice"
+        i.putExtra(EXTRA_SELECTED_TICKETS, selectedForPayment); // = "selectedTickets"
         startActivity(i);
-    }
-
-    /** Model tóm tắt vé đã chọn – truyền sang PaymentActivity */
-    public static class SelectedTicket implements Serializable {
-        public String ticketTypeId;
-        public String name;
-        public double price;
-        public int quantity;
     }
 
     // ================== ADAPTER ==================
@@ -239,9 +251,11 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
                 tvName.setText(t.getName() == null ? "Loại vé" : t.getName());
 
-                String priceStr = (t.getPrice() == 0d)
+                // 🔥 Giá đang áp dụng (có early-bird)
+                double unitPrice = t.getEffectivePrice(false); // hiện tại chưa dùng member
+                String priceStr = (unitPrice == 0d)
                         ? "Miễn phí"
-                        : nf.format(t.getPrice()) + " ₫";
+                        : nf.format(unitPrice) + " ₫";
                 tvPrice.setText(priceStr);
 
                 int quota = t.getQuota();
@@ -250,6 +264,25 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
                 tvRemain.setText("Còn lại: " + remain);
 
                 tvQuantity.setText(String.valueOf(t.getSelectedQuantity()));
+
+                // ====== ƯU ĐÃI ĐẶT SỚM: CÒN X/limit VÉ ƯU ĐÃI ======
+                TextView tvPromo = itemView.findViewById(R.id.tvPromo); // thêm trong XML
+                if (tvPromo != null) {
+                    Integer limit = t.getEarlyBirdLimit();
+                    if (limit != null && limit > 0 && sold < limit
+                            && t.getEarlyBirdPrice() != null && t.getEarlyBirdPrice() > 0) {
+
+                        int remainingEarly = limit - sold;
+                        if (remainingEarly < 0) remainingEarly = 0;
+
+                        String promoText = "Ưu đãi đặt sớm: còn "
+                                + remainingEarly + "/" + limit + " vé ưu đãi";
+                        tvPromo.setText(promoText);
+                        tvPromo.setVisibility(View.VISIBLE);
+                    } else {
+                        tvPromo.setVisibility(View.GONE);
+                    }
+                }
 
                 btnMinus.setOnClickListener(v -> {
                     int q = t.getSelectedQuantity();
@@ -276,6 +309,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
                     }
                 });
             }
+
         }
     }
 }

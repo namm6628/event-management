@@ -39,61 +39,33 @@
                 android:maxLines="2"
                 android:ellipsize="end" />
 
+            <!-- CHIP ƯU ĐÃI / THỜI GIAN (promoTag hoặc datetime) -->
+            <TextView
+                android:id="@+id/tvPlace"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="Ưu đãi đặt sớm"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:background="@drawable/bg_chip_promo"
+                android:textColor="@android:color/white" />
+
             <!-- GIÁ / TRẠNG THÁI -->
             <TextView
                 android:id="@+id/tvPrice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:text="Từ 150.000 đ"
                 android:textColor="@android:color/holo_green_light"
                 android:textSize="13sp" />
-
-            <!-- HÀNG THỜI GIAN -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="4dp">
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_event_24" />
-
-                <TextView
-                    android:id="@+id/tvDate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="21 Tháng 11, 2025"
-                    android:textColor="@android:color/white"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- HÀNG ĐỊA ĐIỂM -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_place_24" />
-
-                <TextView
-                    android:id="@+id/tvPlace"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="Địa điểm"
-                    android:textColor="@android:color/darker_gray"
-                    android:textSize="12sp" />
-            </LinearLayout>
 
         </LinearLayout>
 

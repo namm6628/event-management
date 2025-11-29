@@ -1,5 +1,6 @@
 package com.example.myapplication.common.model;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.Exclude;
 
 import java.io.Serializable;
@@ -16,6 +17,13 @@ public class TicketType implements Serializable {
     private int quota;     // tổng số vé
     private int sold;      // đã bán
 
+    // 🔹 ƯU ĐÃI
+    // các field này sẽ được lưu trên Firestore (KHÔNG @Exclude)
+    private Double earlyBirdPrice;      // giá đặt sớm
+    private Timestamp earlyBirdUntil;   // (optional) đến thời điểm này là hết ưu đãi sớm
+    private Double memberPrice;         // giá cho thành viên
+    private Integer earlyBirdLimit;     // 🔥 số vé tối đa được hưởng early-bird (VD: 10)
+
     // Chỉ dùng trong app (UI chọn vé, không lưu Firestore)
     @Exclude
     private int selectedQuantity = 0;
@@ -25,7 +33,7 @@ public class TicketType implements Serializable {
     private List<String> selectedSeatIds = new ArrayList<>();
 
     public TicketType() {
-        // Firestore bắt buộc phải có constructor rỗng public
+        // Firestore cần constructor rỗng
     }
 
     public TicketType(String id, String name, double price, int quota, int sold) {
@@ -45,63 +53,47 @@ public class TicketType implements Serializable {
 
     // ===== Getters & Setters =====
 
-    public String getId() {
-        return id;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public double getPrice() { return price; }
+    public void setPrice(double price) { this.price = price; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public int getQuota() { return quota; }
+    public void setQuota(int quota) { this.quota = quota; }
 
-    public double getPrice() {
-        return price;
-    }
+    public int getSold() { return sold; }
+    public void setSold(int sold) { this.sold = sold; }
 
-    public void setPrice(double price) {
-        this.price = price;
-    }
+    // ===== ƯU ĐÃI =====
 
-    public int getQuota() {
-        return quota;
-    }
+    public Double getEarlyBirdPrice() { return earlyBirdPrice; }
+    public void setEarlyBirdPrice(Double earlyBirdPrice) { this.earlyBirdPrice = earlyBirdPrice; }
 
-    public void setQuota(int quota) {
-        this.quota = quota;
-    }
+    public Timestamp getEarlyBirdUntil() { return earlyBirdUntil; }
+    public void setEarlyBirdUntil(Timestamp earlyBirdUntil) { this.earlyBirdUntil = earlyBirdUntil; }
 
-    public int getSold() {
-        return sold;
-    }
+    public Double getMemberPrice() { return memberPrice; }
+    public void setMemberPrice(Double memberPrice) { this.memberPrice = memberPrice; }
 
-    public void setSold(int sold) {
-        this.sold = sold;
-    }
+    public Integer getEarlyBirdLimit() { return earlyBirdLimit; }
+    public void setEarlyBirdLimit(Integer earlyBirdLimit) { this.earlyBirdLimit = earlyBirdLimit; }
 
     // ==== Field chỉ dùng trong app (không lưu Firestore) ====
 
     @Exclude
-    public int getSelectedQuantity() {
-        return selectedQuantity;
-    }
+    public int getSelectedQuantity() { return selectedQuantity; }
 
     @Exclude
     public void setSelectedQuantity(int selectedQuantity) {
         this.selectedQuantity = selectedQuantity;
     }
 
-    // ------ GHẾ ĐÃ CHỌN CHO LOẠI VÉ NÀY ------
     @Exclude
-    public List<String> getSelectedSeatIds() {
-        return selectedSeatIds;
-    }
+    public List<String> getSelectedSeatIds() { return selectedSeatIds; }
 
     @Exclude
     public void setSelectedSeatIds(List<String> selectedSeatIds) {
@@ -120,4 +112,67 @@ public class TicketType implements Serializable {
         return getRemainingQuota() <= 0;
     }
 
+    // ===== Helper: tính giá đang áp dụng cho attendee =====
+    @Exclude
+    public double getEffectivePrice(boolean isMember) {
+        double base = price; // giá gốc
+        Timestamp now = Timestamp.now();
+
+        boolean stillInTime = true;
+        if (earlyBirdUntil != null) {
+            // nếu không set earlyBirdUntil thì coi như luôn trong thời gian
+            stillInTime = now.compareTo(earlyBirdUntil) < 0;
+        }
+
+        Integer limit = earlyBirdLimit;
+        boolean stillInQuota = true;
+        if (limit != null && limit > 0) {
+            // 🔥 giới hạn số vé early: chỉ áp nếu đã bán < limit
+            stillInQuota = sold < limit;
+        }
+
+        // 1. Ưu đãi đặt sớm (ưu tiên cao nhất)
+        if (earlyBirdPrice != null && earlyBirdPrice > 0
+                && stillInTime
+                && stillInQuota) {
+            return earlyBirdPrice;
+        }
+
+        // 2. Giá thành viên (nếu sau này dùng)
+        if (isMember && memberPrice != null && memberPrice > 0) {
+            return memberPrice;
+        }
+
+        // 3. Không ưu đãi
+        return base;
+    }
+
+    // Label để hiện dưới loại vé: "Ưu đãi đặt sớm"
+    @Exclude
+    public String getPromoLabel(boolean isMember) {
+        Timestamp now = Timestamp.now();
+
+        boolean stillInTime = true;
+        if (earlyBirdUntil != null) {
+            stillInTime = now.compareTo(earlyBirdUntil) < 0;
+        }
+
+        Integer limit = earlyBirdLimit;
+        boolean stillInQuota = true;
+        if (limit != null && limit > 0) {
+            stillInQuota = sold < limit;
+        }
+
+        if (earlyBirdPrice != null && earlyBirdPrice > 0
+                && stillInTime
+                && stillInQuota) {
+            return "Ưu đãi đặt sớm";
+        }
+
+        if (isMember && memberPrice != null && memberPrice > 0) {
+            return "Giá thành viên";
+        }
+
+        return null;
+    }
 }

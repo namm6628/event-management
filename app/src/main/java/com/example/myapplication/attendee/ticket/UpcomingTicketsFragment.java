@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
@@ -186,6 +187,9 @@ public class UpcomingTicketsFragment extends Fragment {
                                 String ticketType = orderDoc.getString("ticketType");
                                 item.ticketTypeName = ticketType;
 
+                                // seatSummary: kiểu fallback này thường không có ghế riêng -> để null
+                                item.seatSummary = null;
+
                                 // Giá min của event
                                 Double price = e.getPrice();
                                 item.minPrice = price != null ? price.longValue() : 0L;
@@ -216,6 +220,22 @@ public class UpcomingTicketsFragment extends Fragment {
                                     item.ticketTypeName = typeName;
                                     item.ticketQuantity = 1L; // mỗi phần tử = 1 vé
                                     item.ticketPrice = pNum != null ? pNum.longValue() : 0L;
+
+                                    // ✅ Dùng đúng field trong Firestore: label / seatId
+                                    String seatLabel = null;
+
+                                    Object labelObj = tk.get("label");
+                                    if (labelObj instanceof String && !((String) labelObj).isEmpty()) {
+                                        seatLabel = (String) labelObj;
+                                    } else {
+                                        Object seatIdObj = tk.get("seatId");
+                                        if (seatIdObj instanceof String && !((String) seatIdObj).isEmpty()) {
+                                            seatLabel = (String) seatIdObj;
+                                        }
+                                    }
+
+                                    item.seatSummary = seatLabel;  // có thể là "A5", "B1" hoặc null
+
 
                                     // Giá min của event
                                     Double price = e.getPrice();

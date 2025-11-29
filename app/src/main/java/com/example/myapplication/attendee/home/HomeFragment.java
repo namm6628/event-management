@@ -402,7 +402,10 @@ public class HomeFragment extends Fragment {
                 boolean timesSame = (timeA == null) ? (timeB == null) : timeA.equals(timeB);
                 return titleA.equals(titleB)
                         && timesSame
-                        && Objects.equals(a.getAvailableSeats(), b.getAvailableSeats());
+                        && Objects.equals(a.getAvailableSeats(), b.getAvailableSeats())
+                        && Objects.equals(a.getFeaturedBoostScore(), b.getFeaturedBoostScore())
+                        && Objects.equals(a.getPromoTag(), b.getPromoTag())
+                        && Objects.equals(a.getFeatured(), b.getFeatured());
             }
         };
 
@@ -438,16 +441,31 @@ public class HomeFragment extends Fragment {
             Event e = getItem(position);
             if (e == null) return;
 
-            // Title
-            h.title.setText(e.getTitle() == null ? "(No title)" : e.getTitle());
+            // ----- TITLE + HOT -----
+            String rawTitle = (e.getTitle() == null || e.getTitle().isEmpty())
+                    ? "(No title)"
+                    : e.getTitle();
 
-            // Subtitle = thời gian
-            long t = (e.getStartTime() == null) ? 0L : e.getStartTime().toDate().getTime();
-            String time = (t == 0L) ? "" :
-                    new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(t);
-            h.subtitle.setText(time);
+            if (Boolean.TRUE.equals(e.getFeatured())) {
+                h.title.setText("🔥 " + rawTitle);
+            } else {
+                h.title.setText(rawTitle);
+            }
 
-            // Giá
+            // ----- SUBTITLE: ưu đãi hoặc thời gian -----
+            String promo = e.getPromoTag();
+            if (promo != null && !promo.trim().isEmpty()) {
+                h.subtitle.setText(promo.trim());
+            } else {
+                long t = (e.getStartTime() == null)
+                        ? 0L
+                        : e.getStartTime().toDate().getTime();
+                String time = (t == 0L) ? "" :
+                        new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(t);
+                h.subtitle.setText(time);
+            }
+
+            // ----- PRICE -----
             Double p = e.getPrice();
             if (p == null || p == 0d) {
                 h.price.setText("Miễn phí");
@@ -464,7 +482,7 @@ public class HomeFragment extends Fragment {
                 );
             }
 
-            // Thumbnail
+            // ----- THUMBNAIL -----
             if (e.getThumbnail() != null && !e.getThumbnail().isEmpty()) {
                 Glide.with(h.itemView.getContext())
                         .load(e.getThumbnail())

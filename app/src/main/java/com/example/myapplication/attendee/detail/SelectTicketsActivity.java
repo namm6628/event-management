@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.R;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -136,9 +137,15 @@ public class SelectTicketsActivity extends AppCompatActivity {
         double total = 0d;
 
         for (TicketSelectAdapter.TicketType t : list) {
-            if (t.selected > 0 && t.price != null) {
-                qty += t.selected;
-                total += t.selected * t.price;
+            if (t.selected > 0) {
+                double unitPrice = t.getEffectivePrice(); // đã tính early-bird
+                if (unitPrice > 0) {
+                    qty += t.selected;
+                    total += t.selected * unitPrice;
+                } else {
+                    // vé miễn phí
+                    qty += t.selected;
+                }
             }
         }
 
@@ -156,7 +163,6 @@ public class SelectTicketsActivity extends AppCompatActivity {
                     ? getString(R.string.free)
                     : nf.format(total) + " đ";
 
-            // Style giống bạn t: "N vé • xxx đ" + nút "Tiếp tục (xxx đ)"
             tvSummary.setText(qty + " vé • " + priceStr);
             btnContinue.setText("Tiếp tục (" + priceStr + ")");
             btnContinue.setEnabled(true);
@@ -207,11 +213,14 @@ public class SelectTicketsActivity extends AppCompatActivity {
                 return;
             }
 
+            // giá đã áp dụng early-bird (nếu còn hiệu lực)
+            double unitPrice = t.getEffectivePrice();
+
             // Thêm vào mảng ticketItems
             Map<String, Object> m = new HashMap<>();
             m.put("typeId", t.id);
             m.put("name", t.name);
-            m.put("price", t.price);
+            m.put("price", unitPrice);
             m.put("quantity", t.selected);
             ticketItems.add(m);
 
@@ -289,15 +298,32 @@ public class SelectTicketsActivity extends AppCompatActivity {
             void onChanged(List<TicketType> list);
         }
 
+        /** Model vé đơn giản cho màn này – có thêm early-bird */
         static class TicketType {
             public String id;
             public String name;
-            public Double price;
+            public Double price;            // giá gốc
             public Long quota;
             public Long sold;
             public int selected = 0;
 
+            // 🔹 EARLY BIRD
+            public Double earlyBirdPrice;   // giá giảm
+            public Timestamp earlyBirdUntil; // hạn áp dụng
+
             public TicketType() {}
+
+            /** Giá hiện tại (ưu tiên early-bird nếu còn hạn) */
+            public double getEffectivePrice() {
+                double base = (price == null) ? 0d : price;
+                if (earlyBirdPrice != null
+                        && earlyBirdPrice > 0
+                        && earlyBirdUntil != null
+                        && Timestamp.now().compareTo(earlyBirdUntil) < 0) {
+                    return earlyBirdPrice;
+                }
+                return base;
+            }
         }
 
         // Activity có thể đọc được private này (do là inner class)
@@ -330,9 +356,6 @@ public class SelectTicketsActivity extends AppCompatActivity {
 
         private View getInflatedView(ViewGroup parent) {
             return View.inflate(parent.getContext(), R.layout.item_select_ticket, null);
-            // nếu muốn chuẩn hơn:
-            // return LayoutInflater.from(parent.getContext())
-            //        .inflate(R.layout.item_select_ticket, parent, false);
         }
 
         @Override
@@ -393,13 +416,14 @@ public class SelectTicketsActivity extends AppCompatActivity {
             void bind(TicketType t) {
                 tvName.setText(t.name == null ? "Loại vé" : t.name);
 
+                double unitPrice = t.getEffectivePrice();
                 String priceStr;
-                if (t.price == null || t.price == 0d) {
+                if (unitPrice <= 0) {
                     priceStr = "Miễn phí";
                 } else {
                     priceStr = NumberFormat
                             .getNumberInstance(new Locale("vi", "VN"))
-                            .format(t.price) + " đ";
+                            .format(unitPrice) + " đ";
                 }
                 tvPrice.setText(priceStr);
 
@@ -409,7 +433,6 @@ public class SelectTicketsActivity extends AppCompatActivity {
                 boolean soldOut = (quota > 0 && available <= 0);
 
                 if (soldOut) {
-                    // hiện chip Hết vé, ẩn counter, làm mờ cả dòng
                     tvSoldOut.setVisibility(View.VISIBLE);
                     layoutCounter.setVisibility(View.GONE);
                     itemView.setAlpha(0.4f);
