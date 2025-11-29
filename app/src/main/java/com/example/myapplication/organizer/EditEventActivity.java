@@ -2,7 +2,6 @@ package com.example.myapplication.organizer;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -12,7 +11,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
+import android.content.Intent;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,13 +37,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class EditEventActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
-
-    private static final int REQ_CONFIG_SEATS = 1001;
 
     // Input chính
     private EditText edtTitle, edtArtist, edtCategory,
@@ -56,7 +55,6 @@ public class EditEventActivity extends AppCompatActivity {
     private MaterialButton btnAddTicketType;
 
     private final List<TicketRow> ticketRows = new ArrayList<>();
-    private int editingSeatRowIndex = -1;
 
     private FirebaseFirestore db;
     private String eventId;
@@ -64,6 +62,8 @@ public class EditEventActivity extends AppCompatActivity {
     private Uri selectedImageUri;
     private String currentThumbnailUrl;
     private String ownerId; // từ doc event
+
+    private ActivityResultLauncher<String> pickImageLauncher;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -104,23 +104,22 @@ public class EditEventActivity extends AppCompatActivity {
         layoutTicketContainer = findViewById(R.id.layoutTicketContainer);
         btnAddTicketType      = findViewById(R.id.btnAddTicketType);
 
+        // launcher chọn ảnh (đúng cách)
+        pickImageLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        selectedImageUri = uri;
+                        ivPreview.setImageURI(uri);
+                    }
+                }
+        );
+
         // Chọn thời gian
         btnPickDateTime.setOnClickListener(v -> showDateTimePicker());
 
         // Chọn ảnh mới (không bắt buộc)
-        btnPickImage.setOnClickListener(v -> {
-            androidx.activity.result.ActivityResultLauncher<String> launcher =
-                    registerForActivityResult(
-                            new androidx.activity.result.contract.ActivityResultContracts.GetContent(),
-                            uri -> {
-                                if (uri != null) {
-                                    selectedImageUri = uri;
-                                    ivPreview.setImageURI(uri);
-                                }
-                            }
-                    );
-            launcher.launch("image/*");
-        });
+        btnPickImage.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         // Thêm loại vé mới
         btnAddTicketType.setOnClickListener(v -> addTicketRow(null, null, null, null));
@@ -136,6 +135,21 @@ public class EditEventActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         onBackPressed();
         return true;
+    }
+
+    // Khi từ SeatLayoutConfigActivity quay lại → refresh số ghế từng loại
+    @Override
+    protected void onResume() {
+        super.onResume();
+        for (TicketRow row : ticketRows) {
+            String name = text(row.edtName);
+            if (TextUtils.isEmpty(name)) continue;
+
+            List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventId, name);
+            row.seatCodes.clear();
+            row.seatCodes.addAll(seats);
+            updateSeatInfoText(row);
+        }
     }
 
     /* ================== LOAD DATA ================== */
@@ -215,6 +229,11 @@ public class EditEventActivity extends AppCompatActivity {
                         List<String> seatList = (List<String>) d.get("seats");
                         HashSet<String> seatSet = new HashSet<>();
                         if (seatList != null) seatSet.addAll(seatList);
+
+                        // đẩy vào cache tạm để SeatLayoutConfigActivity show đúng ghế đã chọn
+                        if (name != null && seatList != null) {
+                            SeatLayoutConfigActivity.setSeatsForTicket(eventId, name, seatList);
+                        }
 
                         addTicketRow(name, price, quota, seatSet);
                     }
@@ -296,7 +315,7 @@ public class EditEventActivity extends AppCompatActivity {
         EditText edtQuota = rowView.findViewById(R.id.edtTicketQuota);
         TextView btnRemove = rowView.findViewById(R.id.btnRemoveRow);
         MaterialButton btnSetupSeats = rowView.findViewById(R.id.btnSetupSeats);
-        TextView tvSeatInfo = rowView.findViewById(R.id.tvSeatStatus); // có thể null nếu bạn chưa thêm
+        TextView tvSeatInfo = rowView.findViewById(R.id.tvSeatStatus);
 
         if (name != null)  edtName.setText(name);
         if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
@@ -314,11 +333,15 @@ public class EditEventActivity extends AppCompatActivity {
         btnRemove.setOnClickListener(v -> {
             layoutTicketContainer.removeView(rowView);
             ticketRows.remove(row);
+
+            // xóa ghế tạm luôn
+            String ticketName = text(edtName);
+            SeatLayoutConfigActivity.clearSeatsForTicket(eventId, ticketName);
         });
 
         btnSetupSeats.setOnClickListener(v -> {
-            String ticketName = edtName.getText().toString().trim();
-            String sQuota = edtQuota.getText().toString().trim();
+            String ticketName = text(edtName);
+            String sQuota = text(edtQuota);
 
             if (ticketName.isEmpty()) {
                 edtName.setError("Nhập tên loại vé trước");
@@ -342,35 +365,33 @@ public class EditEventActivity extends AppCompatActivity {
                 return;
             }
 
-            editingSeatRowIndex = ticketRows.indexOf(row);
+            // ===== LẤY TỔNG SỐ VÉ CỦA EVENT =====
+            int totalEventSeats = 0;
+            String sTotal = text(edtTotalSeats);
+            try {
+                totalEventSeats = Integer.parseInt(sTotal);
+            } catch (NumberFormatException ignored) {
+                totalEventSeats = 0;
+            }
+            if (totalEventSeats <= 0) {
+                totalEventSeats = quotaVal;
+            }
 
-            // Tập ghế đã dùng bởi các loại vé khác
-            HashSet<String> takenOther = getAllSeatsExcept(editingSeatRowIndex);
+            // ===== CHỌN TEMPLATE THEO TỔNG VÉ =====
+            SeatTemplate pickedTemplate =
+                    SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
+            String templateId = pickedTemplate != null ? pickedTemplate.getId() : null;
 
             Intent i = new Intent(this, SeatLayoutConfigActivity.class);
-            i.putExtra("ticketName", ticketName);
-            i.putExtra("maxSeats", quotaVal);
-            i.putStringArrayListExtra(
-                    "currentSeats",
-                    new ArrayList<>(row.seatCodes)
-            );
-            i.putStringArrayListExtra(
-                    "takenSeats",
-                    new ArrayList<>(takenOther)
-            );
-            startActivityForResult(i, REQ_CONFIG_SEATS);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_EVENT_ID, eventId);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TICKET_NAME, ticketName);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_MAX_SEATS, quotaVal);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TOTAL_EVENT_SEATS, totalEventSeats);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TEMPLATE_ID, templateId);
+            startActivity(i);
         });
 
         layoutTicketContainer.addView(rowView);
-    }
-
-    private HashSet<String> getAllSeatsExcept(int index) {
-        HashSet<String> all = new HashSet<>();
-        for (int i = 0; i < ticketRows.size(); i++) {
-            if (i == index) continue;
-            all.addAll(ticketRows.get(i).seatCodes);
-        }
-        return all;
     }
 
     private void updateSeatInfoText(TicketRow row) {
@@ -380,20 +401,6 @@ public class EditEventActivity extends AppCompatActivity {
                 row.tvSeatInfo.setText("Chưa chọn ghế");
             } else {
                 row.tvSeatInfo.setText("Đã chọn " + count + " ghế");
-            }
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_CONFIG_SEATS && resultCode == RESULT_OK && data != null) {
-            ArrayList<String> seats = data.getStringArrayListExtra("selectedSeats");
-            if (editingSeatRowIndex >= 0 && editingSeatRowIndex < ticketRows.size() && seats != null) {
-                TicketRow row = ticketRows.get(editingSeatRowIndex);
-                row.seatCodes.clear();
-                row.seatCodes.addAll(seats);
-                updateSeatInfoText(row);
             }
         }
     }
@@ -490,15 +497,24 @@ public class EditEventActivity extends AppCompatActivity {
                 return;
             }
 
+            // lấy ghế đã lưu tạm (phòng trường hợp chưa sync vào row.seatCodes)
+            List<String> tempSeats = SeatLayoutConfigActivity.getSeatsForTicket(eventId, name);
+            if (!tempSeats.isEmpty()) {
+                row.seatCodes.clear();
+                row.seatCodes.addAll(tempSeats);
+                updateSeatInfoText(row);
+            }
+
             // ✅ check: số ghế chọn phải = quota
             if (row.seatCodes.size() != quota) {
                 Toast.makeText(this,
-                        "Loại vé \"" + name + "\" phải chọn đúng " + quota + " ghế (đang " + row.seatCodes.size() + ")",
+                        "Loại vé \"" + name + "\" phải chọn đúng " + quota +
+                                " ghế (đang " + row.seatCodes.size() + ")",
                         Toast.LENGTH_LONG).show();
                 return;
             }
 
-            // ✅ check: không trùng ghế giữa các loại vé (global HashSet)
+            // ✅ check: không trùng ghế giữa các loại vé
             for (String c : row.seatCodes) {
                 if (!allSeatsGlobal.add(c)) {
                     Toast.makeText(this,
@@ -593,7 +609,7 @@ public class EditEventActivity extends AppCompatActivity {
         data.put("startTime", startTime);
         data.put("price", price);
         data.put("totalSeats", totalSeats);
-        data.put("availableSeats", totalSeats); // đơn giản: reset, nếu muốn chuẩn hơn thì tính theo sold
+        data.put("availableSeats", totalSeats); // đơn giản: reset
         data.put("updatedAt", FieldValue.serverTimestamp());
         if (!TextUtils.isEmpty(thumbnailUrl)) {
             data.put("thumbnail", thumbnailUrl);
@@ -617,6 +633,9 @@ public class EditEventActivity extends AppCompatActivity {
                                             .collection("ticketTypes")
                                             .add(ticket);
                                 }
+
+                                // clear cache ghế tạm
+                                SeatLayoutConfigActivity.clearSeatsForEvent(eventId);
 
                                 Toast.makeText(this,
                                         "Cập nhật sự kiện thành công",

@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -33,6 +34,10 @@ import com.example.myapplication.data.remote.EventRemoteDataSource;
 import com.example.myapplication.data.repo.EventRepository;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
@@ -48,20 +53,24 @@ public class HomeFragment extends Fragment {
     private SearchView searchView;
     private ChipGroup chipGroup;
 
-    // Nhiều adapter & view
+    // Adapters & views
     private EventsAdapter specialAdapter;
     private EventsAdapter trendingAdapter;
     private EventsAdapter forYouAdapter;
     private EventsAdapter weekendAdapter;
-    private EventsAdapter videoAdapter;
 
     private View exploreCategoriesContainer;
     private TextView tvTitleSpecial;
     private RecyclerView rvSpecial;
     private LinearLayout dynamicCategoriesLayout;
 
-    private View tvTitleVideo;
-    private RecyclerView rvVideoEvents;
+    // ==== HERO VIDEO ====
+    private TextView tvTitleVideo;
+    private View layoutHeroVideo;
+    private PlayerView playerHero;
+    private ImageButton btnToggleMute;
+    private ExoPlayer heroPlayer;
+    private Event heroEvent; // event hiện đang phát
 
     private RecyclerView.LayoutManager specialHorizontalManager;
     private RecyclerView.LayoutManager specialVerticalManager;
@@ -93,7 +102,7 @@ public class HomeFragment extends Fragment {
         ExploreVMFactory factory = new ExploreVMFactory(repo);
         vm = new ViewModelProvider(requireActivity(), factory).get(ExploreViewModel.class);
 
-        // searchView = v.findViewById(R.id.searchView); // nếu layout có thì mở dòng này
+        // searchView = v.findViewById(R.id.searchView); // nếu có trong layout thì mở
         chipGroup  = v.findViewById(R.id.chipGroup);
 
         exploreCategoriesContainer = v.findViewById(R.id.exploreCategoriesContainer);
@@ -101,8 +110,11 @@ public class HomeFragment extends Fragment {
         rvSpecial = v.findViewById(R.id.rvSpecialEvents);
         dynamicCategoriesLayout = v.findViewById(R.id.dynamicCategoriesLayout);
 
-        tvTitleVideo = v.findViewById(R.id.tvTitleVideo);
-        rvVideoEvents = v.findViewById(R.id.rvVideoEvents);
+        // ==== HERO VIDEO VIEW ====
+        tvTitleVideo   = v.findViewById(R.id.tvTitleVideo);
+        layoutHeroVideo = v.findViewById(R.id.layoutHeroVideo);
+        playerHero     = v.findViewById(R.id.playerHero);
+        btnToggleMute  = v.findViewById(R.id.btnToggleMute);
 
         specialHorizontalManager =
                 new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false);
@@ -111,7 +123,7 @@ public class HomeFragment extends Fragment {
 
         // ===== Adapter & Recycler =====
 
-        // 1. Sự kiện đặc biệt
+        // Sự kiện đặc biệt / danh sách chính
         rvSpecial.setLayoutManager(specialHorizontalManager);
         specialAdapter = new EventsAdapter(event -> {
             saveUserInterest(event);
@@ -119,20 +131,7 @@ public class HomeFragment extends Fragment {
         });
         rvSpecial.setAdapter(specialAdapter);
 
-        // 2. Video events
-        rvVideoEvents.setLayoutManager(
-                new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        );
-        videoAdapter = new EventsAdapter(event -> {
-            if (event.getVideoUrl() != null && !event.getVideoUrl().isEmpty()) {
-                Intent intent = new Intent(requireContext(), VideoPlayerActivity.class);
-                intent.putExtra("VIDEO_URL", event.getVideoUrl());
-                startActivity(intent);
-            }
-        });
-        rvVideoEvents.setAdapter(videoAdapter);
-
-        // 3. Xu hướng
+        // Xu hướng
         RecyclerView rvTrending = v.findViewById(R.id.rvTrendingEvents);
         rvTrending.setLayoutManager(
                 new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
@@ -143,7 +142,7 @@ public class HomeFragment extends Fragment {
         });
         rvTrending.setAdapter(trendingAdapter);
 
-        // 4. Dành cho bạn
+        // Dành cho bạn
         RecyclerView rvForYou = v.findViewById(R.id.rvForYouEvents);
         rvForYou.setLayoutManager(
                 new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
@@ -154,7 +153,7 @@ public class HomeFragment extends Fragment {
         });
         rvForYou.setAdapter(forYouAdapter);
 
-        // 5. Cuối tuần
+        // Cuối tuần
         RecyclerView rvWeekend = v.findViewById(R.id.rvWeekendEvents);
         rvWeekend.setLayoutManager(
                 new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
@@ -167,11 +166,37 @@ public class HomeFragment extends Fragment {
 
         // ===== Quan sát LiveData =====
         vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> specialAdapter.submitList(list));
-        vm.getVideoEvents().observe(getViewLifecycleOwner(), list -> videoAdapter.submitList(list));
         vm.getTrendingEvents().observe(getViewLifecycleOwner(), list -> trendingAdapter.submitList(list));
         vm.getForYouEvents().observe(getViewLifecycleOwner(), list -> forYouAdapter.submitList(list));
         vm.getWeekendEvents().observe(getViewLifecycleOwner(), list -> weekendAdapter.submitList(list));
         vm.getDynamicCategories().observe(getViewLifecycleOwner(), this::updateDynamicCategoriesUI);
+
+        // 🔥 HERO VIDEO: lấy danh sách event có video, chọn 1 cái để phát
+        vm.getVideoEvents().observe(getViewLifecycleOwner(), list -> {
+            if (list == null || list.isEmpty()) {
+                tvTitleVideo.setVisibility(View.GONE);
+                layoutHeroVideo.setVisibility(View.GONE);
+                releaseHeroPlayer();
+                heroEvent = null;
+            } else {
+                tvTitleVideo.setVisibility(View.VISIBLE);
+                layoutHeroVideo.setVisibility(View.VISIBLE);
+
+                // Tạm thời lấy event đầu tiên trong list video
+                heroEvent = list.get(0);
+                setupHeroVideo(heroEvent);
+            }
+        });
+
+        // Click hero video -> mở chi tiết event
+        layoutHeroVideo.setOnClickListener(view -> {
+            if (heroEvent != null) {
+                openEventDetail(heroEvent);
+            }
+        });
+
+        // Toggle mute
+        btnToggleMute.setOnClickListener(view -> toggleHeroMute());
 
         // ===== SearchView filter =====
         if (searchView != null) {
@@ -229,6 +254,61 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        // Tạm dừng video khi fragment không còn visible
+        if (heroPlayer != null) {
+            heroPlayer.pause();
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        releaseHeroPlayer();
+    }
+
+    // ==== HERO VIDEO LOGIC ====
+
+    private void setupHeroVideo(Event event) {
+        if (event == null || event.getVideoUrl() == null || event.getVideoUrl().isEmpty()) {
+            return;
+        }
+        if (heroPlayer == null) {
+            heroPlayer = new ExoPlayer.Builder(requireContext()).build();
+            playerHero.setPlayer(heroPlayer);
+        }
+
+        MediaItem media = MediaItem.fromUri(event.getVideoUrl());
+        heroPlayer.setMediaItem(media);
+        heroPlayer.setRepeatMode(Player.REPEAT_MODE_ONE);
+        heroPlayer.prepare();
+        heroPlayer.setVolume(0f); // default: mute
+        heroPlayer.play();
+
+        // icon mute
+        btnToggleMute.setImageResource(R.drawable.ic_volume_off_white_24);
+    }
+
+    private void toggleHeroMute() {
+        if (heroPlayer == null) return;
+        if (heroPlayer.getVolume() == 0f) {
+            heroPlayer.setVolume(1f);
+            btnToggleMute.setImageResource(R.drawable.ic_volume_up_white_24);
+        } else {
+            heroPlayer.setVolume(0f);
+            btnToggleMute.setImageResource(R.drawable.ic_volume_off_white_24);
+        }
+    }
+
+    private void releaseHeroPlayer() {
+        if (heroPlayer != null) {
+            heroPlayer.release();
+            heroPlayer = null;
+        }
+    }
+
     // Map chip label → category
     private String mapChipLabelToCategory(String label) {
         if (label == null) return null;
@@ -250,8 +330,9 @@ public class HomeFragment extends Fragment {
         dynamicCategoriesLayout.setVisibility(isSearching ? View.GONE : View.VISIBLE);
 
         tvTitleVideo.setVisibility(isSearching ? View.GONE : View.VISIBLE);
-        tvTitleSpecial.setText(isSearching ? "Kết quả tìm kiếm" : "Sự kiện đặc biệt");
-        rvVideoEvents.setVisibility(isSearching ? View.GONE : View.VISIBLE);
+        layoutHeroVideo.setVisibility(isSearching ? View.GONE : View.VISIBLE);
+
+        tvTitleSpecial.setText(isSearching ? "Kết quả tìm kiếm" : "Danh sách sự kiện");
 
         rvSpecial.setLayoutManager(
                 isSearching ? specialVerticalManager : specialHorizontalManager

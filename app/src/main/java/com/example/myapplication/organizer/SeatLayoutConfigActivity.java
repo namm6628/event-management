@@ -25,33 +25,37 @@ import java.util.Set;
 
 public class SeatLayoutConfigActivity extends AppCompatActivity {
 
-    public static final String EXTRA_EVENT_ID           = "eventId";
-    public static final String EXTRA_TICKET_NAME        = "ticketTypeName";
-    public static final String EXTRA_MAX_SEATS          = "maxSeats";
-    public static final String EXTRA_TEMPLATE_ID        = "templateId";
-    public static final String EXTRA_TOTAL_EVENT_SEATS  = "totalEventSeats";
+    public static final String EXTRA_EVENT_ID          = "eventId";
+    public static final String EXTRA_TICKET_NAME       = "ticketTypeName";
+    public static final String EXTRA_MAX_SEATS         = "maxSeats";
+    public static final String EXTRA_TEMPLATE_ID       = "templateId";
+    public static final String EXTRA_TOTAL_EVENT_SEATS = "totalEventSeats";
 
-    public static final int ROWS = 8;   // hoặc giá trị bạn đang dùng
+    // ROWS / COLS: tham chiếu, thực tế dùng rows/cols từ template
+    public static final int ROWS = 8;
     public static final int COLS = 12;
 
-
-    // Lưu sơ đồ ghế tạm cho mọi loại vé (trong RAM, chưa lên Firestore)
-    // key = eventId + "|" + ticketTypeName
+    // GHẾ TẠM TRONG RAM
     private static final Map<String, List<String>> TEMP_SEATS = new HashMap<>();
 
     private static String buildKey(String eventId, String ticketName) {
         return eventId + "|" + ticketName;
     }
 
-    /** Lấy danh sách ghế đã chọn cho 1 loại vé */
     public static List<String> getSeatsForTicket(String eventId, String ticketName) {
         String key = buildKey(eventId, ticketName);
         List<String> list = TEMP_SEATS.get(key);
         if (list == null) return new ArrayList<>();
-        return new ArrayList<>(list); // clone ra để bên ngoài không sửa trực tiếp
+        return new ArrayList<>(list);
     }
 
-    /** Xoá toàn bộ ghế tạm cho 1 event (sau khi tạo xong event) */
+    // ✅ thêm setter để màn Edit / Create có thể đẩy ghế cũ vào cache
+    public static void setSeatsForTicket(String eventId, String ticketName, List<String> seats) {
+        if (eventId == null || ticketName == null) return;
+        String key = buildKey(eventId, ticketName);
+        TEMP_SEATS.put(key, new ArrayList<>(seats));
+    }
+
     public static void clearSeatsForEvent(String eventId) {
         List<String> removeKeys = new ArrayList<>();
         for (String key : TEMP_SEATS.keySet()) {
@@ -59,16 +63,12 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
                 removeKeys.add(key);
             }
         }
-        for (String k : removeKeys) {
-            TEMP_SEATS.remove(k);
-        }
+        for (String k : removeKeys) TEMP_SEATS.remove(k);
     }
 
-    /** Xoá ghế của 1 loại vé khi bị xoá dòng ở màn tạo sự kiện */
     public static void clearSeatsForTicket(String eventId, String ticketName) {
         if (eventId == null || ticketName == null) return;
-        String key = buildKey(eventId, ticketName);
-        TEMP_SEATS.remove(key);
+        TEMP_SEATS.remove(buildKey(eventId, ticketName));
     }
 
     private RecyclerView recyclerView;
@@ -107,14 +107,24 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         int totalEventSeats = getIntent().getIntExtra(EXTRA_TOTAL_EVENT_SEATS, 0);
         String templateId   = getIntent().getStringExtra(EXTRA_TEMPLATE_ID);
 
-        // Chọn template phù hợp
+        // ===== CHỌN TEMPLATE =====
         template = null;
+
+        // 1. ƯU TIÊN templateId được gửi từ Create/Edit
         if (templateId != null) {
             template = SeatTemplateStore.getTemplate(templateId);
         }
+
+        // 2. Nếu templateId null hoặc không tìm thấy → fallback chọn theo capacity
         if (template == null) {
+            if (totalEventSeats <= 0) {
+                // nếu không truyền tổng số vé, fallback thêm sang quota của loại vé
+                totalEventSeats = maxSeats;
+            }
             template = SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
         }
+
+        // 3. Nếu vẫn null → dùng default
         if (template == null) {
             template = SeatTemplateStore.getDefaultTemplate();
         }
@@ -126,15 +136,14 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             getSupportActionBar().setTitle(template.getName());
         }
 
-        // Ghế đã chọn trước đó của loại vé này
+        // ghế đã chọn
         List<String> preSelected = getSeatsForTicket(eventId, ticketName);
 
-        // Ghế đã dùng bởi các loại vé khác của cùng event → khoá
+        // ghế bị khoá do loại vé khác
         Set<String> lockedByOthers = new HashSet<>();
         String myKey = buildKey(eventId, ticketName);
         for (Map.Entry<String, List<String>> entry : TEMP_SEATS.entrySet()) {
-            String key = entry.getKey();
-            if (key.startsWith(eventId + "|") && !key.equals(myKey)) {
+            if (!entry.getKey().equals(myKey) && entry.getKey().startsWith(eventId + "|")) {
                 lockedByOthers.addAll(entry.getValue());
             }
         }
@@ -153,43 +162,42 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
 
         Set<String> activeSeats = template.getActiveSeats();
 
+        int index = 0;
         for (int r = 0; r < rows; r++) {
             char rowChar = (char) ('A' + r);
             for (int c = 1; c <= cols; c++) {
-                String label = String.format(Locale.getDefault(), "%c%d", rowChar, c);
 
+                String label = String.format(Locale.getDefault(), "%c%d", rowChar, c);
                 boolean isSeat = activeSeats.contains(label);
+
                 boolean selected = isSeat && preSelected.contains(label);
-                boolean locked = isSeat && lockedByOthers.contains(label);
-                String zone = isSeat ? template.getZoneForSeat(label) : null;
+                boolean locked   = isSeat && lockedByOthers.contains(label);
+                String zone      = isSeat ? template.getZoneForSeat(label) : null;
 
                 SeatItem item = new SeatItem(label, selected, locked, !isSeat, zone);
+                item.position = index++;
+
                 seatItems.add(item);
             }
         }
     }
 
     private void onSeatClicked(SeatItem seat) {
-        if (seat.isPlaceholder) {
-            return; // Ô trống (lối đi)
-        }
+        if (seat.isPlaceholder) return;
 
         if (seat.locked) {
-            Toast.makeText(this,
-                    "Ghế này đã được gán cho loại vé khác",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Ghế này đã được chọn bởi loại vé khác", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Đếm số ghế đang bật
-        int currentSelected = 0;
+        // đếm số ghế đang chọn
+        int selectedCount = 0;
         for (SeatItem s : seatItems) {
-            if (!s.isPlaceholder && s.selected) currentSelected++;
+            if (!s.isPlaceholder && s.selected) selectedCount++;
         }
 
         if (!seat.selected) {
-            // bật thêm ghế → check quota
-            if (maxSeats > 0 && currentSelected >= maxSeats) {
+            if (maxSeats > 0 && selectedCount >= maxSeats) {
                 Toast.makeText(
                         this,
                         "Loại vé \"" + ticketName + "\" chỉ được chọn tối đa " + maxSeats + " ghế",
@@ -199,7 +207,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             }
             seat.selected = true;
         } else {
-            // tắt ghế
             seat.selected = false;
         }
 
@@ -212,46 +219,38 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             if (!s.isPlaceholder && s.selected) selected.add(s.label);
         }
 
-        if (maxSeats > 0) {
-            if (selected.size() != maxSeats) {
-                Toast.makeText(
-                        this,
-                        "Loại vé \"" + ticketName + "\" phải chọn đúng "
-                                + maxSeats + " ghế (hiện đang " + selected.size() + ")",
-                        Toast.LENGTH_LONG
-                ).show();
-                return;
-            }
-        } else if (selected.isEmpty()) {
-            Toast.makeText(this,
-                    "Chưa chọn ghế nào cho loại vé \"" + ticketName + "\"",
-                    Toast.LENGTH_SHORT).show();
+        if (maxSeats > 0 && selected.size() != maxSeats) {
+            Toast.makeText(
+                    this,
+                    "Loại vé \"" + ticketName + "\" phải chọn đúng "
+                            + maxSeats + " ghế (hiện " + selected.size() + ")",
+                    Toast.LENGTH_LONG
+            ).show();
             return;
         }
 
-        String key = buildKey(eventId, ticketName);
-        TEMP_SEATS.put(key, selected);
+        // Lưu tạm
+        TEMP_SEATS.put(buildKey(eventId, ticketName), selected);
 
         Toast.makeText(this,
-                "Đã lưu " + selected.size() + " ghế cho loại vé \"" + ticketName + "\"",
+                "Đã lưu " + selected.size() + " ghế cho \"" + ticketName + "\"",
                 Toast.LENGTH_SHORT).show();
 
         setResult(RESULT_OK);
         finish();
     }
 
-    /* ===== MODEL & ADAPTER ===== */
+    // ===== MODEL =====
 
     private static class SeatItem {
         String label;
         boolean selected;
         boolean locked;
-        boolean isPlaceholder; // true = ô trống (lối đi)
-        String zone;           // hiện tại chưa dùng để đổi màu
+        boolean isPlaceholder;
+        String zone;
         int position;
 
-        SeatItem(String label, boolean selected, boolean locked,
-                 boolean isPlaceholder, String zone) {
+        SeatItem(String label, boolean selected, boolean locked, boolean isPlaceholder, String zone) {
             this.label = label;
             this.selected = selected;
             this.locked = locked;
@@ -259,6 +258,8 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             this.zone = zone;
         }
     }
+
+    // ===== ADAPTER =====
 
     interface OnSeatClickListener {
         void onSeatClick(SeatItem seat);
@@ -297,53 +298,44 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
 
         static class SeatViewHolder extends RecyclerView.ViewHolder {
             MaterialButton btnSeat;
+
             SeatViewHolder(@NonNull View itemView) {
                 super(itemView);
                 btnSeat = itemView.findViewById(R.id.btnSeat);
             }
 
             void bind(SeatItem seat, OnSeatClickListener listener) {
-
                 if (seat.isPlaceholder) {
-                    // Ô trống (lối đi): ẩn nút nhưng vẫn giữ chỗ → tạo hành lang rõ
                     btnSeat.setText("");
                     btnSeat.setEnabled(false);
-                    btnSeat.setClickable(false);
                     btnSeat.setVisibility(View.INVISIBLE);
                     return;
                 }
 
                 btnSeat.setVisibility(View.VISIBLE);
-                btnSeat.setText(seat.label);  // luôn là A1, A2,...
+                btnSeat.setText(seat.label);
 
                 int colorRes;
                 if (seat.locked) {
-                    // ghế đã gán cho loại vé khác
                     colorRes = R.color.seat_booked;
                     btnSeat.setEnabled(false);
                 } else if (seat.selected) {
-                    // ghế đang chọn cho loại vé hiện tại
                     colorRes = R.color.seat_selected;
                     btnSeat.setEnabled(true);
                 } else {
-                    // ghế trống bình thường
                     colorRes = R.color.seat_available;
                     btnSeat.setEnabled(true);
                 }
 
                 btnSeat.setBackgroundTintList(
-                        androidx.core.content.ContextCompat.getColorStateList(
-                                itemView.getContext(), colorRes
-                        )
+                        androidx.core.content.ContextCompat
+                                .getColorStateList(itemView.getContext(), colorRes)
                 );
 
                 if (!seat.locked) {
                     btnSeat.setOnClickListener(v -> listener.onSeatClick(seat));
-                } else {
-                    btnSeat.setOnClickListener(null);
                 }
             }
         }
     }
-
 }

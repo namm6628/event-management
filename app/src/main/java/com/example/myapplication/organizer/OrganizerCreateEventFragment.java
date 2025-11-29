@@ -254,6 +254,7 @@ public class OrganizerCreateEventFragment extends Fragment {
             // xóa luôn ghế tạm cho loại vé này
             String ticketName = getText(edtName);
             SeatLayoutConfigActivity.clearSeatsForTicket(eventIdForSeats, ticketName);
+            if (row.tvSeatInfo != null) row.tvSeatInfo.setText("Chưa chọn ghế");
         });
 
         btnSetupSeats.setOnClickListener(v -> {
@@ -281,15 +282,36 @@ public class OrganizerCreateEventFragment extends Fragment {
                 return;
             }
 
+            // ===== LẤY TỔNG SỐ VÉ CỦA EVENT =====
+            int totalEventSeats = 0;
+            String sTotal = getText(edtTotalSeats);
+            try {
+                totalEventSeats = Integer.parseInt(sTotal);
+            } catch (NumberFormatException ignored) {
+                totalEventSeats = 0;
+            }
+            // fallback: nếu chưa nhập tổng vé thì dùng quota của loại vé
+            if (totalEventSeats <= 0) {
+                totalEventSeats = quotaVal;
+            }
+
+            // ===== CHỌN TEMPLATE PHÙ HỢP THEO TỔNG VÉ =====
+            SeatTemplate pickedTemplate =
+                    SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
+            String templateId = pickedTemplate != null ? pickedTemplate.getId() : null;
+
             Intent i = new Intent(requireContext(), SeatLayoutConfigActivity.class);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_EVENT_ID, eventIdForSeats);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_TICKET_NAME, ticketName);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_MAX_SEATS, quotaVal);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TOTAL_EVENT_SEATS, totalEventSeats);
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TEMPLATE_ID, templateId);
             startActivity(i);
         });
 
         layoutTicketContainer.addView(rowView);
     }
+
 
     private static class TicketRow {
         EditText edtName, edtPrice, edtQuota;

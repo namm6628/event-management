@@ -20,25 +20,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvTitleSpecial"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Danh sách sự kiện"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                android:layout_marginBottom="8dp"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvSpecialEvents"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:clipToPadding="false"
-                android:paddingEnd="12dp"
-                android:orientation="horizontal" />
-
+            <!-- 🔥 VIDEO GIỚI THIỆU – HERO -->
             <TextView
                 android:id="@+id/tvTitleVideo"
                 android:layout_width="wrap_content"
@@ -49,14 +31,34 @@
                 android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp"/>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvVideoEvents"
+            <FrameLayout
+                android:id="@+id/layoutHeroVideo"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:clipToPadding="false"
-                android:paddingEnd="12dp"
-                android:orientation="horizontal" />
+                android:layout_height="220dp"
+                android:layout_marginBottom="16dp">
+
+                <!-- PlayerView chiếm full ngang -->
+                <com.google.android.exoplayer2.ui.PlayerView
+                    android:id="@+id/playerHero"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/black"
+                    app:use_controller="false" />
+
+                <!-- Nút bật/tắt âm ở góc phải dưới -->
+                <ImageButton
+                    android:id="@+id/btnToggleMute"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="8dp"
+                    android:background="@drawable/bg_circle_dark_60"
+                    android:padding="6dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_volume_off_white_24"
+                    android:contentDescription="@string/app_name" />
+
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/exploreCategoriesContainer"
@@ -127,6 +129,30 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
             </LinearLayout>
+
+            <!-- Sự kiện đặc biệt -->
+            <TextView
+                android:id="@+id/tvTitleSpecial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Danh sách sự kiện"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:layout_marginBottom="8dp"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvSpecialEvents"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:clipToPadding="false"
+                android:paddingEnd="12dp"
+                android:orientation="horizontal" />
+
+            <!-- Các block còn lại giữ nguyên -->
+
+
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

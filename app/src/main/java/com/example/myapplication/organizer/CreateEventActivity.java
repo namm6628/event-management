@@ -1,17 +1,16 @@
 package com.example.myapplication.organizer;
 
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -25,10 +24,6 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.LinearLayout;
-
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -41,6 +36,7 @@ public class CreateEventActivity extends AppCompatActivity {
     private EditText edtTitle, edtArtist, edtCategory,
             edtPlace, edtAddressDetail,
             edtDescription, edtTotalSeats;
+
     private TextView tvPickedDateTime;
     private ImageView ivPreview;
     private MaterialButton btnPickDateTime, btnPickImage, btnSave;
@@ -53,8 +49,6 @@ public class CreateEventActivity extends AppCompatActivity {
     private Uri selectedImageUri;
 
     private String editingEventId = null;
-
-    private ActivityResultLauncher<String> pickImageLauncher;
 
     private LinearLayout layoutTicketContainer;
     private MaterialButton btnAddTicketType;
@@ -70,7 +64,7 @@ public class CreateEventActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_event);
 
-        // ánh xạ view đúng với XML
+        // ánh xạ view
         edtTitle          = findViewById(R.id.edtTitle);
         edtArtist         = findViewById(R.id.edtArtist);
         edtCategory       = findViewById(R.id.edtCategory);
@@ -89,8 +83,8 @@ public class CreateEventActivity extends AppCompatActivity {
         btnAddTicketType      = findViewById(R.id.btnAddTicketType);
 
         // 🔹 Marketing views
-        switchFeatured = findViewById(R.id.switchFeatured);   // SwitchMaterial trong layout
-        edtPromoTag    = findViewById(R.id.edtPromoTag);      // EditText cho text ưu đãi
+        switchFeatured = findViewById(R.id.switchFeatured);
+        edtPromoTag    = findViewById(R.id.edtPromoTag);
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Tạo sự kiện mới");
@@ -99,14 +93,13 @@ public class CreateEventActivity extends AppCompatActivity {
 
         // Lấy eventId nếu đang ở chế độ EDIT
         editingEventId = getIntent().getStringExtra("EXTRA_EVENT_ID");
-
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // TẠO eventIdForSeats (dùng cả cho event và sơ đồ ghế tạm)
+        // Tạo eventIdForSeats
         if (editingEventId != null) {
-            eventIdForSeats = editingEventId;      // đang edit
+            eventIdForSeats = editingEventId;
         } else {
-            eventIdForSeats = db.collection("events").document().getId();  // tạo mới
+            eventIdForSeats = db.collection("events").document().getId();
         }
 
         if (getSupportActionBar() != null) {
@@ -122,8 +115,7 @@ public class CreateEventActivity extends AppCompatActivity {
             loadEventForEdit(editingEventId);
             btnSave.setText("Cập nhật sự kiện");
         } else {
-            // TẠO MỚI: auto thêm sẵn 1 dòng loại vé để user thấy UI
-            addTicketRow();
+            addTicketRow(); // tạo sẵn 1 dòng vé
         }
 
         btnAddTicketType.setOnClickListener(v -> addTicketRow());
@@ -132,20 +124,19 @@ public class CreateEventActivity extends AppCompatActivity {
         btnPickDateTime.setOnClickListener(v -> showDateTimePicker());
 
         // chọn ảnh
-        pickImageLauncher = registerForActivityResult(
-                new ActivityResultContracts.GetContent(),
-                uri -> {
-                    if (uri != null) {
-                        selectedImageUri = uri;
-                        ivPreview.setImageURI(uri);
-                    }
-                }
-        );
-        btnPickImage.setOnClickListener(v ->
-                pickImageLauncher.launch("image/*")
-        );
+        androidx.activity.result.ActivityResultLauncher<String> pickImageLauncher =
+                registerForActivityResult(
+                        new androidx.activity.result.contract.ActivityResultContracts.GetContent(),
+                        uri -> {
+                            if (uri != null) {
+                                selectedImageUri = uri;
+                                ivPreview.setImageURI(uri);
+                            }
+                        }
+                );
+        btnPickImage.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
-        // lưu sự kiện
+        // lưu
         btnSave.setOnClickListener(v -> saveEvent());
     }
 
@@ -155,12 +146,12 @@ public class CreateEventActivity extends AppCompatActivity {
         return true;
     }
 
-    /* ========= REFRESH THÔNG TIN GHẾ SAU KHI VẼ SƠ ĐỒ ========= */
+    /* ========= REFRESH GHẾ KHI QUAY LẠI ========= */
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Mỗi lần quay lại màn, đọc TEMP_SEATS để cập nhật text "Đã chọn X ghế"
+        // Cập nhật text "Đã chọn X ghế" cho từng dòng vé
         for (TicketRow row : ticketRows) {
             String name = row.edtName.getText().toString().trim();
             if (name.isEmpty()) continue;
@@ -172,10 +163,12 @@ public class CreateEventActivity extends AppCompatActivity {
         }
     }
 
+    /* ========= CHỌN NGÀY GIỜ ========= */
+
     private void showDateTimePicker() {
         Calendar now = Calendar.getInstance();
 
-        DatePickerDialog dp = new DatePickerDialog(
+        android.app.DatePickerDialog dp = new android.app.DatePickerDialog(
                 this,
                 (view, year, month, dayOfMonth) -> {
                     Calendar picked = Calendar.getInstance();
@@ -183,7 +176,7 @@ public class CreateEventActivity extends AppCompatActivity {
                     picked.set(Calendar.MONTH, month);
                     picked.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 
-                    TimePickerDialog tp = new TimePickerDialog(
+                    android.app.TimePickerDialog tp = new android.app.TimePickerDialog(
                             this,
                             (timePicker, hourOfDay, minute) -> {
                                 picked.set(Calendar.HOUR_OF_DAY, hourOfDay);
@@ -209,6 +202,8 @@ public class CreateEventActivity extends AppCompatActivity {
         dp.show();
     }
 
+    /* ========= DÒNG LOẠI VÉ ========= */
+
     private void addTicketRow() {
         addTicketRowWithData(null, null, null);
     }
@@ -233,7 +228,7 @@ public class CreateEventActivity extends AppCompatActivity {
         TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, tvSeatInfo, rowView);
         ticketRows.add(row);
 
-        // nếu đã có tên (trường hợp edit), thử load ghế tạm
+        // nếu đã có tên (trường hợp edit) → load ghế tạm
         if (name != null) {
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
@@ -244,6 +239,7 @@ public class CreateEventActivity extends AppCompatActivity {
         btnRemove.setOnClickListener(v -> {
             layoutTicketContainer.removeView(rowView);
             ticketRows.remove(row);
+            SeatLayoutConfigActivity.clearSeatsForTicket(eventIdForSeats, name);
         });
 
         btnSetupSeats.setOnClickListener(v -> {
@@ -272,21 +268,69 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // mở màn vẽ sơ đồ ghế – tạm lưu vào TEMP_SEATS, chưa đẩy Firestore
+            // 🔹 BẮT BUỘC NHẬP "TỔNG SỐ VÉ" TRƯỚC KHI CHỌN GHẾ
+            String sTotal = edtTotalSeats.getText() != null
+                    ? edtTotalSeats.getText().toString().trim()
+                    : "";
+
+            if (TextUtils.isEmpty(sTotal)) {
+                edtTotalSeats.setError("Nhập tổng số vé trước khi cấu hình ghế");
+                Toast.makeText(
+                        CreateEventActivity.this,
+                        "Vui lòng nhập Tổng số vé (tổng sức chứa) trước khi chọn sơ đồ ghế",
+                        Toast.LENGTH_LONG
+                ).show();
+                return;
+            }
+
+            int totalEventSeats;
+            try {
+                totalEventSeats = Integer.parseInt(sTotal);
+            } catch (NumberFormatException e) {
+                edtTotalSeats.setError("Tổng số vé không hợp lệ");
+                Toast.makeText(
+                        CreateEventActivity.this,
+                        "Tổng số vé phải là số nguyên dương",
+                        Toast.LENGTH_LONG
+                ).show();
+                return;
+            }
+
+            if (totalEventSeats <= 0) {
+                edtTotalSeats.setError("Tổng số vé phải > 0");
+                Toast.makeText(
+                        CreateEventActivity.this,
+                        "Tổng số vé phải lớn hơn 0",
+                        Toast.LENGTH_LONG
+                ).show();
+                return;
+            }
+
+            // 🔹 CHỌN TEMPLATE THEO TỔNG SỨC CHỨA (KHÔNG DÙNG QUOTA)
+            SeatTemplate pickedTemplate =
+                    SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
+            String templateId = pickedTemplate != null ? pickedTemplate.getId() : null;
+
             android.content.Intent i = new android.content.Intent(
                     CreateEventActivity.this,
                     SeatLayoutConfigActivity.class
             );
             i.putExtra(SeatLayoutConfigActivity.EXTRA_EVENT_ID, eventIdForSeats);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_TICKET_NAME, ticketName);
+            // Giới hạn số ghế được chọn cho LOẠI VÉ
             i.putExtra(SeatLayoutConfigActivity.EXTRA_MAX_SEATS, quotaVal);
+            // Tổng sức chứa event
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TOTAL_EVENT_SEATS, totalEventSeats);
+            // Template id ("S","M","L")
+            i.putExtra(SeatLayoutConfigActivity.EXTRA_TEMPLATE_ID, templateId);
+
             startActivity(i);
         });
 
         layoutTicketContainer.addView(rowView);
     }
 
-    /* ========= MODEL ========= */
+    /* ========= MODEL TICKET ROW ========= */
 
     private static class TicketRow {
         EditText edtName, edtPrice, edtQuota;
@@ -331,10 +375,6 @@ public class CreateEventActivity extends AppCompatActivity {
         String desc     = text(edtDescription);
         String sSeats   = text(edtTotalSeats);
 
-        // 🔹 Marketing
-        boolean isFeatured = switchFeatured != null && switchFeatured.isChecked();
-        String promoTag    = text(edtPromoTag);
-
         if (TextUtils.isEmpty(title)) {
             edtTitle.setError("Nhập tên sự kiện");
             return;
@@ -372,12 +412,18 @@ public class CreateEventActivity extends AppCompatActivity {
             return;
         }
 
-        // ====== LẤY DANH SÁCH LOẠI VÉ + GHẾ ======
+        // 🔹 LẤY MARKETING
+        boolean isFeatured = switchFeatured != null && switchFeatured.isChecked();
+        String promoTag = edtPromoTag != null
+                ? edtPromoTag.getText().toString().trim()
+                : "";
+        int featuredBoostScore = isFeatured ? 100 : 0;
+
+        // ====== LOẠI VÉ + GHẾ ======
         List<Map<String, Object>> ticketTypes = new ArrayList<>();
         int totalSeatsFromTickets = 0;
         double minPriceFromTickets = Double.MAX_VALUE;
 
-        // để đảm bảo không trùng ghế giữa các loại vé
         HashSet<String> allSeatsGlobal = new HashSet<>();
 
         for (TicketRow row : ticketRows) {
@@ -417,13 +463,13 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // 🔥 Lấy ghế đã vẽ tạm trong SeatLayoutConfigActivity
+            // Lấy ghế đã vẽ tạm
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
             row.seatCodes.addAll(seats);
             updateSeatInfoText(row);
 
-            // ✅ check: số ghế chọn phải = quota
+            // quota == số ghế
             if (seats.size() != quota) {
                 Toast.makeText(this,
                         "Loại vé \"" + name + "\" phải chọn đúng "
@@ -432,7 +478,7 @@ public class CreateEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // ✅ check: không trùng ghế giữa các loại vé
+            // không trùng ghế giữa các loại vé
             for (String c : seats) {
                 if (!allSeatsGlobal.add(c)) {
                     Toast.makeText(this,
@@ -447,7 +493,7 @@ public class CreateEventActivity extends AppCompatActivity {
             ticket.put("price", price);
             ticket.put("quota", quota);
             ticket.put("sold", 0);
-            ticket.put("seats", seats); // lưu danh sách ghế ngay trong doc ticketTypes
+            ticket.put("seats", seats);
 
             ticketTypes.add(ticket);
 
@@ -483,7 +529,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String ownerId = user.getUid();
-        String eventId = eventIdForSeats;   // luôn dùng id đã tạo từ trước
+        String eventId = eventIdForSeats;
 
         if (selectedImageUri != null) {
             FirebaseStorage.getInstance()
@@ -498,7 +544,7 @@ public class CreateEventActivity extends AppCompatActivity {
                                                     place, addrDtl, desc,
                                                     selectedStartTime, price, totalSeats,
                                                     uri.toString(), ticketTypes,
-                                                    isFeatured, promoTag
+                                                    isFeatured, featuredBoostScore, promoTag
                                             )
                                     )
                                     .addOnFailureListener(e -> {
@@ -521,7 +567,7 @@ public class CreateEventActivity extends AppCompatActivity {
                     place, addrDtl, desc,
                     selectedStartTime, price, totalSeats,
                     null, ticketTypes,
-                    isFeatured, promoTag
+                    isFeatured, featuredBoostScore, promoTag
             );
         }
     }
@@ -540,8 +586,9 @@ public class CreateEventActivity extends AppCompatActivity {
                                        int totalSeats,
                                        @Nullable String thumbnailUrl,
                                        List<Map<String, Object>> ticketTypes,
-                                       boolean isFeatured,
-                                       String promoTag) {
+                                       boolean featured,
+                                       int featuredBoostScore,
+                                       @Nullable String promoTag) {
 
         Map<String, Object> data = new HashMap<>();
         data.put("title", title);
@@ -559,10 +606,12 @@ public class CreateEventActivity extends AppCompatActivity {
         data.put("updatedAt", FieldValue.serverTimestamp());
 
         // 🔹 Marketing fields
-        data.put("featured", isFeatured);
-        data.put("featuredBoostScore", isFeatured ? 10 : 0);
-        if (!TextUtils.isEmpty(promoTag)) {
+        data.put("featured", featured);
+        data.put("featuredBoostScore", featuredBoostScore);
+        if (promoTag != null && !promoTag.isEmpty()) {
             data.put("promoTag", promoTag);
+        } else {
+            data.remove("promoTag");
         }
 
         if (editingEventId == null) {
@@ -580,7 +629,6 @@ public class CreateEventActivity extends AppCompatActivity {
                     .set(data)
                     .addOnSuccessListener(unused -> {
                         saveTicketTypes(db, eventId, ticketTypes);
-                        // clear ghế tạm sau khi lưu xong
                         SeatLayoutConfigActivity.clearSeatsForEvent(eventIdForSeats);
                         Toast.makeText(this,
                                 "Tạo sự kiện thành công!",
@@ -641,6 +689,8 @@ public class CreateEventActivity extends AppCompatActivity {
                 });
     }
 
+    /* ========= LOAD EDIT ========= */
+
     private void loadEventForEdit(String eventId) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("events").document(eventId)
@@ -672,14 +722,15 @@ public class CreateEventActivity extends AppCompatActivity {
                         tvPickedDateTime.setText(sdf.format(ts.toDate()));
                     }
 
-                    // 🔹 Marketing: load lại
-                    if (switchFeatured != null) {
-                        Boolean featured = doc.getBoolean("featured");
-                        switchFeatured.setChecked(featured != null && featured);
+                    // 🔹 Marketing
+                    Boolean featured = doc.getBoolean("featured");
+                    if (featured != null && switchFeatured != null) {
+                        switchFeatured.setChecked(featured);
                     }
-                    if (edtPromoTag != null) {
-                        String promoTag = doc.getString("promoTag");
-                        if (promoTag != null) edtPromoTag.setText(promoTag);
+
+                    String promo = doc.getString("promoTag");
+                    if (promo != null && edtPromoTag != null) {
+                        edtPromoTag.setText(promo);
                     }
 
                     loadTicketTypesForEdit(eventId);
@@ -713,8 +764,6 @@ public class CreateEventActivity extends AppCompatActivity {
                         Long quota    = d.getLong("quota");
 
                         addTicketRowWithData(name, price, quota);
-                        // Nếu cần, có thể đọc thêm "seats" từ Firestore về và
-                        // push vào SeatLayoutConfigActivity, tuỳ bạn triển khai thêm.
                     }
                 })
                 .addOnFailureListener(e ->
