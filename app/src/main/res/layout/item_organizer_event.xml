@@ -36,8 +36,7 @@
             <ImageView
                 android:layout_width="16dp"
                 android:layout_height="16dp"
-                android:src="@drawable/ic_event_24"
-                 />
+                android:src="@drawable/ic_event_24" />
 
             <TextView
                 android:id="@+id/tvTime"
@@ -110,7 +109,7 @@
             android:paddingTop="12dp"
             android:paddingLeft="12dp"
             android:paddingRight="12dp"
-            android:paddingBottom="16dp">
+            android:paddingBottom="8dp">
 
             <Button
                 android:id="@+id/btnBroadcast"
@@ -141,6 +140,34 @@
                 android:text="Chỉnh sửa"
                 android:textSize="13sp" />
         </LinearLayout>
+
+        <!-- Nút quét QR check-in -->
+        <Button
+            android:id="@+id/btnScanQr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginHorizontal="12dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:text="Quét mã QR check-in"
+            android:textAllCaps="false"
+            android:textSize="13sp" />
+
+        <!-- Nút danh sách check-in -->
+        <Button
+            android:id="@+id/btnCheckinList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginHorizontal="12dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:text="Danh sách check-in"
+            android:textAllCaps="false"
+            android:textSize="13sp" />
 
     </LinearLayout>
 

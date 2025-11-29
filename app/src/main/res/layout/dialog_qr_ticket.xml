@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:id="@+id/tvQrTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Vé điện tử"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:textColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/tvQrSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Đưa mã này cho BTC quét khi check-in"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:textColor="@color/text_secondary" />
+
+    <ImageView
+        android:id="@+id/imgQr"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:layout_marginTop="16dp"
+        android:layout_gravity="center_horizontal"
+        android:contentDescription="@string/qr_ticket" />
+
+    <TextView
+        android:id="@+id/tvQrInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Mã đơn: pCk15TGlqFBhqVveqaX8"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:textColor="@color/text_secondary" />
+</LinearLayout>

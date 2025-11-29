@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardUseCompatPadding="true"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- OrderId + thời gian check-in -->
+        <TextView
+            android:id="@+id/tvOrderId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mã đơn: xxxxxx"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvCheckinTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Check-in lúc: 10:05 29/11/2025"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+        <!-- Tên khách / email -->
+        <TextView
+            android:id="@+id/tvUserInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Khách: Nguyễn A (email@gmail.com)"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- Số vé + tổng tiền -->
+        <TextView
+            android:id="@+id/tvTicketSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Số vé: 2 • Tổng tiền: 300.000 đ"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- Ghế -->
+        <TextView
+            android:id="@+id/tvSeats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ghế: A1, A2"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- Chi tiết loại vé -->
+        <TextView
+            android:id="@+id/tvTicketDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="drgra (A1) – 245.000 đ"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

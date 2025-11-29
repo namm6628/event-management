@@ -1,9 +1,14 @@
 package com.example.myapplication.attendee.ticket;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
@@ -11,6 +16,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
+import com.example.myapplication.common.util.QrUtils;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -57,7 +63,7 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
     }
 
     // ================== ViewHolder ==================
-    static class VH extends RecyclerView.ViewHolder {
+    class VH extends RecyclerView.ViewHolder {
 
         TextView tvDay, tvMonthYear, tvEventTitle,
                 tvStatusChip, tvTicketTypeChip,
@@ -97,12 +103,14 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
             // ===== Chips =====
             tvStatusChip.setText("Thành công");
 
-            // loại vé
-            if (item.ticketTypeName != null && !item.ticketTypeName.isEmpty()) {
-                tvTicketTypeChip.setText(item.ticketTypeName);
-            } else {
-                tvTicketTypeChip.setText("Vé điện tử");
-            }
+
+            tvTicketTypeChip.setText("Vé điện tử");
+
+
+            // Click vào chip "Vé điện tử" -> show QR
+            tvTicketTypeChip.setOnClickListener(v -> {
+                showQrDialog(v.getContext(), item);
+            });
 
             // ===== Order code =====
             tvOrderCode.setText("Mã đơn hàng: " + item.orderId);
@@ -131,7 +139,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                 boolean hasAddr  = item.addressDetail != null && !item.addressDetail.isEmpty();
 
                 if (hasVenue && hasAddr) {
-                    // Cả 2 đều có → 2 dòng
                     tvVenue.setText(item.venue);
                     tvVenue.setVisibility(View.VISIBLE);
 
@@ -139,7 +146,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                     tvAddressDetail.setVisibility(View.VISIBLE);
 
                 } else if (hasVenue) {
-                    // Chỉ có venue → dùng 1 dòng trên
                     tvVenue.setText(item.venue);
                     tvVenue.setVisibility(View.VISIBLE);
 
@@ -147,7 +153,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                     tvAddressDetail.setVisibility(View.GONE);
 
                 } else if (hasAddr) {
-                    // Chỉ có address → đẩy lên dòng trên cho đỡ trống
                     tvVenue.setText(item.addressDetail);
                     tvVenue.setVisibility(View.VISIBLE);
 
@@ -155,14 +160,12 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                     tvAddressDetail.setVisibility(View.GONE);
 
                 } else {
-                    // Không có gì
                     tvVenue.setText("");
                     tvVenue.setVisibility(View.GONE);
                     tvAddressDetail.setText("");
                     tvAddressDetail.setVisibility(View.GONE);
                 }
             }
-
 
             // ===== Price =====
             NumberFormat nf = NumberFormat.getInstance(new Locale("vi", "VN"));
@@ -178,26 +181,60 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                 tvPrice.setVisibility(View.GONE);
             }
 
-            // Click item
+            // Click cả item -> mở EventDetail
             itemView.setOnClickListener(v -> {
                 if (onClick != null) onClick.onClick(item);
             });
         }
     }
 
+    // ================== QR dialog ==================
+    private void showQrDialog(Context context, TicketItem item) {
+        // Nội dung QR: cho BTC quét check-in
+        String qrContent = "eventId=" + item.eventId
+                + ";orderId=" + item.orderId
+                + ";userId=" + item.userId;
+
+        Bitmap qrBitmap = QrUtils.generateQr(qrContent, 800);
+        if (qrBitmap == null) {
+            Toast.makeText(context, "Không tạo được mã QR", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(context)
+                .inflate(R.layout.dialog_qr_ticket, null, false);
+
+        ImageView imgQr   = dialogView.findViewById(R.id.imgQr);
+        TextView tvTitle  = dialogView.findViewById(R.id.tvQrTitle);
+        TextView tvSub    = dialogView.findViewById(R.id.tvQrSubtitle);
+        TextView tvInfo   = dialogView.findViewById(R.id.tvQrInfo);
+
+        imgQr.setImageBitmap(qrBitmap);
+        tvTitle.setText("Vé điện tử");
+        tvSub.setText(item.title != null ? item.title : "Sự kiện");
+        tvInfo.setText("Mã đơn: " + item.orderId);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setView(dialogView);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
     // ================== Model ==================
     public static class TicketItem {
         public String orderId;
         public String eventId;
+        public String userId;        // dùng cho QR
         public String title;
 
         public String venue;          // địa điểm ngắn
         public String addressDetail;  // địa chỉ chi tiết
 
         public String ticketTypeName; // tên loại vé
-        public long ticketPrice;// giá đúng loại vé
-
-        public long ticketQuantity;     // 3, 2, 1...
+        public long ticketPrice;      // giá đúng loại vé
+        public long ticketQuantity;   // 3, 2, 1...
 
         public long startTimeMillis;
         public long endTimeMillis;
@@ -210,6 +247,7 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
             TicketItem o = (TicketItem) obj;
             return safeEquals(orderId, o.orderId)
                     && safeEquals(eventId, o.eventId)
+                    && safeEquals(userId, o.userId)
                     && safeEquals(title, o.title)
                     && safeEquals(venue, o.venue)
                     && safeEquals(addressDetail, o.addressDetail)

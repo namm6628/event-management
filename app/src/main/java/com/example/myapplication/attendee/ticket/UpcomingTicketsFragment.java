@@ -161,6 +161,7 @@ public class UpcomingTicketsFragment extends Fragment {
                                 TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
                                 item.orderId = orderDoc.getId();
                                 item.eventId = eventId;
+                                item.userId  = orderDoc.getString("userId");
                                 item.title = e.getTitle();
 
                                 item.startTimeMillis = start;
@@ -199,6 +200,7 @@ public class UpcomingTicketsFragment extends Fragment {
                                     TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
                                     item.orderId = orderDoc.getId();
                                     item.eventId = eventId;
+                                    item.userId  = orderDoc.getString("userId");
                                     item.title = e.getTitle();
 
                                     item.startTimeMillis = start;

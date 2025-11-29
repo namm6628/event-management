@@ -243,6 +243,9 @@ public class PaymentActivity extends AppCompatActivity {
                         throw new RuntimeException("Rất tiếc, vé vừa bán hết!");
                     }
 
+                    // 👇 LẤY OWNER CỦA SỰ KIỆN
+                    String ownerId = snapshot.getString("ownerId");   // 👈 rất quan trọng cho thống kê
+
                     // 1. Trừ vé
                     transaction.update(eventRef, "availableSeats", available - quantity);
 
@@ -251,11 +254,20 @@ public class PaymentActivity extends AppCompatActivity {
                     order.put("eventId", eventId);
                     order.put("userId", userId);
 
+                    // 👇 GẮN THÊM ownerId ĐỂ ORGANIZER ĐỌC & THỐNG KÊ
+                    if (ownerId != null) {
+                        order.put("ownerId", ownerId);               // 👈 field mới
+                    }
+
                     // các field mà rules yêu cầu
                     order.put("totalTickets", quantity);      // int > 0
                     order.put("totalAmount", totalPrice);     // number >= 0
                     order.put("createdAt", FieldValue.serverTimestamp());
                     order.put("status", "PAID");
+
+                    // OPTIONAL: khởi tạo trạng thái check-in
+                    order.put("checkedIn", false);            // 👈 cho QR check-in
+                    order.put("checkedInAt", null);
 
                     // các field thêm tuỳ ý – rules cho phép vì không check keys()
                     order.put("eventTitle", eventTitle);
@@ -290,6 +302,7 @@ public class PaymentActivity extends AppCompatActivity {
                     Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
+
 
 
     private void resetPaymentUi() {

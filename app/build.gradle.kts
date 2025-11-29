@@ -91,6 +91,8 @@ dependencies {
 
     implementation("androidx.cardview:cardview:1.0.0")
 
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
 
 
 }

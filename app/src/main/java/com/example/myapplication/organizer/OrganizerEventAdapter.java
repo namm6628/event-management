@@ -1,5 +1,6 @@
 package com.example.myapplication.organizer;
 
+import android.content.Intent;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,6 +13,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
+import com.example.myapplication.organizer.checkin.OrganizerCheckinListActivity;
+import com.example.myapplication.organizer.checkin.ScanQrActivity;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -26,7 +29,7 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
     public interface Listener {
         void onEdit(@NonNull Event e);
         void onViewAttendees(@NonNull Event e);
-        void onBroadcast(@NonNull Event e);   // 👈 Gửi thông báo
+        void onBroadcast(@NonNull Event e);
     }
 
     private final List<Event> data = new ArrayList<>();
@@ -63,7 +66,7 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
 
     static class VH extends RecyclerView.ViewHolder {
         final TextView tvTitle, tvTime, tvVenue, tvTicketInfo, tvTicketTypesDetail;
-        final Button btnEdit, btnViewAttendees, btnBroadcast;
+        final Button btnEdit, btnViewAttendees, btnBroadcast, btnScanQr, btnCheckinList;
         private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         VH(@NonNull View itemView) {
@@ -76,7 +79,9 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
 
             btnEdit = itemView.findViewById(R.id.btnEdit);
             btnViewAttendees = itemView.findViewById(R.id.btnViewAttendees);
-            btnBroadcast = itemView.findViewById(R.id.btnBroadcast);   // 👈 nút Gửi thông báo
+            btnBroadcast = itemView.findViewById(R.id.btnBroadcast);
+            btnScanQr = itemView.findViewById(R.id.btnScanQr);
+            btnCheckinList = itemView.findViewById(R.id.btnCheckinList);
         }
 
         void bind(Event e, Listener listener) {
@@ -156,6 +161,21 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
 
             btnBroadcast.setOnClickListener(v -> {
                 if (listener != null) listener.onBroadcast(e);
+            });
+
+            // 👉 Quét QR check-in
+            btnScanQr.setOnClickListener(v -> {
+                Intent i = new Intent(v.getContext(), ScanQrActivity.class);
+                i.putExtra("EVENT_ID", e.getId());
+                v.getContext().startActivity(i);
+            });
+
+            // 👉 Danh sách check-in
+            btnCheckinList.setOnClickListener(v -> {
+                Intent i = new Intent(v.getContext(), OrganizerCheckinListActivity.class);
+                i.putExtra(OrganizerCheckinListActivity.EXTRA_EVENT_ID, e.getId());
+                i.putExtra(OrganizerCheckinListActivity.EXTRA_EVENT_TITLE, e.getTitle());
+                v.getContext().startActivity(i);
             });
 
             // card click = edit
