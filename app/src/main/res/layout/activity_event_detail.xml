@@ -540,17 +540,19 @@
                 app:layout_constraintEnd_toEndOf="parent" />
 
             <!-- Danh sách review -->
+
+            <!-- ========== Có thể bạn cũng thích ========== -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerReviews"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
-                app:layout_constraintTop_toBottomOf="@id/tvEmptyReviews"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintTop_toBottomOf="@id/tvEmptyReviews" />
 
-            <!-- ========== Có thể bạn cũng thích ========== -->
             <LinearLayout
                 android:id="@+id/layoutRecommended"
                 android:layout_width="0dp"

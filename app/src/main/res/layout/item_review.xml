@@ -55,5 +55,36 @@
             android:layout_marginTop="8dp"
             android:text="Sự kiện rất tuyệt vời, âm thanh tốt và không khí vui vẻ!"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
+        <ImageView
+            android:id="@+id/imgReviewMedia"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:layout_marginTop="4dp"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btnEditReview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sửa"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/btnDeleteReview"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Xoá"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"/>
+        </LinearLayout>
+
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

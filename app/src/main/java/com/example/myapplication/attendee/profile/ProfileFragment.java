@@ -30,6 +30,7 @@ import androidx.transition.AutoTransition;
 import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 
+import com.bumptech.glide.Glide; // NEW
 import com.example.myapplication.R;
 import com.example.myapplication.auth.AuthManager;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -43,6 +44,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.storage.FirebaseStorage;   // NEW
+import com.google.firebase.storage.StorageReference; // NEW
 
 import java.io.File;
 import java.io.InputStream;
@@ -76,7 +79,6 @@ public class ProfileFragment extends Fragment {
     private static class FavoriteEvent {
         String id;
         String title;
-
         String location;
 
         FavoriteEvent(String id, String title, String location) {
@@ -92,24 +94,29 @@ public class ProfileFragment extends Fragment {
 
         db = FirebaseFirestore.getInstance();
 
-        // Chọn ảnh từ thư viện: COPY về storage riêng của app rồi lưu URI FileProvider
+        // Chọn ảnh từ thư viện
         pickImage = registerForActivityResult(new ActivityResultContracts.GetContent(), src -> {
             if (!isAdded()) return;
             View root = getView();
             if (src != null && root != null) {
+                // có thể copy sang storage app hoặc dùng trực tiếp src
                 Uri local = copyToAppStorage(src);
+                if (local == null) local = src;
+
                 ImageView av = root.findViewById(R.id.imgAvatar);
                 if (local != null) {
                     av.setImageURI(local);
                     Context ctx = getContext();
                     if (ctx != null) AuthManager.setAvatarUri(ctx, local.toString());
+                    // NEW: upload lên Storage + lưu URL Firestore
+                    uploadAvatarToCloud(local);
                 } else {
                     toast("Không lưu được ảnh đã chọn");
                 }
             }
         });
 
-        // Chụp ảnh mới (đã dùng FileProvider sẵn)
+        // Chụp ảnh mới (FileProvider)
         takePhoto = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
             if (!isAdded()) return;
             View root = getView();
@@ -118,6 +125,8 @@ public class ProfileFragment extends Fragment {
                 av.setImageURI(cameraUri);
                 Context ctx = getContext();
                 if (ctx != null) AuthManager.setAvatarUri(ctx, cameraUri.toString());
+                // NEW: upload avatar
+                uploadAvatarToCloud(cameraUri);
             }
         });
 
@@ -176,21 +185,17 @@ public class ProfileFragment extends Fragment {
 
         SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
 
-        // Lấy trạng thái NIGHT hiện tại của app (đang áp dụng thật sự)
         boolean currentlyDark =
                 (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                         == Configuration.UI_MODE_NIGHT_YES;
 
-        // Tránh callback bị gọi khi setChecked programmatically
         if (switchDarkMode != null) {
             switchDarkMode.setOnCheckedChangeListener(null);
             switchDarkMode.setChecked(currentlyDark);
 
             switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                // Lưu lại lựa chọn
                 prefs.edit().putBoolean("dark_mode", isChecked).apply();
 
-                // Chỉ đổi nếu khác trạng thái hiện tại (tránh recreate thừa)
                 boolean darkNow =
                         (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                                 == Configuration.UI_MODE_NIGHT_YES;
@@ -206,12 +211,11 @@ public class ProfileFragment extends Fragment {
         if (av != null) {
             av.setShapeAppearanceModel(
                     av.getShapeAppearanceModel().toBuilder()
-                            .setAllCornerSizes(new RelativeCornerSize(0.5f)) // 50% = tròn
+                            .setAllCornerSizes(new RelativeCornerSize(0.5f))
                             .build()
             );
         }
 
-        // Nút trên header
         View btnHeader = v.findViewById(R.id.btnEditProfile);
         if (btnHeader != null) {
             btnHeader.setOnClickListener(view ->
@@ -219,7 +223,6 @@ public class ProfileFragment extends Fragment {
             );
         }
 
-        // Nút login riêng (nếu có)
         View btnLogin = v.findViewById(R.id.btnLogin);
         if (btnLogin != null) {
             btnLogin.setOnClickListener(view ->
@@ -227,19 +230,17 @@ public class ProfileFragment extends Fragment {
             );
         }
 
-        // Bấm avatar -> menu 2 lựa chọn (chỉ khi đã đăng nhập)
         ImageView img = v.findViewById(R.id.imgAvatar);
         if (img != null) {
             img.setOnClickListener(view -> {
                 if (AuthManager.isLoggedIn(requireContext())) {
-                    showAvatarMenu(); // Xem / Chọn ảnh khác
+                    showAvatarMenu();
                 } else {
                     toast("Vui lòng đăng nhập để thao tác với ảnh đại diện");
                 }
             });
         }
 
-        // --- Favorite events views ---
         containerFavoriteEventsView = v.findViewById(R.id.containerFavoriteEvents);
         btnToggleFavoriteEventsView = v.findViewById(R.id.btnToggleFavoriteEvents);
         tvEmptyFavoriteEvents = v.findViewById(R.id.tvEmptyFavoriteEvents);
@@ -255,8 +256,8 @@ public class ProfileFragment extends Fragment {
             });
         }
 
-        updateUi(v);        // lần đầu
-        refreshFavoriteEvents(v); // load favorite events lần đầu
+        updateUi(v);
+        refreshFavoriteEvents(v);
     }
 
     @Override
@@ -265,7 +266,7 @@ public class ProfileFragment extends Fragment {
         View v = getView();
         if (v != null) {
             updateUi(v);
-            refreshFavoriteEvents(v); // quay lại màn hình thì reload follow
+            refreshFavoriteEvents(v);
         }
 
         if (btnGoOrg != null) {
@@ -282,7 +283,6 @@ public class ProfileFragment extends Fragment {
                 btnGoOrg.setVisibility(isOrganizer ? View.VISIBLE : View.GONE);
             }
             if (btnRequestOrg != null) {
-                // Nếu chưa là organizer → hiện nút đăng ký
                 btnRequestOrg.setVisibility(isOrganizer ? View.GONE : View.VISIBLE);
             }
         });
@@ -299,25 +299,12 @@ public class ProfileFragment extends Fragment {
         MaterialButton btn = root.findViewById(R.id.btnEditProfile);
         ImageView avatar = root.findViewById(R.id.imgAvatar);
 
-        // Avatar: chỉ load ảnh đã lưu khi ĐÃ đăng nhập; chưa đăng nhập thì reset về mặc định
         if (avatar != null) {
             if (logged) {
-                String savedUri = AuthManager.getAvatarUri(requireContext());
-                if (savedUri != null) {
-                    try {
-                        avatar.setImageURI(Uri.parse(savedUri));
-                    } catch (RuntimeException e) {
-                        // URI cũ (Photo Picker) hết quyền → fallback + xoá
-                        avatar.setImageResource(android.R.drawable.sym_def_app_icon);
-                        try { AuthManager.setAvatarUri(requireContext(), null); } catch (Exception ignore) {}
-                        toast("Ảnh cũ không còn quyền truy cập, vui lòng chọn lại.");
-                    }
-                } else {
-                    avatar.setImageResource(android.R.drawable.sym_def_app_icon);
-                }
+                // NEW: luôn ưu tiên load avatar từ Firestore (avatarUrl)
+                loadAvatarFromCloud(avatar);
             } else {
-                avatar.setImageDrawable(null); // clear reference
-                avatar.setImageResource(android.R.drawable.sym_def_app_icon);
+                setDefaultAvatar(avatar);
             }
         }
 
@@ -332,7 +319,6 @@ public class ProfileFragment extends Fragment {
             setupExpandable(root, R.id.rowProfile,        R.id.panelProfile,  R.id.chevronProfile);
             setupExpandable(root, R.id.rowPaymentMethods, R.id.panelPayment,  R.id.chevronPayment);
 
-            // Favorite events: nút xem thêm luôn bật, text tùy số lượng
             if (btnToggleFavoriteEventsView != null) {
                 btnToggleFavoriteEventsView.setVisibility(View.VISIBLE);
             }
@@ -364,7 +350,6 @@ public class ProfileFragment extends Fragment {
                 if (c != null) c.setRotation(0f);
             }
 
-            // Favorite events khi chưa login
             favoriteEvents.clear();
             favoritesExpanded = false;
             if (btnToggleFavoriteEventsView instanceof TextView) {
@@ -381,6 +366,96 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    private void setDefaultAvatar(@NonNull ImageView avatar) {
+        avatar.setImageDrawable(null);
+        avatar.setImageResource(android.R.drawable.sym_def_app_icon);
+    }
+
+    // NEW: đọc avatarUrl từ Firestore và load bằng Glide
+    private void loadAvatarFromCloud(@NonNull ImageView avatar) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            setDefaultAvatar(avatar);
+            return;
+        }
+        String uid = user.getUid();
+
+        db.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+                    String url = doc != null ? doc.getString("avatarUrl") : null;
+                    if (url != null && !url.isEmpty()) {
+                        Glide.with(this)
+                                .load(url)
+                                .circleCrop()
+                                .placeholder(android.R.drawable.sym_def_app_icon)
+                                .error(android.R.drawable.sym_def_app_icon)
+                                .into(avatar);
+                    } else {
+                        setDefaultAvatar(avatar);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    setDefaultAvatar(avatar);
+                });
+    }
+
+    // NEW: upload file lên Firebase Storage rồi lưu URL vào users/{uid}.avatarUrl
+    private void uploadAvatarToCloud(@NonNull Uri fileUri) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            toast("Cần đăng nhập để cập nhật ảnh đại diện");
+            return;
+        }
+
+        String uid = user.getUid();
+        String path = "user_avatars/" + uid + "/avatar_" + System.currentTimeMillis() + ".jpg";
+
+        StorageReference ref = FirebaseStorage.getInstance()
+                .getReference()
+                .child(path);
+
+        ref.putFile(fileUri)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        throw task.getException();
+                    }
+                    return ref.getDownloadUrl();
+                })
+                .addOnSuccessListener(downloadUri -> {
+                    String url = downloadUri.toString();
+                    db.collection("users")
+                            .document(uid)
+                            .update("avatarUrl", url)
+                            .addOnSuccessListener(unused -> {
+                                if (!isAdded()) return;
+                                View root = getView();
+                                if (root != null) {
+                                    ImageView avatar = root.findViewById(R.id.imgAvatar);
+                                    if (avatar != null) {
+                                        Glide.with(this)
+                                                .load(url)
+                                                .circleCrop()
+                                                .placeholder(android.R.drawable.sym_def_app_icon)
+                                                .error(android.R.drawable.sym_def_app_icon)
+                                                .into(avatar);
+                                    }
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                if (!isAdded()) return;
+                                toast("Lưu avatarUrl thất bại");
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    toast("Upload ảnh đại diện thất bại");
+                });
+    }
+
     private void showLogoutConfirm(@NonNull View root) {
         final int titleColor = MaterialColors.getColor(
                 requireContext(), com.google.android.material.R.attr.colorOnSurface, 0);
@@ -389,17 +464,13 @@ public class ProfileFragment extends Fragment {
                 .setTitle(colorize("Đăng xuất?", titleColor))
                 .setMessage("Bạn có chắc muốn đăng xuất không?")
                 .setPositiveButton("Đăng xuất", (d, w) -> {
-                    // 1. Logout FirebaseAuth
                     FirebaseAuth.getInstance().signOut();
 
-                    // 2. Xoá info local
                     try { AuthManager.setAvatarUri(requireContext(), null); } catch (Exception ignore) {}
                     AuthManager.logout(requireContext());
 
-                    // 3. Cập nhật UI hiện tại (chuyển sang trạng thái khách)
                     updateUi(root);
 
-                    // 4. Điều hướng về màn Login
                     NavHostFragment.findNavController(this).navigate(R.id.loginFragment);
                 })
                 .setNegativeButton("Huỷ", null)
@@ -467,7 +538,7 @@ public class ProfileFragment extends Fragment {
                     }
 
                     for (DocumentSnapshot d : snap.getDocuments()) {
-                        String eventId = d.getId();               // doc ID = eventId
+                        String eventId = d.getId();
                         String title = d.getString("title");
                         String location = d.getString("location");
 
@@ -477,7 +548,6 @@ public class ProfileFragment extends Fragment {
                         favoriteEvents.add(new FavoriteEvent(eventId, title, location));
                     }
 
-                    // Nút xem thêm
                     if (btnToggleFavoriteEventsView != null) {
                         btnToggleFavoriteEventsView.setVisibility(
                                 favoriteEvents.size() > FAVORITES_COLLAPSED_LIMIT
@@ -494,8 +564,6 @@ public class ProfileFragment extends Fragment {
                     renderFavoriteEventsUi();
                 });
     }
-
-
 
     private void renderFavoriteEventsUi() {
         if (containerFavoriteEventsView == null) return;
@@ -542,18 +610,15 @@ public class ProfileFragment extends Fragment {
                 }
             }
 
-            // TODO: nếu muốn click mở EventDetail thì thêm điều hướng ở đây
             row.setOnClickListener(v -> {
-                // NavHostFragment.findNavController(this)
-                //        .navigate(...);
+                // TODO: điều hướng sang EventDetail nếu muốn
             });
 
             container.addView(row);
         }
     }
 
-
-    /* --------- Menu avatar & bottom sheet chọn nguồn ảnh --------- */
+    /* --------- Menu avatar --------- */
 
     private void showAvatarMenu() {
         final int titleColor = MaterialColors.getColor(
@@ -617,7 +682,6 @@ public class ProfileFragment extends Fragment {
         row.setClickable(true);
         row.setFocusable(true);
 
-        // ripple theo theme: ?attr/selectableItemBackground
         android.util.TypedValue tv = new android.util.TypedValue();
         requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
         row.setBackgroundResource(tv.resourceId);
@@ -717,20 +781,12 @@ public class ProfileFragment extends Fragment {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         img.setPadding(pad, pad, pad, pad);
 
-        String saved = AuthManager.getAvatarUri(requireContext());
-        if (saved != null) {
-            try {
-                img.setImageURI(Uri.parse(saved));
-            } catch (RuntimeException e) {
-                img.setImageResource(android.R.drawable.sym_def_app_icon);
-            }
+        // lấy luôn drawable hiện tại của imgAvatar cho đơn giản
+        ImageView current = getView() != null ? getView().findViewById(R.id.imgAvatar) : null;
+        if (current != null && current.getDrawable() != null) {
+            img.setImageDrawable(current.getDrawable());
         } else {
-            ImageView current = getView() != null ? getView().findViewById(R.id.imgAvatar) : null;
-            if (current != null && current.getDrawable() != null) {
-                img.setImageDrawable(current.getDrawable());
-            } else {
-                img.setImageResource(android.R.drawable.sym_def_app_icon);
-            }
+            img.setImageResource(android.R.drawable.sym_def_app_icon);
         }
 
         new MaterialAlertDialogBuilder(requireContext())

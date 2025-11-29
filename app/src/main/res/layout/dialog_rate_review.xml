@@ -61,6 +61,23 @@
                 android:overScrollMode="never"
                 android:inputType="textMultiLine" />
 
+            <!-- Nút chọn ảnh / video -->
+            <Button
+                android:id="@+id/btnPickMedia"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thêm ảnh / video"
+                android:layout_marginTop="8dp" />
+
+            <!-- Preview media -->
+            <ImageView
+                android:id="@+id/imgMediaPreview"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:layout_marginTop="8dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"/>
+
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
