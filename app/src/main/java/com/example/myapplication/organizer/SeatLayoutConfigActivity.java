@@ -1,8 +1,10 @@
 package com.example.myapplication.organizer;
 
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ScaleGestureDetector;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -28,14 +30,13 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
     public static final String EXTRA_EVENT_ID          = "eventId";
     public static final String EXTRA_TICKET_NAME       = "ticketTypeName";
     public static final String EXTRA_MAX_SEATS         = "maxSeats";
-    public static final String EXTRA_TEMPLATE_ID       = "templateId";
     public static final String EXTRA_TOTAL_EVENT_SEATS = "totalEventSeats";
 
-    // ROWS / COLS: tham chiếu, thực tế dùng rows/cols từ template
-    public static final int ROWS = 8;
-    public static final int COLS = 12;
+    // rows / cols hiện tại (dùng thêm ở chỗ khác nếu cần)
+    public static int ROWS = 8;
+    public static int COLS = 12;
 
-    // GHẾ TẠM TRONG RAM
+    // GHẾ TẠM TRONG RAM: key = eventId + "|" + ticketName
     private static final Map<String, List<String>> TEMP_SEATS = new HashMap<>();
 
     private static String buildKey(String eventId, String ticketName) {
@@ -47,13 +48,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         List<String> list = TEMP_SEATS.get(key);
         if (list == null) return new ArrayList<>();
         return new ArrayList<>(list);
-    }
-
-    // ✅ thêm setter để màn Edit / Create có thể đẩy ghế cũ vào cache
-    public static void setSeatsForTicket(String eventId, String ticketName, List<String> seats) {
-        if (eventId == null || ticketName == null) return;
-        String key = buildKey(eventId, ticketName);
-        TEMP_SEATS.put(key, new ArrayList<>(seats));
     }
 
     public static void clearSeatsForEvent(String eventId) {
@@ -77,13 +71,18 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
     private String eventId;
     private String ticketName;
     private int maxSeats;
-
-    private SeatTemplate template;
-    private int rows;
-    private int cols;
+    private int totalEventSeats;   // tổng ghế của event
 
     private final List<SeatItem> seatItems = new ArrayList<>();
     private SeatConfigAdapter adapter;
+
+    // Zoom
+    private ScaleGestureDetector scaleDetector;
+    private float scaleFactor = 1.0f;
+
+    // Drag select
+    private boolean isDraggingSelect = false;
+    private final HashSet<Integer> draggedPositions = new HashSet<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -100,101 +99,230 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         eventId    = getIntent().getStringExtra(EXTRA_EVENT_ID);
         ticketName = getIntent().getStringExtra(EXTRA_TICKET_NAME);
         maxSeats   = getIntent().getIntExtra(EXTRA_MAX_SEATS, 0);
+        totalEventSeats = getIntent().getIntExtra(EXTRA_TOTAL_EVENT_SEATS, 0);
 
         if (eventId == null) eventId = "";
         if (ticketName == null) ticketName = "";
 
-        int totalEventSeats = getIntent().getIntExtra(EXTRA_TOTAL_EVENT_SEATS, 0);
-        String templateId   = getIntent().getStringExtra(EXTRA_TEMPLATE_ID);
+        // fallback: nếu không truyền tổng số ghế event thì dùng quota của loại vé
+        if (totalEventSeats <= 0) totalEventSeats = maxSeats;
+        // để tránh map quá khủng – bạn muốn lớn hơn thì chỉnh
+        if (totalEventSeats > 500) totalEventSeats = 500;
 
-        // ===== CHỌN TEMPLATE =====
-        template = null;
+        // ===== TÍNH rows / cols ĐỘNG =====
+        int maxCols = 12; // nhiều hơn thì nút bé xíu
+        int cols = (int) Math.ceil(Math.sqrt(totalEventSeats));
+        if (cols < 4) cols = 4;
+        if (cols > maxCols) cols = maxCols;
+        int rows = (int) Math.ceil(totalEventSeats * 1.0 / cols);
 
-        // 1. ƯU TIÊN templateId được gửi từ Create/Edit
-        if (templateId != null) {
-            template = SeatTemplateStore.getTemplate(templateId);
-        }
-
-        // 2. Nếu templateId null hoặc không tìm thấy → fallback chọn theo capacity
-        if (template == null) {
-            if (totalEventSeats <= 0) {
-                // nếu không truyền tổng số vé, fallback thêm sang quota của loại vé
-                totalEventSeats = maxSeats;
-            }
-            template = SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
-        }
-
-        // 3. Nếu vẫn null → dùng default
-        if (template == null) {
-            template = SeatTemplateStore.getDefaultTemplate();
-        }
-
-        rows = template.getRows();
-        cols = template.getCols();
+        ROWS = rows;
+        COLS = cols;
 
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(template.getName());
+            getSupportActionBar().setTitle(
+                    String.format(Locale.getDefault(),
+                            "Sơ đồ ghế (%d ghế)", totalEventSeats)
+            );
         }
 
-        // ghế đã chọn
+        // Ghế đã chọn trước của loại vé này
         List<String> preSelected = getSeatsForTicket(eventId, ticketName);
 
-        // ghế bị khoá do loại vé khác
+        // Ghế bị khoá do loại vé khác
         Set<String> lockedByOthers = new HashSet<>();
         String myKey = buildKey(eventId, ticketName);
         for (Map.Entry<String, List<String>> entry : TEMP_SEATS.entrySet()) {
-            if (!entry.getKey().equals(myKey) && entry.getKey().startsWith(eventId + "|")) {
+            if (!entry.getKey().equals(myKey)
+                    && entry.getKey().startsWith(eventId + "|")) {
                 lockedByOthers.addAll(entry.getValue());
             }
         }
 
-        buildSeatGrid(preSelected, lockedByOthers);
+        buildSeatGrid(rows, cols, totalEventSeats, preSelected, lockedByOthers);
 
         adapter = new SeatConfigAdapter(seatItems, this::onSeatClicked);
         recyclerView.setLayoutManager(new GridLayoutManager(this, cols));
         recyclerView.setAdapter(adapter);
 
+        // ===== ZOOM 2 NGÓN =====
+        scaleDetector = new ScaleGestureDetector(
+                this,
+                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    @Override
+                    public boolean onScale(ScaleGestureDetector detector) {
+                        scaleFactor *= detector.getScaleFactor();
+                        // hạn chế zoom
+                        scaleFactor = Math.max(0.5f, Math.min(scaleFactor, 3.0f));
+                        recyclerView.setScaleX(scaleFactor);
+                        recyclerView.setScaleY(scaleFactor);
+                        return true;
+                    }
+                }
+        );
+
+        recyclerView.setOnTouchListener((v, event) -> {
+            scaleDetector.onTouchEvent(event);
+            // cho phép RecyclerView vẫn scroll / click bình thường
+            return false;
+        });
+
+        // ===== DRAG SELECT =====
+        recyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv,
+                                                 @NonNull MotionEvent e) {
+                // vẫn feed event cho zoom
+                scaleDetector.onTouchEvent(e);
+
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        isDraggingSelect = false;
+                        draggedPositions.clear();
+
+                        View child = rv.findChildViewUnder(e.getX(), e.getY());
+                        if (child != null) {
+                            int idx = rv.getChildAdapterPosition(child);
+                            if (idx != RecyclerView.NO_POSITION && idx < seatItems.size()) {
+                                SeatItem seat = seatItems.get(idx);
+                                if (!seat.isPlaceholder && !seat.locked) {
+                                    isDraggingSelect = true;
+                                    draggedPositions.add(idx);
+                                    // bắt đầu bằng toggle giống click
+                                    onSeatClicked(seat);
+                                    return true; // mình xử lý các move tiếp theo
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public void onTouchEvent(@NonNull RecyclerView rv,
+                                     @NonNull MotionEvent e) {
+                scaleDetector.onTouchEvent(e);
+
+                if (!isDraggingSelect) return;
+
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_MOVE: {
+                        View child = rv.findChildViewUnder(e.getX(), e.getY());
+                        if (child != null) {
+                            int idx = rv.getChildAdapterPosition(child);
+                            if (idx != RecyclerView.NO_POSITION
+                                    && idx < seatItems.size()
+                                    && !draggedPositions.contains(idx)) {
+
+                                SeatItem seat = seatItems.get(idx);
+                                if (!seat.isPlaceholder && !seat.locked) {
+                                    draggedPositions.add(idx);
+                                    selectSeatDuringDrag(seat);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        isDraggingSelect = false;
+                        draggedPositions.clear();
+                        break;
+                }
+            }
+
+            @Override
+            public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
+        });
+
         btnSaveSeats.setOnClickListener(v -> onSaveClicked());
     }
 
-    private void buildSeatGrid(List<String> preSelected, Set<String> lockedByOthers) {
+    /** Build grid động: tạo đúng totalSeats ghế, phần dư là placeholder (ẩn). */
+    private void buildSeatGrid(int rows,
+                               int cols,
+                               int totalSeats,
+                               List<String> preSelected,
+                               Set<String> lockedByOthers) {
         seatItems.clear();
 
-        Set<String> activeSeats = template.getActiveSeats();
-
+        int createdSeats = 0;
         int index = 0;
+
         for (int r = 0; r < rows; r++) {
             char rowChar = (char) ('A' + r);
             for (int c = 1; c <= cols; c++) {
 
+                if (createdSeats >= totalSeats) {
+                    // placeholder giữ form grid
+                    SeatItem placeholder = new SeatItem("", false, false, true, null);
+                    placeholder.position = index++;
+                    seatItems.add(placeholder);
+                    continue;
+                }
+
                 String label = String.format(Locale.getDefault(), "%c%d", rowChar, c);
-                boolean isSeat = activeSeats.contains(label);
+                createdSeats++;
 
-                boolean selected = isSeat && preSelected.contains(label);
-                boolean locked   = isSeat && lockedByOthers.contains(label);
-                String zone      = isSeat ? template.getZoneForSeat(label) : null;
+                boolean selected = preSelected.contains(label);
+                boolean locked   = lockedByOthers.contains(label);
 
-                SeatItem item = new SeatItem(label, selected, locked, !isSeat, zone);
+                // zone đơn giản cho đẹp – không dùng logic gì đặc biệt
+                String zone;
+                if (r < 2) {
+                    zone = "VIP";
+                } else if (r < 5) {
+                    zone = "STANDARD";
+                } else {
+                    zone = "ECONOMY";
+                }
+
+                SeatItem item = new SeatItem(label, selected, locked, false, zone);
                 item.position = index++;
-
                 seatItems.add(item);
             }
         }
     }
 
-    private void onSeatClicked(SeatItem seat) {
-        if (seat.isPlaceholder) return;
-
-        if (seat.locked) {
-            Toast.makeText(this, "Ghế này đã được chọn bởi loại vé khác", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // đếm số ghế đang chọn
+    private int getCurrentSelectedCount() {
         int selectedCount = 0;
         for (SeatItem s : seatItems) {
             if (!s.isPlaceholder && s.selected) selectedCount++;
         }
+        return selectedCount;
+    }
+
+    /** Chọn thêm ghế trong lúc drag (chỉ bật, không toggle tắt). */
+    private void selectSeatDuringDrag(SeatItem seat) {
+        if (seat.selected) return;
+
+        int selectedCount = getCurrentSelectedCount();
+        if (maxSeats > 0 && selectedCount >= maxSeats) {
+            Toast.makeText(
+                    this,
+                    "Đã đạt giới hạn " + maxSeats + " ghế cho \"" + ticketName + "\"",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        seat.selected = true;
+        adapter.notifyItemChanged(seat.position);
+    }
+
+    /** Click bình thường (toggle) – dùng cho cả tap và bắt đầu drag. */
+    private void onSeatClicked(SeatItem seat) {
+        if (seat.isPlaceholder) return;
+
+        if (seat.locked) {
+            Toast.makeText(this,
+                    "Ghế này đã được chọn bởi loại vé khác",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int selectedCount = getCurrentSelectedCount();
 
         if (!seat.selected) {
             if (maxSeats > 0 && selectedCount >= maxSeats) {
@@ -229,7 +357,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             return;
         }
 
-        // Lưu tạm
         TEMP_SEATS.put(buildKey(eventId, ticketName), selected);
 
         Toast.makeText(this,
@@ -250,7 +377,8 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         String zone;
         int position;
 
-        SeatItem(String label, boolean selected, boolean locked, boolean isPlaceholder, String zone) {
+        SeatItem(String label, boolean selected, boolean locked,
+                 boolean isPlaceholder, String zone) {
             this.label = label;
             this.selected = selected;
             this.locked = locked;
@@ -314,6 +442,7 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
 
                 btnSeat.setVisibility(View.VISIBLE);
                 btnSeat.setText(seat.label);
+                btnSeat.setAllCaps(false);
 
                 int colorRes;
                 if (seat.locked) {
@@ -334,8 +463,17 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
 
                 if (!seat.locked) {
                     btnSeat.setOnClickListener(v -> listener.onSeatClick(seat));
+                } else {
+                    btnSeat.setOnClickListener(null);
                 }
             }
         }
+    }
+
+    // Cho phép màn khác (Edit / Create) set ghế từ Firestore vào cache tạm
+    public static void setSeatsForTicket(String eventId, String ticketName, List<String> seats) {
+        if (eventId == null || ticketName == null || seats == null) return;
+        String key = buildKey(eventId, ticketName);
+        TEMP_SEATS.put(key, new ArrayList<>(seats));
     }
 }

@@ -20,7 +20,7 @@ public class OrganizerProfileActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Hồ sơ tổ chức");
+            getSupportActionBar().setTitle("Hồ sơ tổ ban chức");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 

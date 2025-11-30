@@ -128,7 +128,7 @@
                 android:layout_marginEnd="8dp"
                 android:minHeight="0dp"
                 android:paddingHorizontal="12dp"
-                android:text="Xem vé đã bán"
+                android:text="Vé &amp; danh sách"
                 android:textSize="13sp" />
 
             <Button

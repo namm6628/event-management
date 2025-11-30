@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -23,6 +22,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
@@ -34,10 +34,6 @@ import com.example.myapplication.data.remote.EventRemoteDataSource;
 import com.example.myapplication.data.repo.EventRepository;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
@@ -53,29 +49,31 @@ public class HomeFragment extends Fragment {
     private SearchView searchView;
     private ChipGroup chipGroup;
 
+    // Hero indicator (dot)
+    private LinearLayout layoutHeroIndicator;
+
     // Adapters & views
     private EventsAdapter specialAdapter;
     private EventsAdapter trendingAdapter;
     private EventsAdapter forYouAdapter;
     private EventsAdapter weekendAdapter;
 
-    private View exploreCategoriesContainer;
-    private TextView tvTitleSpecial;
+    private View        exploreCategoriesContainer;
+    private TextView    tvTitleSpecial;
     private RecyclerView rvSpecial;
     private LinearLayout dynamicCategoriesLayout;
 
-    // ==== HERO VIDEO ====
-    private TextView tvTitleVideo;
-    private View layoutHeroVideo;
-    private PlayerView playerHero;
-    private ImageButton btnToggleMute;
-    private ExoPlayer heroPlayer;
-    private Event heroEvent; // event hiện đang phát
+    // ==== HERO VIDEO SLIDER ====
+    private ViewPager2      vpHeroVideos;
+    private HeroVideoAdapter heroAdapter;
+    private int currentHeroIndex = 0;
 
     private RecyclerView.LayoutManager specialHorizontalManager;
     private RecyclerView.LayoutManager specialVerticalManager;
 
     private final List<EventsAdapter> dynamicAdapters = new ArrayList<>();
+
+    // ================== LIFECYCLE ==================
 
     @Nullable
     @Override
@@ -102,19 +100,24 @@ public class HomeFragment extends Fragment {
         ExploreVMFactory factory = new ExploreVMFactory(repo);
         vm = new ViewModelProvider(requireActivity(), factory).get(ExploreViewModel.class);
 
-        // searchView = v.findViewById(R.id.searchView); // nếu có trong layout thì mở
-        chipGroup  = v.findViewById(R.id.chipGroup);
+        // searchView = v.findViewById(R.id.searchView); // nếu có trong layout
+        chipGroup = v.findViewById(R.id.chipGroup);
 
         exploreCategoriesContainer = v.findViewById(R.id.exploreCategoriesContainer);
-        tvTitleSpecial = v.findViewById(R.id.tvTitleSpecial);
-        rvSpecial = v.findViewById(R.id.rvSpecialEvents);
-        dynamicCategoriesLayout = v.findViewById(R.id.dynamicCategoriesLayout);
+        tvTitleSpecial            = v.findViewById(R.id.tvTitleSpecial);
+        rvSpecial                 = v.findViewById(R.id.rvSpecialEvents);
+        dynamicCategoriesLayout   = v.findViewById(R.id.dynamicCategoriesLayout);
 
-        // ==== HERO VIDEO VIEW ====
-        tvTitleVideo   = v.findViewById(R.id.tvTitleVideo);
-        layoutHeroVideo = v.findViewById(R.id.layoutHeroVideo);
-        playerHero     = v.findViewById(R.id.playerHero);
-        btnToggleMute  = v.findViewById(R.id.btnToggleMute);
+        // ==== HERO VIDEO SLIDER + DOTS ====
+        vpHeroVideos        = v.findViewById(R.id.vpHeroVideos);
+        layoutHeroIndicator = v.findViewById(R.id.layoutHeroIndicator);
+
+        heroAdapter = new HeroVideoAdapter(requireContext(), event -> {
+            saveUserInterest(event);
+            openEventDetail(event);
+        });
+        vpHeroVideos.setAdapter(heroAdapter);
+        vpHeroVideos.registerOnPageChangeCallback(heroPageChangeCallback);
 
         specialHorizontalManager =
                 new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false);
@@ -171,32 +174,29 @@ public class HomeFragment extends Fragment {
         vm.getWeekendEvents().observe(getViewLifecycleOwner(), list -> weekendAdapter.submitList(list));
         vm.getDynamicCategories().observe(getViewLifecycleOwner(), this::updateDynamicCategoriesUI);
 
-        // 🔥 HERO VIDEO: lấy danh sách event có video, chọn 1 cái để phát
+        // 🔥 HERO VIDEO SLIDER
         vm.getVideoEvents().observe(getViewLifecycleOwner(), list -> {
             if (list == null || list.isEmpty()) {
-                tvTitleVideo.setVisibility(View.GONE);
-                layoutHeroVideo.setVisibility(View.GONE);
-                releaseHeroPlayer();
-                heroEvent = null;
+                vpHeroVideos.setVisibility(View.GONE);
+                layoutHeroIndicator.setVisibility(View.GONE);
             } else {
-                tvTitleVideo.setVisibility(View.VISIBLE);
-                layoutHeroVideo.setVisibility(View.VISIBLE);
+                vpHeroVideos.setVisibility(View.VISIBLE);
+                layoutHeroIndicator.setVisibility(View.VISIBLE);
 
-                // Tạm thời lấy event đầu tiên trong list video
-                heroEvent = list.get(0);
-                setupHeroVideo(heroEvent);
+                heroAdapter.submitList(list);
+                setupHeroIndicators(list.size());
+
+                if (currentHeroIndex >= list.size()) currentHeroIndex = 0;
+
+                vpHeroVideos.setCurrentItem(currentHeroIndex, false);
+                updateHeroIndicator(currentHeroIndex);
+
+                // nếu bạn đã dùng HeroVideoAdapter mới có onPageSelected:
+                heroAdapter.onPageSelected(currentHeroIndex);
             }
         });
 
-        // Click hero video -> mở chi tiết event
-        layoutHeroVideo.setOnClickListener(view -> {
-            if (heroEvent != null) {
-                openEventDetail(heroEvent);
-            }
-        });
 
-        // Toggle mute
-        btnToggleMute.setOnClickListener(view -> toggleHeroMute());
 
         // ===== SearchView filter =====
         if (searchView != null) {
@@ -243,6 +243,20 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    // callback đổi trang -> đổi dot + reset auto-scroll
+    private final ViewPager2.OnPageChangeCallback heroPageChangeCallback =
+            new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    super.onPageSelected(position);
+                    currentHeroIndex = position;
+                    updateHeroIndicator(position);
+                    heroAdapter.onPageSelected(position);   // báo adapter, adapter tự gắn player + play
+                }
+            };
+
+
+
     @Override
     public void onResume() {
         super.onResume();
@@ -252,60 +266,69 @@ public class HomeFragment extends Fragment {
             String lastInterest = prefs.getString("LAST_INTEREST_CATEGORY", null);
             vm.refresh(lastInterest);
         }
+        // nếu đã có list video thì tiếp tục play slide hiện tại
+        if (heroAdapter != null) {
+            heroAdapter.onPageSelected(currentHeroIndex);   // tiếp tục đúng video ở slide hiện tại
+        }
+
     }
 
     @Override
-    public void onStop() {
-        super.onStop();
-        // Tạm dừng video khi fragment không còn visible
-        if (heroPlayer != null) {
-            heroPlayer.pause();
+    public void onPause() {
+        super.onPause();
+        if (heroAdapter != null) {
+            heroAdapter.pause();
         }
     }
+
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        releaseHeroPlayer();
+        if (vpHeroVideos != null) {
+            vpHeroVideos.unregisterOnPageChangeCallback(heroPageChangeCallback);
+        }
+        if (heroAdapter != null) {
+            heroAdapter.release();  // 🔥 giải phóng player khi fragment destroy
+        }
+
     }
 
-    // ==== HERO VIDEO LOGIC ====
+    // ====== DOT INDICATOR ======
+    private void setupHeroIndicators(int count) {
+        layoutHeroIndicator.removeAllViews();
 
-    private void setupHeroVideo(Event event) {
-        if (event == null || event.getVideoUrl() == null || event.getVideoUrl().isEmpty()) {
+        if (count <= 1) {
+            layoutHeroIndicator.setVisibility(View.GONE);
             return;
         }
-        if (heroPlayer == null) {
-            heroPlayer = new ExoPlayer.Builder(requireContext()).build();
-            playerHero.setPlayer(heroPlayer);
-        }
 
-        MediaItem media = MediaItem.fromUri(event.getVideoUrl());
-        heroPlayer.setMediaItem(media);
-        heroPlayer.setRepeatMode(Player.REPEAT_MODE_ONE);
-        heroPlayer.prepare();
-        heroPlayer.setVolume(0f); // default: mute
-        heroPlayer.play();
+        layoutHeroIndicator.setVisibility(View.VISIBLE);
 
-        // icon mute
-        btnToggleMute.setImageResource(R.drawable.ic_volume_off_white_24);
-    }
+        float density = getResources().getDisplayMetrics().density;
+        int size   = (int) (8 * density);
+        int margin = (int) (4 * density);
 
-    private void toggleHeroMute() {
-        if (heroPlayer == null) return;
-        if (heroPlayer.getVolume() == 0f) {
-            heroPlayer.setVolume(1f);
-            btnToggleMute.setImageResource(R.drawable.ic_volume_up_white_24);
-        } else {
-            heroPlayer.setVolume(0f);
-            btnToggleMute.setImageResource(R.drawable.ic_volume_off_white_24);
+        for (int i = 0; i < count; i++) {
+            View dot = new View(requireContext());
+            LinearLayout.LayoutParams lp =
+                    new LinearLayout.LayoutParams(size, size);
+            lp.setMargins(margin, margin, margin, margin);
+            dot.setLayoutParams(lp);
+            dot.setBackgroundResource(R.drawable.bg_hero_indicator_inactive);
+            layoutHeroIndicator.addView(dot);
         }
     }
 
-    private void releaseHeroPlayer() {
-        if (heroPlayer != null) {
-            heroPlayer.release();
-            heroPlayer = null;
+    private void updateHeroIndicator(int position) {
+        int childCount = layoutHeroIndicator.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            View dot = layoutHeroIndicator.getChildAt(i);
+            dot.setBackgroundResource(
+                    i == position
+                            ? R.drawable.bg_chip_broadcast
+                            : R.drawable.bg_bottom_nav
+            );
         }
     }
 
@@ -328,9 +351,8 @@ public class HomeFragment extends Fragment {
 
         exploreCategoriesContainer.setVisibility(isSearching ? View.GONE : View.VISIBLE);
         dynamicCategoriesLayout.setVisibility(isSearching ? View.GONE : View.VISIBLE);
-
-        tvTitleVideo.setVisibility(isSearching ? View.GONE : View.VISIBLE);
-        layoutHeroVideo.setVisibility(isSearching ? View.GONE : View.VISIBLE);
+        vpHeroVideos.setVisibility(isSearching ? View.GONE : View.VISIBLE);
+        layoutHeroIndicator.setVisibility(isSearching ? View.GONE : View.VISIBLE);
 
         tvTitleSpecial.setText(isSearching ? "Kết quả tìm kiếm" : "Danh sách sự kiện");
 
@@ -380,9 +402,9 @@ public class HomeFragment extends Fragment {
         if (categories == null) return;
 
         float density = getResources().getDisplayMetrics().density;
-        int marginBottom8dp = (int) (8 * density);
+        int marginBottom8dp  = (int) (8 * density);
         int marginBottom16dp = (int) (16 * density);
-        int paddingEnd12dp = (int) (12 * density);
+        int paddingEnd12dp   = (int) (12 * density);
 
         for (DynamicCategory category : categories) {
             // Tiêu đề
@@ -460,6 +482,7 @@ public class HomeFragment extends Fragment {
     public static class EventsAdapter extends ListAdapter<Event, EventsAdapter.VH> {
 
         private final OnEventClickListener clickListener;
+        private static android.view.animation.Animation HINT_ANIM = null;
 
         public EventsAdapter(OnEventClickListener listener) {
             super(DIFF);
@@ -492,20 +515,25 @@ public class HomeFragment extends Fragment {
 
         static class VH extends RecyclerView.ViewHolder {
             final TextView title;
-            final TextView subtitle;
-            final TextView price;
             final ImageView thumbnail;
+            final View btnSeeMore;
+            final ImageView ivArrow;
+            final ImageView moreHint;
 
             VH(@NonNull View itemView) {
                 super(itemView);
-                title = itemView.findViewById(R.id.tvTitle);
-                subtitle = itemView.findViewById(R.id.tvPlace);
-                price = itemView.findViewById(R.id.tvPrice);
-                thumbnail = itemView.findViewById(R.id.ivThumb);
+                title      = itemView.findViewById(R.id.tvTitle);
+                thumbnail  = itemView.findViewById(R.id.ivThumb);
+                btnSeeMore = itemView.findViewById(R.id.btnSeeMore);
+                ivArrow    = itemView.findViewById(R.id.ivMoreHint);
+                moreHint   = itemView.findViewById(R.id.ivMoreHint);
             }
 
             void bind(Event event, OnEventClickListener listener) {
                 itemView.setOnClickListener(v -> listener.onEventClick(event));
+                if (btnSeeMore != null) {
+                    btnSeeMore.setOnClickListener(v -> listener.onEventClick(event));
+                }
             }
         }
 
@@ -522,48 +550,13 @@ public class HomeFragment extends Fragment {
             Event e = getItem(position);
             if (e == null) return;
 
-            // ----- TITLE + HOT -----
+            // ----- TITLE -----
             String rawTitle = (e.getTitle() == null || e.getTitle().isEmpty())
                     ? "(No title)"
                     : e.getTitle();
+            h.title.setText(rawTitle);
 
-            if (Boolean.TRUE.equals(e.getFeatured())) {
-                h.title.setText("🔥 " + rawTitle);
-            } else {
-                h.title.setText(rawTitle);
-            }
-
-            // ----- SUBTITLE: ưu đãi hoặc thời gian -----
-            String promo = e.getPromoTag();
-            if (promo != null && !promo.trim().isEmpty()) {
-                h.subtitle.setText(promo.trim());
-            } else {
-                long t = (e.getStartTime() == null)
-                        ? 0L
-                        : e.getStartTime().toDate().getTime();
-                String time = (t == 0L) ? "" :
-                        new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(t);
-                h.subtitle.setText(time);
-            }
-
-            // ----- PRICE -----
-            Double p = e.getPrice();
-            if (p == null || p == 0d) {
-                h.price.setText("Miễn phí");
-                h.price.setTextColor(
-                        android.graphics.Color.parseColor("#4CAF50")
-                );
-            } else {
-                String priceText = java.text.NumberFormat
-                        .getNumberInstance(new Locale("vi", "VN"))
-                        .format(p) + " đ";
-                h.price.setText(priceText);
-                h.price.setTextColor(
-                        android.graphics.Color.parseColor("#D32F2F")
-                );
-            }
-
-            // ----- THUMBNAIL -----
+            // ----- ẢNH COVER FULL CARD -----
             if (e.getThumbnail() != null && !e.getThumbnail().isEmpty()) {
                 Glide.with(h.itemView.getContext())
                         .load(e.getThumbnail())
@@ -575,6 +568,15 @@ public class HomeFragment extends Fragment {
             }
 
             h.bind(e, clickListener);
+
+            // ----- ANIM MŨI TÊN GỢI Ý LƯỚT -----
+            if (h.moreHint != null) {
+                if (HINT_ANIM == null) {
+                    HINT_ANIM = android.view.animation.AnimationUtils
+                            .loadAnimation(h.itemView.getContext(), R.anim.hero_hint_wiggle);
+                }
+                h.moreHint.startAnimation(HINT_ANIM);
+            }
         }
     }
 }

@@ -4,67 +4,50 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp"
     android:background="?attr/colorSurface">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
         android:layout_weight="1"
         android:fillViewport="true">
 
+        <!-- ✅ NestedScrollView CHỈ CÓ 1 CHILD: LinearLayout này -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- 🔥 VIDEO GIỚI THIỆU – HERO -->
-            <TextView
-                android:id="@+id/tvTitleVideo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Video Giới Thiệu"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                android:layout_marginBottom="8dp"/>
-
-            <FrameLayout
-                android:id="@+id/layoutHeroVideo"
+            <!-- 🔥 HERO SLIDER + DOT INDICATOR -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:layout_marginBottom="16dp">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
 
-                <!-- PlayerView chiếm full ngang -->
-                <com.google.android.exoplayer2.ui.PlayerView
-                    android:id="@+id/playerHero"
+                <androidx.viewpager2.widget.ViewPager2
+                    android:id="@+id/vpHeroVideos"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@android:color/black"
-                    app:use_controller="false" />
+                    android:layout_height="220dp" />
 
-                <!-- Nút bật/tắt âm ở góc phải dưới -->
-                <ImageButton
-                    android:id="@+id/btnToggleMute"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_gravity="bottom|end"
-                    android:layout_margin="8dp"
-                    android:background="@drawable/bg_circle_dark_60"
-                    android:padding="6dp"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/ic_volume_off_white_24"
-                    android:contentDescription="@string/app_name" />
+                <LinearLayout
+                    android:id="@+id/layoutHeroIndicator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
 
-            </FrameLayout>
-
+            <!-- Từ đây trở xuống: nội dung có padding để đẹp mắt -->
             <LinearLayout
                 android:id="@+id/exploreCategoriesContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:padding="12dp">
 
                 <TextView
                     android:id="@+id/tvTitleTrending"
@@ -74,7 +57,7 @@
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvTrendingEvents"
@@ -93,7 +76,7 @@
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvForYouEvents"
@@ -112,7 +95,7 @@
                     android:textAppearance="?attr/textAppearanceTitleMedium"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvWeekendEvents"
@@ -130,16 +113,17 @@
                     android:orientation="vertical" />
             </LinearLayout>
 
-            <!-- Sự kiện đặc biệt -->
             <TextView
                 android:id="@+id/tvTitleSpecial"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Danh sách sự kiện"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
                 android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginBottom="8dp" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvSpecialEvents"
@@ -149,10 +133,6 @@
                 android:clipToPadding="false"
                 android:paddingEnd="12dp"
                 android:orientation="horizontal" />
-
-            <!-- Các block còn lại giữ nguyên -->
-
-
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

@@ -42,7 +42,7 @@ public class Event implements Serializable {
     private String videoUrl;
 
     @com.google.firebase.firestore.PropertyName("hasVideo")
-    private boolean hasVideo = false; // Mặc định là false
+    private boolean hasVideo;
 
     // 🔹 MARKETING
     // featured: sự kiện nổi bật
@@ -127,13 +127,15 @@ public class Event implements Serializable {
 
     @com.google.firebase.firestore.PropertyName("hasVideo")
     public boolean getHasVideo() {
-        return hasVideo;
+        // null hoặc false -> trả về false
+        return Boolean.TRUE.equals(hasVideo);
     }
 
     @com.google.firebase.firestore.PropertyName("hasVideo")
-    public void setHasVideo(boolean hasVideo) {
+    public void setHasVideo(Boolean hasVideo) {
         this.hasVideo = hasVideo;
     }
+
 
     @Exclude
     public boolean hasSeatLayout() {

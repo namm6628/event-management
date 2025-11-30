@@ -146,6 +146,21 @@ public class OrganizerCreateEventFragment extends Fragment {
         }
     }
 
+    // ===== REFRESH GHẾ KHI QUAY LẠI =====
+    @Override
+    public void onResume() {
+        super.onResume();
+        for (TicketRow row : ticketRows) {
+            String name = getText(row.edtName);
+            if (name.isEmpty()) continue;
+
+            List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
+            row.seatCodes.clear();
+            row.seatCodes.addAll(seats);
+            updateSeatInfoText(row);
+        }
+    }
+
     private void showDateTimePicker() {
         final Calendar now = Calendar.getInstance();
 
@@ -221,6 +236,8 @@ public class OrganizerCreateEventFragment extends Fragment {
         dateDialog.show();
     }
 
+    // ===== DÒNG LOẠI VÉ =====
+
     private void addTicketRow() {
         addTicketRowWithData(null, null, null);
     }
@@ -244,8 +261,20 @@ public class OrganizerCreateEventFragment extends Fragment {
         if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
         if (quota != null) edtQuota.setText(String.valueOf(quota.intValue()));
 
+        // ✅ set text mặc định
+        tvSeatInfo.setVisibility(View.VISIBLE);
+        tvSeatInfo.setText("Chưa chọn ghế");
+
         TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, rowView, tvSeatInfo);
         ticketRows.add(row);
+
+        // Nếu đang edit / có sẵn tên → load ghế tạm
+        if (name != null) {
+            List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
+            row.seatCodes.clear();
+            row.seatCodes.addAll(seats);
+        }
+        updateSeatInfoText(row);
 
         btnRemove.setOnClickListener(v -> {
             layoutTicketContainer.removeView(rowView);
@@ -254,7 +283,6 @@ public class OrganizerCreateEventFragment extends Fragment {
             // xóa luôn ghế tạm cho loại vé này
             String ticketName = getText(edtName);
             SeatLayoutConfigActivity.clearSeatsForTicket(eventIdForSeats, ticketName);
-            if (row.tvSeatInfo != null) row.tvSeatInfo.setText("Chưa chọn ghế");
         });
 
         btnSetupSeats.setOnClickListener(v -> {
@@ -282,42 +310,36 @@ public class OrganizerCreateEventFragment extends Fragment {
                 return;
             }
 
-            // ===== LẤY TỔNG SỐ VÉ CỦA EVENT =====
             int totalEventSeats = 0;
-            String sTotal = getText(edtTotalSeats);
+            String totalStr = getText(edtTotalSeats);
             try {
-                totalEventSeats = Integer.parseInt(sTotal);
-            } catch (NumberFormatException ignored) {
-                totalEventSeats = 0;
-            }
-            // fallback: nếu chưa nhập tổng vé thì dùng quota của loại vé
+                totalEventSeats = Integer.parseInt(totalStr);
+            } catch (NumberFormatException ignored) {}
             if (totalEventSeats <= 0) {
                 totalEventSeats = quotaVal;
             }
-
-            // ===== CHỌN TEMPLATE PHÙ HỢP THEO TỔNG VÉ =====
-            SeatTemplate pickedTemplate =
-                    SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
-            String templateId = pickedTemplate != null ? pickedTemplate.getId() : null;
 
             Intent i = new Intent(requireContext(), SeatLayoutConfigActivity.class);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_EVENT_ID, eventIdForSeats);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_TICKET_NAME, ticketName);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_MAX_SEATS, quotaVal);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_TOTAL_EVENT_SEATS, totalEventSeats);
-            i.putExtra(SeatLayoutConfigActivity.EXTRA_TEMPLATE_ID, templateId);
             startActivity(i);
         });
 
         layoutTicketContainer.addView(rowView);
     }
 
+    // ===== MODEL TICKET ROW =====
 
     private static class TicketRow {
         EditText edtName, edtPrice, edtQuota;
         TextView tvSeatInfo;
         View root;
-        TicketRow(EditText name, EditText price, EditText quota, View root, TextView tvSeatInfo) {
+        HashSet<String> seatCodes = new HashSet<>();
+
+        TicketRow(EditText name, EditText price, EditText quota,
+                  View root, TextView tvSeatInfo) {
             this.edtName = name;
             this.edtPrice = price;
             this.edtQuota = quota;
@@ -325,6 +347,20 @@ public class OrganizerCreateEventFragment extends Fragment {
             this.tvSeatInfo = tvSeatInfo;
         }
     }
+
+    private void updateSeatInfoText(TicketRow row) {
+        if (row.tvSeatInfo == null) return;
+        row.tvSeatInfo.setVisibility(View.VISIBLE);
+
+        int count = row.seatCodes != null ? row.seatCodes.size() : 0;
+        if (count == 0) {
+            row.tvSeatInfo.setText("Chưa chọn ghế");
+        } else {
+            row.tvSeatInfo.setText("Đã chọn " + count + " ghế");
+        }
+    }
+
+    // ===== SAVE EVENT =====
 
     private void saveEvent() {
         String title    = getText(edtTitle);
@@ -424,7 +460,12 @@ public class OrganizerCreateEventFragment extends Fragment {
                 return;
             }
 
+            // Lấy ghế đã vẽ tạm & cập nhật text
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
+            row.seatCodes.clear();
+            row.seatCodes.addAll(seats);
+            updateSeatInfoText(row);
+
             if (!seats.isEmpty()) {
                 // nếu có cấu hình sơ đồ ghế thì check chặt quota
                 if (seats.size() != quota) {
@@ -519,6 +560,8 @@ public class OrganizerCreateEventFragment extends Fragment {
         );
     }
 
+    // ==== upload & save, saveSeatsForEvent giữ nguyên như cũ ====
+
     private void uploadImageThenSaveEvent(
             String ownerId,
             String title,
@@ -578,12 +621,9 @@ public class OrganizerCreateEventFragment extends Fragment {
                                     .set(data)
                                     .addOnSuccessListener(unused -> {
                                         if (!ticketTypes.isEmpty()) {
-                                            // 1. Lưu subcollection ticketTypes (có list seats)
                                             saveTicketTypes(eventIdForSeats, ticketTypes);
-                                            // 2. Generate FULL map seats (available + blocked) từ template
                                             saveSeatsForEvent(eventIdForSeats, ticketTypes);
                                         }
-                                        // Xoá cache tạm trong RAM
                                         SeatLayoutConfigActivity.clearSeatsForEvent(eventIdForSeats);
 
                                         Toast.makeText(requireContext(),
@@ -621,12 +661,7 @@ public class OrganizerCreateEventFragment extends Fragment {
         }
     }
 
-    /**
-     * Generate collection events/{eventId}/seats từ list ghế trong từng ticketType.
-     * Mỗi ghế: docId = "A1", field: row, number, type, status="available", price.
-     */
     private void saveSeatsForEvent(String eventId, List<Map<String, Object>> ticketTypes) {
-        // 1. Tập ghế đã gán cho loại vé (available)
         java.util.HashSet<String> assigned = new java.util.HashSet<>();
 
         for (Map<String, Object> ticket : ticketTypes) {
@@ -639,7 +674,7 @@ public class OrganizerCreateEventFragment extends Fragment {
 
             @SuppressWarnings("unchecked")
             List<String> seats = (List<String>) ticket.get("seats");
-            if (seats == null || seats.isEmpty()) continue; // loại vé không dùng sơ đồ ghế
+            if (seats == null || seats.isEmpty()) continue;
 
             for (String label : seats) {
                 if (label == null || label.trim().isEmpty()) continue;
@@ -663,12 +698,11 @@ public class OrganizerCreateEventFragment extends Fragment {
                 db.collection("events")
                         .document(eventId)
                         .collection("seats")
-                        .document(trimmed) // id = "A1"
+                        .document(trimmed)
                         .set(seatDoc);
             }
         }
 
-        // 2. Generate FULL map theo template (A1..H12 chẳng hạn)
         int rows = SeatLayoutConfigActivity.ROWS;
         int cols = SeatLayoutConfigActivity.COLS;
 
@@ -676,15 +710,13 @@ public class OrganizerCreateEventFragment extends Fragment {
             char rowChar = (char) ('A' + r);
             for (int c = 1; c <= cols; c++) {
                 String label = rowChar + String.valueOf(c);
-
-                // Nếu ghế này đã được gán cho loại vé -> bỏ qua (đã set ở trên)
                 if (assigned.contains(label)) continue;
 
                 Map<String, Object> seatDoc = new HashMap<>();
                 seatDoc.put("row", String.valueOf(rowChar));
                 seatDoc.put("number", c);
-                seatDoc.put("type", null);              // không thuộc loại vé nào
-                seatDoc.put("status", "blocked");       // ghế / lối đi không bán
+                seatDoc.put("type", null);
+                seatDoc.put("status", "blocked");
                 seatDoc.put("price", 0L);
 
                 db.collection("events")
@@ -695,7 +727,6 @@ public class OrganizerCreateEventFragment extends Fragment {
             }
         }
     }
-
 
     private String getText(EditText e) {
         return e == null || e.getText() == null

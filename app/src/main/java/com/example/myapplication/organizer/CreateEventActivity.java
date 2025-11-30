@@ -221,6 +221,9 @@ public class CreateEventActivity extends AppCompatActivity {
         MaterialButton btnSetupSeats = rowView.findViewById(R.id.btnSetupSeats);
         TextView tvSeatInfo = rowView.findViewById(R.id.tvSeatStatus);
 
+        tvSeatInfo.setVisibility(View.VISIBLE);
+        tvSeatInfo.setText("Chưa chọn ghế");
+
         if (name != null)  edtName.setText(name);
         if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
         if (quota != null) edtQuota.setText(String.valueOf(quota.intValue()));
@@ -247,11 +250,11 @@ public class CreateEventActivity extends AppCompatActivity {
             String sQuota = edtQuota.getText().toString().trim();
 
             if (ticketName.isEmpty()) {
-                edtName.setError("Nhập tên loại vé trước");
+                edtName.setError("Nhập loại vé trước");
                 return;
             }
             if (sQuota.isEmpty()) {
-                edtQuota.setError("Nhập số vé (quota) trước");
+                edtQuota.setError("Nhập số vé trước");
                 return;
             }
 
@@ -262,54 +265,22 @@ public class CreateEventActivity extends AppCompatActivity {
                 edtQuota.setError("Quota không hợp lệ");
                 return;
             }
-
             if (quotaVal <= 0) {
                 edtQuota.setError("Quota phải > 0");
                 return;
             }
 
-            // 🔹 BẮT BUỘC NHẬP "TỔNG SỐ VÉ" TRƯỚC KHI CHỌN GHẾ
+            int totalEventSeats = 0;
             String sTotal = edtTotalSeats.getText() != null
                     ? edtTotalSeats.getText().toString().trim()
                     : "";
-
-            if (TextUtils.isEmpty(sTotal)) {
-                edtTotalSeats.setError("Nhập tổng số vé trước khi cấu hình ghế");
-                Toast.makeText(
-                        CreateEventActivity.this,
-                        "Vui lòng nhập Tổng số vé (tổng sức chứa) trước khi chọn sơ đồ ghế",
-                        Toast.LENGTH_LONG
-                ).show();
-                return;
-            }
-
-            int totalEventSeats;
             try {
                 totalEventSeats = Integer.parseInt(sTotal);
-            } catch (NumberFormatException e) {
-                edtTotalSeats.setError("Tổng số vé không hợp lệ");
-                Toast.makeText(
-                        CreateEventActivity.this,
-                        "Tổng số vé phải là số nguyên dương",
-                        Toast.LENGTH_LONG
-                ).show();
-                return;
-            }
+            } catch (NumberFormatException ignored) {}
 
             if (totalEventSeats <= 0) {
-                edtTotalSeats.setError("Tổng số vé phải > 0");
-                Toast.makeText(
-                        CreateEventActivity.this,
-                        "Tổng số vé phải lớn hơn 0",
-                        Toast.LENGTH_LONG
-                ).show();
-                return;
+                totalEventSeats = quotaVal;  // fallback
             }
-
-            // 🔹 CHỌN TEMPLATE THEO TỔNG SỨC CHỨA (KHÔNG DÙNG QUOTA)
-            SeatTemplate pickedTemplate =
-                    SeatTemplateStore.pickTemplateForCapacity(totalEventSeats);
-            String templateId = pickedTemplate != null ? pickedTemplate.getId() : null;
 
             android.content.Intent i = new android.content.Intent(
                     CreateEventActivity.this,
@@ -317,15 +288,11 @@ public class CreateEventActivity extends AppCompatActivity {
             );
             i.putExtra(SeatLayoutConfigActivity.EXTRA_EVENT_ID, eventIdForSeats);
             i.putExtra(SeatLayoutConfigActivity.EXTRA_TICKET_NAME, ticketName);
-            // Giới hạn số ghế được chọn cho LOẠI VÉ
             i.putExtra(SeatLayoutConfigActivity.EXTRA_MAX_SEATS, quotaVal);
-            // Tổng sức chứa event
             i.putExtra(SeatLayoutConfigActivity.EXTRA_TOTAL_EVENT_SEATS, totalEventSeats);
-            // Template id ("S","M","L")
-            i.putExtra(SeatLayoutConfigActivity.EXTRA_TEMPLATE_ID, templateId);
-
             startActivity(i);
         });
+
 
         layoutTicketContainer.addView(rowView);
     }
@@ -350,6 +317,9 @@ public class CreateEventActivity extends AppCompatActivity {
 
     private void updateSeatInfoText(TicketRow row) {
         if (row.tvSeatInfo == null) return;
+
+        row.tvSeatInfo.setVisibility(View.VISIBLE);
+
         int count = row.seatCodes.size();
         if (count == 0) {
             row.tvSeatInfo.setText("Chưa chọn ghế");
@@ -464,27 +434,31 @@ public class CreateEventActivity extends AppCompatActivity {
             }
 
             // Lấy ghế đã vẽ tạm
+            // Lấy ghế đã vẽ tạm (nếu có)
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
             row.seatCodes.addAll(seats);
             updateSeatInfoText(row);
 
-            // quota == số ghế
-            if (seats.size() != quota) {
-                Toast.makeText(this,
-                        "Loại vé \"" + name + "\" phải chọn đúng "
-                                + quota + " ghế (hiện đang " + seats.size() + ")",
-                        Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            // không trùng ghế giữa các loại vé
-            for (String c : seats) {
-                if (!allSeatsGlobal.add(c)) {
+// ✅ Chỉ check quota & trùng ghế NẾU đã cấu hình sơ đồ ghế
+            if (!seats.isEmpty()) {
+                // quota == số ghế
+                if (seats.size() != quota) {
                     Toast.makeText(this,
-                            "Ghế " + c + " đang bị dùng bởi nhiều loại vé",
+                            "Loại vé \"" + name + "\" phải chọn đúng "
+                                    + quota + " ghế (hiện đang " + seats.size() + ")",
                             Toast.LENGTH_LONG).show();
                     return;
+                }
+
+                // không trùng ghế giữa các loại vé
+                for (String c : seats) {
+                    if (!allSeatsGlobal.add(c)) {
+                        Toast.makeText(this,
+                                "Ghế " + c + " đang bị dùng bởi nhiều loại vé",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
                 }
             }
 
@@ -493,7 +467,11 @@ public class CreateEventActivity extends AppCompatActivity {
             ticket.put("price", price);
             ticket.put("quota", quota);
             ticket.put("sold", 0);
-            ticket.put("seats", seats);
+// ✅ Chỉ lưu field "seats" nếu có cấu hình
+            if (!seats.isEmpty()) {
+                ticket.put("seats", seats);
+            }
+
 
             ticketTypes.add(ticket);
 

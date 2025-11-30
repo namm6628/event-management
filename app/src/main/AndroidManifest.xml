@@ -125,13 +125,6 @@
             android:exported="false" />
 
 
-
-
-
-
-
-
-
         <!-- LƯU Ý: KHÔNG khai báo LoginFragment / RegisterFragment ở đây -->
     </application>
 

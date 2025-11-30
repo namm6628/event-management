@@ -169,16 +169,14 @@ public class EventRemoteDataSource {
      * - Sự kiện tương lai
      */
     public Task<QuerySnapshot> loadVideoEvents(int limit) {
-        Date now = new Date();
-
         Query q = db.collection("events")
                 .whereEqualTo("hasVideo", true)
-                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now))
                 .orderBy("startTime", Query.Direction.ASCENDING)
                 .limit(limit);
 
         return q.get();
     }
+
 
     // ================== HÀM CŨ HỖ TRỢ REPO ==================
 
