@@ -8,10 +8,6 @@ import java.util.Set;
 
 public class SeatTemplateStore {
 
-    // Template:
-    //  S  = nhỏ (≈50 ghế)
-    //  M  = vừa (≈88 ghế, 1 lối đi giữa)
-    //  L  = lớn (≈192 ghế, 2 lối đi)
     private static final SeatTemplate TEMPLATE_SMALL;
     private static final SeatTemplate TEMPLATE_MEDIUM;
     private static final SeatTemplate TEMPLATE_LARGE;
@@ -28,8 +24,6 @@ public class SeatTemplateStore {
         TEMPLATES.put(TEMPLATE_LARGE.getId(), TEMPLATE_LARGE);
     }
 
-    // Sân khấu nhỏ: A..E, 1..10 (50 ghế)
-    // A-B: VIP, C-D: Standard, E: Economy
     private static SeatTemplate buildSmallTemplate() {
         int rows = 5;
         int cols = 10;

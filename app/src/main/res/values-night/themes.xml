@@ -1,12 +1,10 @@
 <resources>
     <style name="Theme.MyApplication" parent="Theme.Material3.Dark.NoActionBar">
 
-        <!-- Primary -->
         <item name="colorPrimary">@color/mint_primary</item>
         <item name="colorOnPrimary">@android:color/white</item>
         <item name="colorPrimaryContainer">@color/mint_primary_dark</item>
 
-        <!-- Dark Background -->
         <item name="colorSurface">@color/bg_primary</item>
         <item name="colorOnSurface">@color/text_primary</item>
 
@@ -15,10 +13,8 @@
 
         <item name="colorOutline">@color/border_light</item>
 
-        <!-- Window background -->
         <item name="android:windowBackground">@color/bg_primary</item>
 
-        <!-- Status bar -->
         <item name="android:statusBarColor">@color/bg_primary</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>

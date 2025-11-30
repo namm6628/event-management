@@ -1,5 +1,4 @@
 <resources>
-    <!-- Chip filter khi được chọn dùng màu primary đậm hơn -->
     <style name="App.FilterChip" parent="Widget.Material3.Chip.Assist">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
@@ -7,13 +6,11 @@
         <item name="chipStrokeWidth">1dp</item>
         <item name="chipStrokeColor">@color/md_outline</item>
         <item name="rippleColor">@color/md_outline</item>
-        <!-- trạng thái đã chọn -->
         <item name="chipBackgroundColor">@color/chip_bg_light</item>
         <item name="android:textColor">@color/chip_text_light</item>
 
     </style>
 
-    <!-- Nút chính: ĐẶT VÉ -->
     <style name="App.PrimaryButton" parent="Widget.Material3.Button">
         <item name="android:layout_height">48dp</item>
         <item name="cornerRadius">999dp</item>
@@ -25,7 +22,6 @@
         <item name="android:textColor">@color/md_onPrimary</item>
     </style>
 
-    <!-- Nút phụ: CHIA SẺ, THEO DÕI, BẢN ĐỒ -->
     <style name="App.OutlineButton" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:layout_height">40dp</item>
         <item name="cornerRadius">999dp</item>
@@ -36,9 +32,8 @@
         <item name="android:textColor">@color/mint_primary</item>
     </style>
 
-    <!-- Giá tiền -->
     <style name="App.PriceText">
-        <item name="android:textColor">@color/colorError</item> <!-- #E63946 -->
+        <item name="android:textColor">@color/colorError</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">16sp</item>
     </style>
@@ -70,7 +65,6 @@
     </style>
 
     <style name="Widget.TicketMate.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
-        <!-- Tắt cái nền viên thuốc khi selected -->
         <item name="itemActiveIndicatorStyle">@null</item>
     </style>
 

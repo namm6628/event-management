@@ -57,12 +57,4 @@
         android:name="com.example.myapplication.attendee.profile.OrganizerProfileFragment"
         android:label="Hồ sơ"
         tools:layout="@layout/fragment_organizer_profile" />
-
-
-
-
-
-
-
-
 </navigation>

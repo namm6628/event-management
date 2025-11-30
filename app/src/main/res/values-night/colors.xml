@@ -1,23 +1,18 @@
 <resources>
 
-    <!-- Mint Brand -->
     <color name="mint_primary">#00C46C</color>
     <color name="mint_primary_dark">#00995A</color>
     <color name="mint_accent">#00A186</color>
 
-    <!-- DARK MODE / Premium tone -->
-    <color name="bg_primary">#050506</color>      <!-- nền toàn app, siêu tối -->
-    <color name="bg_card">#0C0D0F</color>        <!-- card / surface -->
-    <color name="bg_bottom_nav">#090A0B</color>  <!-- bottom nav -->
+    <color name="bg_primary">#050506</color>
+    <color name="bg_card">#0C0D0F</color>
+    <color name="bg_bottom_nav">#090A0B</color>
 
-    <!-- Text -->
-    <color name="text_primary">#F7F9FA</color>   <!-- trắng nhẹ -->
-    <color name="text_secondary">#8C8F94</color> <!-- xám premium -->
+    <color name="text_primary">#F7F9FA</color>
+    <color name="text_secondary">#8C8F94</color>
 
-    <!-- Border / Divider -->
     <color name="border_light">#1A1C1F</color>
 
-    <!-- Material aliases -->
     <color name="md_primary">@color/mint_primary</color>
     <color name="md_onPrimary">@android:color/white</color>
 
@@ -27,7 +22,6 @@
     <color name="md_outline">@color/border_light</color>
     <color name="card_bg">@color/bg_card</color>
 
-    <!-- Spotify Compatibility -->
     <color name="sp_black">@color/bg_primary</color>
     <color name="sp_gray_dark">@color/bg_card</color>
     <color name="sp_gray">@color/border_light</color>

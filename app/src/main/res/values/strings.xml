@@ -44,7 +44,6 @@
     <string name="event_detail_title">Chi tiết sự kiện</string>
     <string name="artist_unknown">Nghệ sĩ chưa rõ</string>
 
-
     <string name="time_range_fmt">%1$s - %2$s</string>
     <string name="share_event">Chia sẻ</string>
     <string name="follow_artist">Theo dõi</string>
@@ -55,7 +54,7 @@
     <string name="review_count_fmt">%1$d đánh giá</string>
     <string name="no_reviews">Chưa có đánh giá</string>
 
-    <string name="share_template">Mình thấy sự kiện “%1$s” tại %2$s khá hay. Đi cùng không? 🤝</string>
+    <string name="share_template">Mình thấy sự kiện “%1$s” tại %2$s khá hay. Đi cùng không?</string>
 
     <string name="average_rating">Đánh giá trung bình</string>
 
@@ -69,9 +68,4 @@
 
     <string name="delete">Xoá</string>
     <string name="scan_qr">Xoá</string>
-
-
-
-
-
 </resources>

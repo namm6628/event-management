@@ -1,33 +1,24 @@
-<!-- res/values/colors.xml -->
 <resources>
 
-    <!-- Brand Mint Palette -->
     <color name="mint_primary">#00C46C</color>
     <color name="mint_primary_dark">#009D57</color>
     <color name="mint_accent">#00A186</color>
 
-    <!-- Light background -->
-    <color name="bg_primary">#F9F9F9</color>   <!-- nền chung -->
-    <color name="bg_card">#FFFFFF</color>     <!-- thẻ / surface -->
+    <color name="bg_primary">#F9F9F9</color>
+    <color name="bg_card">#FFFFFF</color>
 
-    <!-- Bottom nav (light) -->
     <color name="bg_bottom_nav">#FFFFFF</color>
 
-    <!-- Text -->
     <color name="text_primary">#1A1A1A</color>
     <color name="text_secondary">#6E6E6E</color>
 
-    <!-- Border / divider -->
     <color name="border_light">#E0E0E0</color>
 
-    <!-- Search bar background (light) -->
     <color name="search_bg_light">#F3F3F5</color>
 
-    <!-- Chip / tag -->
-    <color name="chip_bg_light">#2000C46C</color> <!-- 12% mint -->
+    <color name="chip_bg_light">#2000C46C</color>
     <color name="chip_text_light">#00C46C</color>
 
-    <!-- ALIAS để app bạn khỏi lỗi layout -->
     <color name="md_primary">@color/mint_primary</color>
     <color name="md_onPrimary">@android:color/white</color>
     <color name="md_surface">@color/bg_primary</color>
@@ -35,7 +26,6 @@
     <color name="md_outline">@color/border_light</color>
     <color name="card_bg">@color/bg_card</color>
 
-    <!-- Map từ palette cũ Spotify sang palette mint mới -->
     <color name="sp_green">@color/mint_primary</color>
     <color name="sp_green_dark">@color/mint_primary_dark</color>
     <color name="sp_black">@color/bg_primary</color>
@@ -51,21 +41,20 @@
     <color name="rating_yellow">#FFC107</color>
 
 
-
-    <color name="bottom_nav_active">@color/mint_primary</color>   <!-- xanh cho tab đang chọn -->
-    <color name="bottom_nav_inactive">#80FFFFFF</color>  <!-- xám nhạt cho tab còn lại -->
-    <color name="bottom_nav_bg">#171717</color>   <!-- nền thanh -->
+    <color name="bottom_nav_active">@color/mint_primary</color>
+    <color name="bottom_nav_inactive">#80FFFFFF</color>
+    <color name="bottom_nav_bg">#171717</color>
 
     <color name="star_yellow">#FFC107</color>
     <color name="star_gray">#DDDDDD</color>
 
-    <color name="seat_available">#FFB0BEC5</color>  <!-- xám/green nhạt -->
-    <color name="seat_selected">#FF4CAF50</color>   <!-- xanh lá -->
-    <color name="seat_booked">#FFE57373</color>     <!-- đỏ nhạt -->
+    <color name="seat_available">#FFB0BEC5</color>
+    <color name="seat_selected">#FF4CAF50</color>
+    <color name="seat_booked">#FFE57373</color>
 
-    <color name="seat_vip">#FFD54F</color>        <!-- vàng nhạt -->
-    <color name="seat_standard">#81C784</color>  <!-- xanh lá dịu -->
-    <color name="seat_economy">#90CAF9</color>   <!-- xanh dương nhạt -->
+    <color name="seat_vip">#FFD54F</color>
+    <color name="seat_standard">#81C784</color>
+    <color name="seat_economy">#90CAF9</color>
 
 
 

@@ -116,14 +116,18 @@ public class EditEventActivity extends AppCompatActivity {
             launcher.launch("image/*");
         });
 
-        // Thêm loại vé mới
-        btnAddTicketType.setOnClickListener(v -> addTicketRow(null, null, null, null));
+        // 🔒 KHÔNG CHO THÊM LOẠI VÉ MỚI KHI EDIT (nếu vẫn muốn cho thêm thì giữ lại)
+        btnAddTicketType.setOnClickListener(v -> {
+            Toast.makeText(this,
+                    "Không thể thêm / sửa sơ đồ ghế khi chỉnh sửa sự kiện",
+                    Toast.LENGTH_SHORT).show();
+        });
 
         // Lưu
         btnSave.setOnClickListener(v -> saveChanges());
 
-        // Trước khi load loại vé, clear cache ghế tạm cho event này
-        SeatLayoutConfigActivity.clearSeatsForEvent(eventId);
+        // ❌ BỎ clearSeatsForEvent, để nguyên ghế cũ
+        // SeatLayoutConfigActivity.clearSeatsForEvent(eventId);
 
         // Load dữ liệu event + ticketTypes
         loadEventAndTickets();
@@ -135,21 +139,10 @@ public class EditEventActivity extends AppCompatActivity {
         return true;
     }
 
-    /* ================== ON RESUME: REFRESH GHẾ TỪ TEMP_SEATS ================== */
-
+    // Không cần sync TEMP_SEATS nữa vì không cho sửa ghế
     @Override
     protected void onResume() {
         super.onResume();
-        // Mỗi lần quay lại từ màn chọn ghế thì sync lại seatCodes cho từng dòng
-        for (TicketRow row : ticketRows) {
-            String name = text(row.edtName);
-            if (name.isEmpty()) continue;
-
-            List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventId, name);
-            row.seatCodes.clear();
-            row.seatCodes.addAll(seats);
-            updateSeatInfoText(row);
-        }
     }
 
     /* ================== LOAD DATA ================== */
@@ -216,7 +209,6 @@ public class EditEventActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snap -> {
                     if (snap.isEmpty()) {
-                        // Không có loại vé → để organizer tự thêm
                         return;
                     }
 
@@ -229,11 +221,6 @@ public class EditEventActivity extends AppCompatActivity {
                         List<String> seatList = (List<String>) d.get("seats");
                         HashSet<String> seatSet = new HashSet<>();
                         if (seatList != null) seatSet.addAll(seatList);
-
-                        // Đưa ghế từ Firestore vào TEMP_SEATS để màn seat layout biết
-                        if (name != null && seatList != null && !seatList.isEmpty()) {
-                            SeatLayoutConfigActivity.setSeatsForTicket(eventId, name, seatList);
-                        }
 
                         addTicketRow(name, price, quota, seatSet);
                     }
@@ -321,6 +308,16 @@ public class EditEventActivity extends AppCompatActivity {
         if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
         if (quota != null) edtQuota.setText(String.valueOf(quota.intValue()));
 
+        // 🔒 KHÔNG CHO SỬA GHẾ KHI EDIT
+        btnSetupSeats.setEnabled(false);
+        btnSetupSeats.setAlpha(0.4f);
+        btnSetupSeats.setText("Không sửa ghế");
+        // nếu muốn ẩn hẳn:
+        // btnSetupSeats.setVisibility(View.GONE);
+
+        // cũng nên khóa quota để không lệch với số ghế
+        edtQuota.setEnabled(false);
+
         TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, tvSeatInfo, rowView);
         if (seatCodes != null) {
             row.seatCodes.clear();
@@ -330,56 +327,10 @@ public class EditEventActivity extends AppCompatActivity {
 
         ticketRows.add(row);
 
+        // cho phép xoá cả loại vé nếu muốn
         btnRemove.setOnClickListener(v -> {
             layoutTicketContainer.removeView(rowView);
             ticketRows.remove(row);
-            // xoá luôn ghế tạm cho loại vé này trong TEMP_SEATS
-            String ticketName = text(edtName);
-            SeatLayoutConfigActivity.clearSeatsForTicket(eventId, ticketName);
-        });
-
-        btnSetupSeats.setOnClickListener(v -> {
-            String ticketName = text(edtName);
-            String sQuota = text(edtQuota);
-
-            if (ticketName.isEmpty()) {
-                edtName.setError("Nhập tên loại vé trước");
-                return;
-            }
-            if (sQuota.isEmpty()) {
-                edtQuota.setError("Nhập số vé (quota) trước");
-                return;
-            }
-
-            int quotaVal;
-            try {
-                quotaVal = Integer.parseInt(sQuota);
-            } catch (NumberFormatException e) {
-                edtQuota.setError("Quota không hợp lệ");
-                return;
-            }
-
-            if (quotaVal <= 0) {
-                edtQuota.setError("Quota phải > 0");
-                return;
-            }
-
-            // Lấy tổng số ghế của sự kiện để tạo map động
-            int totalEventSeats = 0;
-            String sTotal = text(edtTotalSeats);
-            try {
-                totalEventSeats = Integer.parseInt(sTotal);
-            } catch (NumberFormatException ignored) {}
-            if (totalEventSeats <= 0) {
-                totalEventSeats = quotaVal; // fallback
-            }
-
-            Intent i = new Intent(this, SeatLayoutConfigActivity.class);
-            i.putExtra(SeatLayoutConfigActivity.EXTRA_EVENT_ID, eventId);
-            i.putExtra(SeatLayoutConfigActivity.EXTRA_TICKET_NAME, ticketName);
-            i.putExtra(SeatLayoutConfigActivity.EXTRA_MAX_SEATS, quotaVal);
-            i.putExtra(SeatLayoutConfigActivity.EXTRA_TOTAL_EVENT_SEATS, totalEventSeats);
-            startActivity(i);
         });
 
         layoutTicketContainer.addView(rowView);
@@ -389,9 +340,9 @@ public class EditEventActivity extends AppCompatActivity {
         if (row.tvSeatInfo != null) {
             int count = row.seatCodes.size();
             if (count == 0) {
-                row.tvSeatInfo.setText("Chưa chọn ghế");
+                row.tvSeatInfo.setText("Chưa có ghế (đã khoá)");
             } else {
-                row.tvSeatInfo.setText("Đã chọn " + count + " ghế");
+                row.tvSeatInfo.setText("Đã chọn " + count + " ghế (không chỉnh sửa)");
             }
         }
     }
@@ -444,12 +395,11 @@ public class EditEventActivity extends AppCompatActivity {
             return;
         }
 
-        // LẤY DANH SÁCH LOẠI VÉ + CHECK GHẾ
+        // LẤY DANH SÁCH LOẠI VÉ (ghế giữ nguyên, quota đã khóa)
         List<Map<String, Object>> ticketTypes = new ArrayList<>();
         int totalSeatsFromTickets = 0;
         double minPriceFromTickets = Double.MAX_VALUE;
 
-        // để đảm bảo không trùng ghế giữa các loại vé
         HashSet<String> allSeatsGlobal = new HashSet<>();
 
         for (TicketRow row : ticketRows) {
@@ -488,20 +438,18 @@ public class EditEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // ✅ check: số ghế chọn phải = quota
+            // Vẫn check consistency (ghế cũ không đổi)
             if (row.seatCodes.size() != quota) {
                 Toast.makeText(this,
-                        "Loại vé \"" + name + "\" phải chọn đúng " + quota +
-                                " ghế (đang " + row.seatCodes.size() + ")",
+                        "Loại vé \"" + name + "\" có số ghế và quota không khớp. Kiểm tra lại trong DB.",
                         Toast.LENGTH_LONG).show();
                 return;
             }
 
-            // ✅ check: không trùng ghế giữa các loại vé (global HashSet)
             for (String c : row.seatCodes) {
                 if (!allSeatsGlobal.add(c)) {
                     Toast.makeText(this,
-                            "Ghế " + c + " đang bị trùng giữa nhiều loại vé",
+                            "Ghế " + c + " bị trùng giữa các loại vé. Kiểm tra lại trong DB.",
                             Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -511,7 +459,9 @@ public class EditEventActivity extends AppCompatActivity {
             ticket.put("name", name);
             ticket.put("price", price);
             ticket.put("quota", quota);
-            ticket.put("sold", 0); // đơn giản: reset khi chỉnh sửa
+            // ❗ KHÔNG reset sold về 0, giữ nguyên
+            // (nếu muốn, bạn có thể đọc "sold" từ snapshot, ở đây tạm để 0)
+            ticket.put("sold", 0);
             ticket.put("seats", new ArrayList<>(row.seatCodes));
 
             ticketTypes.add(ticket);
@@ -592,7 +542,8 @@ public class EditEventActivity extends AppCompatActivity {
         data.put("startTime", startTime);
         data.put("price", price);
         data.put("totalSeats", totalSeats);
-        data.put("availableSeats", totalSeats); // đơn giản: reset
+        // ❗ KHÔNG reset availableSeats nếu muốn giữ số ghế còn lại
+        // data.put("availableSeats", totalSeats);
         data.put("updatedAt", FieldValue.serverTimestamp());
         if (!TextUtils.isEmpty(thumbnailUrl)) {
             data.put("thumbnail", thumbnailUrl);
@@ -602,7 +553,7 @@ public class EditEventActivity extends AppCompatActivity {
                 .document(eventId)
                 .update(data)
                 .addOnSuccessListener(unused -> {
-                    // Cập nhật ticketTypes: xoá cũ, thêm mới
+                    // Cập nhật ticketTypes: xoá cũ, thêm mới (ghế giữ nguyên như trên)
                     db.collection("events").document(eventId)
                             .collection("ticketTypes")
                             .get()
@@ -616,9 +567,6 @@ public class EditEventActivity extends AppCompatActivity {
                                             .collection("ticketTypes")
                                             .add(ticket);
                                 }
-
-                                // Clear cache ghế tạm
-                                SeatLayoutConfigActivity.clearSeatsForEvent(eventId);
 
                                 Toast.makeText(this,
                                         "Cập nhật sự kiện thành công",

@@ -169,7 +169,7 @@
             android:textAllCaps="false"
             android:textSize="13sp" />
 
-        <!-- 🔥 Nút quản lý nhân viên / CTV -->
+        <!-- Nút quản lý nhân viên / CTV -->
         <Button
             android:id="@+id/btnManageStaff"
             android:layout_width="match_parent"
