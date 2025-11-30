@@ -295,6 +295,15 @@ public class ProfileFragment extends Fragment {
         setupStaffCheckinButton();
     }
 
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // tránh giữ reference tới view sau khi bị destroy
+        containerFavoriteEventsView = null;
+        btnToggleFavoriteEventsView = null;
+        tvEmptyFavoriteEvents = null;
+    }
+
     /* -------------------------- STAFF CHECK-IN BUTTON -------------------------- */
 
     private void setupStaffCheckinButton() {
@@ -543,6 +552,9 @@ public class ProfileFragment extends Fragment {
                 .collection("favoriteEvents")
                 .get()
                 .addOnSuccessListener(snap -> {
+                    // 🔐 fragment đã detach thì thôi, không render nữa
+                    if (!isAdded() || getView() == null) return;
+
                     favoriteEvents.clear();
 
                     if (snap.isEmpty()) {
@@ -583,6 +595,7 @@ public class ProfileFragment extends Fragment {
                     renderFavoriteEventsUi();
                 })
                 .addOnFailureListener(e -> {
+                    if (!isAdded() || getView() == null) return;
                     toast("Không tải được danh sách sự kiện yêu thích");
                     favoriteEvents.clear();
                     renderFavoriteEventsUi();
@@ -590,13 +603,16 @@ public class ProfileFragment extends Fragment {
     }
 
     private void renderFavoriteEventsUi() {
+        // 🔐 tránh crash khi fragment không còn attach
+        if (!isAdded()) return;
         if (containerFavoriteEventsView == null) return;
         if (!(containerFavoriteEventsView instanceof ViewGroup)) return;
 
         ViewGroup container = (ViewGroup) containerFavoriteEventsView;
         container.removeAllViews();
 
-        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        // dùng context từ chính ViewGroup, không cần requireContext()
+        LayoutInflater inflater = LayoutInflater.from(container.getContext());
 
         if (favoriteEvents.isEmpty()) {
             if (tvEmptyFavoriteEvents != null) {
