@@ -124,6 +124,15 @@
             android:name=".organizer.checkin.OrganizerCheckinListActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".organizer.checkin.ManageCollaboratorsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".organizer.checkin.StaffCheckinEventListActivity"
+            android:exported="false" />
+
+
+
 
         <!-- LƯU Ý: KHÔNG khai báo LoginFragment / RegisterFragment ở đây -->
     </application>

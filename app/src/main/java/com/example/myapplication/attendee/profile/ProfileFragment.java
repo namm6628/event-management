@@ -2,6 +2,7 @@ package com.example.myapplication.attendee.profile;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -30,8 +31,9 @@ import androidx.transition.AutoTransition;
 import androidx.transition.Transition;
 import androidx.transition.TransitionManager;
 
-import com.bumptech.glide.Glide; // NEW
+import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
+import com.example.myapplication.organizer.checkin.StaffCheckinEventListActivity;
 import com.example.myapplication.auth.AuthManager;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
@@ -44,8 +46,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.storage.FirebaseStorage;   // NEW
-import com.google.firebase.storage.StorageReference; // NEW
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
 import java.io.InputStream;
@@ -61,7 +63,9 @@ public class ProfileFragment extends Fragment {
     private ActivityResultLauncher<String> requestReadPerm;    // READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE
     private ActivityResultLauncher<String> requestCameraPerm;  // CAMERA
     private Uri cameraUri;                                     // nơi lưu ảnh vừa chụp
+
     private MaterialSwitch switchDarkMode;
+    private MaterialButton btnStaffCheckin;
 
     private AuthManager authManager;
     private View btnGoOrg;
@@ -99,7 +103,6 @@ public class ProfileFragment extends Fragment {
             if (!isAdded()) return;
             View root = getView();
             if (src != null && root != null) {
-                // có thể copy sang storage app hoặc dùng trực tiếp src
                 Uri local = copyToAppStorage(src);
                 if (local == null) local = src;
 
@@ -108,7 +111,6 @@ public class ProfileFragment extends Fragment {
                     av.setImageURI(local);
                     Context ctx = getContext();
                     if (ctx != null) AuthManager.setAvatarUri(ctx, local.toString());
-                    // NEW: upload lên Storage + lưu URL Firestore
                     uploadAvatarToCloud(local);
                 } else {
                     toast("Không lưu được ảnh đã chọn");
@@ -125,7 +127,6 @@ public class ProfileFragment extends Fragment {
                 av.setImageURI(cameraUri);
                 Context ctx = getContext();
                 if (ctx != null) AuthManager.setAvatarUri(ctx, cameraUri.toString());
-                // NEW: upload avatar
                 uploadAvatarToCloud(cameraUri);
             }
         });
@@ -166,6 +167,8 @@ public class ProfileFragment extends Fragment {
         authManager = new AuthManager();
         btnGoOrg = v.findViewById(R.id.btnGoOrganizer);
         btnRequestOrg = v.findViewById(R.id.btnRequestOrganizer);
+        btnStaffCheckin = v.findViewById(R.id.btnStaffCheckin);
+        switchDarkMode = v.findViewById(R.id.switchDarkMode);
 
         if (btnGoOrg != null) {
             btnGoOrg.setOnClickListener(x ->
@@ -181,7 +184,8 @@ public class ProfileFragment extends Fragment {
             );
         }
 
-        switchDarkMode = v.findViewById(R.id.switchDarkMode);
+        // 🔹 setup nút staff check-in
+        setupStaffCheckinButton();
 
         SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
 
@@ -286,6 +290,29 @@ public class ProfileFragment extends Fragment {
                 btnRequestOrg.setVisibility(isOrganizer ? View.GONE : View.VISIBLE);
             }
         });
+
+        // cập nhật lại nút staff khi quay lại / đổi tài khoản
+        setupStaffCheckinButton();
+    }
+
+    /* -------------------------- STAFF CHECK-IN BUTTON -------------------------- */
+
+    private void setupStaffCheckinButton() {
+        if (btnStaffCheckin == null) return;
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || user.getEmail() == null || user.getEmail().isEmpty()) {
+            btnStaffCheckin.setVisibility(View.GONE);
+            return;
+        }
+
+        // Đơn giản: user nào có email (đăng nhập) là thấy nút
+        btnStaffCheckin.setVisibility(View.VISIBLE);
+        btnStaffCheckin.setOnClickListener(v -> {
+            Context ctx = requireContext();
+            Intent i = new Intent(ctx, StaffCheckinEventListActivity.class);
+            ctx.startActivity(i);
+        });
     }
 
     /* -------------------------- UI logic -------------------------- */
@@ -301,7 +328,6 @@ public class ProfileFragment extends Fragment {
 
         if (avatar != null) {
             if (logged) {
-                // NEW: luôn ưu tiên load avatar từ Firestore (avatarUrl)
                 loadAvatarFromCloud(avatar);
             } else {
                 setDefaultAvatar(avatar);
@@ -371,7 +397,6 @@ public class ProfileFragment extends Fragment {
         avatar.setImageResource(android.R.drawable.sym_def_app_icon);
     }
 
-    // NEW: đọc avatarUrl từ Firestore và load bằng Glide
     private void loadAvatarFromCloud(@NonNull ImageView avatar) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -403,7 +428,6 @@ public class ProfileFragment extends Fragment {
                 });
     }
 
-    // NEW: upload file lên Firebase Storage rồi lưu URL vào users/{uid}.avatarUrl
     private void uploadAvatarToCloud(@NonNull Uri fileUri) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -781,7 +805,6 @@ public class ProfileFragment extends Fragment {
         int pad = (int) (16 * getResources().getDisplayMetrics().density);
         img.setPadding(pad, pad, pad, pad);
 
-        // lấy luôn drawable hiện tại của imgAvatar cho đơn giản
         ImageView current = getView() != null ? getView().findViewById(R.id.imgAvatar) : null;
         if (current != null && current.getDrawable() != null) {
             img.setImageDrawable(current.getDrawable());

@@ -41,7 +41,7 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
         selectedIds.clear();
 
         if (seats != null) {
-            // Sắp xếp theo hàng (A,B,C...) rồi tới số (1,2,3..)
+            // 🔹 Sắp xếp theo hàng (A,B,C...) rồi tới số (1,2,3..)
             Collections.sort(seats, new Comparator<Seat>() {
                 @Override
                 public int compare(Seat a, Seat b) {
@@ -115,19 +115,21 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
 
             String status = seat.getStatus() == null ? "available" : seat.getStatus();
 
-            // Ghế không bán hoặc đã đặt → xám, không click
+            // 🔹 Ghế bị khóa / đã đặt / đang hold → xám, không click
             if ("booked".equalsIgnoreCase(status)
-                    || "blocked".equalsIgnoreCase(status)) {
+                    || "blocked".equalsIgnoreCase(status)
+                    || "hold".equalsIgnoreCase(status)) {
                 btnSeat.setEnabled(false);
                 btnSeat.setBackgroundTintList(
                         androidx.core.content.ContextCompat.getColorStateList(
-                                itemView.getContext(), R.color.seat_booked   // có thể là màu xám
+                                itemView.getContext(),
+                                R.color.seat_booked   // màu xám
                         )
                 );
                 return;
             }
 
-            // Ghế đang còn trống
+            // 🔹 Ghế đang trống
             btnSeat.setEnabled(true);
             btnSeat.setBackgroundTintList(
                     androidx.core.content.ContextCompat.getColorStateList(

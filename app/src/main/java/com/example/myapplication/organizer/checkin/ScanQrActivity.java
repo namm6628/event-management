@@ -10,8 +10,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
+import com.example.myapplication.data.remote.EventRemoteDataSource;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.journeyapps.barcodescanner.BarcodeCallback;
@@ -37,22 +39,59 @@ public class ScanQrActivity extends AppCompatActivity {
     private TextView tvStatusTitle, tvStatusDetail;
     private Button btnToggleCamera, btnClose;
 
+    private final EventRemoteDataSource remote = new EventRemoteDataSource();
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scan_qr);
 
-        barcodeView = findViewById(R.id.barcodeScanner);
-        layoutStatus = findViewById(R.id.layoutStatus);
-        tvStatusTitle = findViewById(R.id.tvStatusTitle);
-        tvStatusDetail = findViewById(R.id.tvStatusDetail);
+        barcodeView     = findViewById(R.id.barcodeScanner);
+        layoutStatus    = findViewById(R.id.layoutStatus);
+        tvStatusTitle   = findViewById(R.id.tvStatusTitle);
+        tvStatusDetail  = findViewById(R.id.tvStatusDetail);
         btnToggleCamera = findViewById(R.id.btnToggleCamera);
-        btnClose = findViewById(R.id.btnClose);
+        btnClose        = findViewById(R.id.btnClose);
 
         db = FirebaseFirestore.getInstance();
         expectedEventId = getIntent().getStringExtra("EVENT_ID");
 
-        // Khởi tạo camera sau mặc định
+        if (expectedEventId == null || expectedEventId.isEmpty()) {
+            Toast.makeText(this, "Thiếu EVENT_ID, không thể check-in", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        // user hiện tại
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || user.getEmail() == null || user.getEmail().isEmpty()) {
+            Toast.makeText(this, "Bạn cần đăng nhập bằng email để check-in", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        String email = user.getEmail();
+        String uid   = user.getUid();
+
+        // 🔐 kiểm tra quyền: owner hoặc collaborator(role = "checkin")
+        remote.canUserCheckin(expectedEventId, email, uid)
+                .addOnSuccessListener(allowed -> {
+                    if (!allowed) {
+                        Toast.makeText(this, "Bạn không có quyền check-in sự kiện này", Toast.LENGTH_LONG).show();
+                        finish();
+                    } else {
+                        // ✅ Có quyền → khởi tạo scanner
+                        initScanner();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Lỗi kiểm tra quyền: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    finish();
+                });
+    }
+
+    /** Chỉ gọi khi đã check quyền OK */
+    private void initScanner() {
         applyCameraSettings();
 
         barcodeView.decodeContinuous(callback);

@@ -17,6 +17,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.Tasks;
+
+
 /**
  * EventRepository (phiên bản khớp EventDao của bạn)
  * -------------------------------------------------
@@ -137,6 +142,37 @@ public class EventRepository {
             local.upsertAll(list); // ✅ append qua Room
         });
     }
+    // ================== COLLABORATOR (CTV CHECK-IN) ==================
+
+    /**
+     * Thêm / cập nhật cộng tác viên check-in cho sự kiện.
+     */
+    public Task<Void> addCollaborator(String eventId, String email, String role) {
+        return remote.addCollaborator(eventId, email, role);
+    }
+
+    /**
+     * Xoá cộng tác viên khỏi sự kiện.
+     */
+    public Task<Void> removeCollaborator(String eventId, String email) {
+        return remote.removeCollaborator(eventId, email);
+    }
+
+    /**
+     * Lấy danh sách cộng tác viên (documents trong subcollection collaborators).
+     */
+    public Task<QuerySnapshot> getCollaborators(String eventId) {
+        return remote.getCollaborators(eventId);
+    }
+
+    /**
+     * Kiểm tra user (email hiện tại) có quyền check-in sự kiện này không.
+     * - true nếu là owner hoặc là collaborator role "checkin".
+     */
+    public Task<Boolean> canUserCheckin(String eventId, String email, String currentUid) {
+        return remote.canUserCheckin(eventId, email, currentUid);
+    }
+
 
 
 }

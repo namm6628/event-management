@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
 import com.example.myapplication.common.model.Event;
+import com.example.myapplication.organizer.checkin.ManageCollaboratorsActivity;
 import com.example.myapplication.organizer.checkin.OrganizerCheckinListActivity;
 import com.example.myapplication.organizer.checkin.ScanQrActivity;
 import com.google.firebase.Timestamp;
@@ -67,6 +68,8 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
     static class VH extends RecyclerView.ViewHolder {
         final TextView tvTitle, tvTime, tvVenue, tvTicketInfo, tvTicketTypesDetail;
         final Button btnEdit, btnViewAttendees, btnBroadcast, btnScanQr, btnCheckinList;
+        final Button btnManageStaff;
+
         private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         VH(@NonNull View itemView) {
@@ -82,6 +85,9 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
             btnBroadcast = itemView.findViewById(R.id.btnBroadcast);
             btnScanQr = itemView.findViewById(R.id.btnScanQr);
             btnCheckinList = itemView.findViewById(R.id.btnCheckinList);
+            btnManageStaff = itemView.findViewById(R.id.btnManageStaff);
+
+
         }
 
         void bind(Event e, Listener listener) {
@@ -177,6 +183,13 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
                 i.putExtra(OrganizerCheckinListActivity.EXTRA_EVENT_TITLE, e.getTitle());
                 v.getContext().startActivity(i);
             });
+
+            btnManageStaff.setOnClickListener(v -> {
+                Intent i = new Intent(v.getContext(), ManageCollaboratorsActivity.class);
+                i.putExtra(ManageCollaboratorsActivity.EXTRA_EVENT_ID, e.getId());
+                v.getContext().startActivity(i);
+            });
+
 
             // card click = edit
             itemView.setOnClickListener(v -> {

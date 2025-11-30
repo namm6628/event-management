@@ -250,6 +250,17 @@ public class SeatSelectionActivity extends AppCompatActivity {
                         finish();
                         return;
                     }
+                    // SẮP XẾP GHẾ THEO HÀNG + SỐ (A1, A2, ..., B1, B2, ...)
+                    java.util.Collections.sort(seats, (s1, s2) -> {
+                        String r1 = s1.getRow() == null ? "" : s1.getRow();
+                        String r2 = s2.getRow() == null ? "" : s2.getRow();
+                        int cmpRow = r1.compareTo(r2);
+                        if (cmpRow != 0) return cmpRow;
+                        return Integer.compare(s1.getNumber(), s2.getNumber());
+                    });
+
+                    adapter.setSeatList(seats);
+
 
                     adapter.setSeatList(seats); // render full map
                 });

@@ -20,6 +20,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
@@ -85,11 +86,6 @@ public class CreateEventActivity extends AppCompatActivity {
         // 🔹 Marketing views
         switchFeatured = findViewById(R.id.switchFeatured);
         edtPromoTag    = findViewById(R.id.edtPromoTag);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Tạo sự kiện mới");
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
 
         // Lấy eventId nếu đang ở chế độ EDIT
         editingEventId = getIntent().getStringExtra("EXTRA_EVENT_ID");
@@ -293,7 +289,6 @@ public class CreateEventActivity extends AppCompatActivity {
             startActivity(i);
         });
 
-
         layoutTicketContainer.addView(rowView);
     }
 
@@ -434,13 +429,12 @@ public class CreateEventActivity extends AppCompatActivity {
             }
 
             // Lấy ghế đã vẽ tạm
-            // Lấy ghế đã vẽ tạm (nếu có)
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
             row.seatCodes.addAll(seats);
             updateSeatInfoText(row);
 
-// ✅ Chỉ check quota & trùng ghế NẾU đã cấu hình sơ đồ ghế
+            // ✅ Chỉ check quota & trùng ghế NẾU đã cấu hình sơ đồ ghế
             if (!seats.isEmpty()) {
                 // quota == số ghế
                 if (seats.size() != quota) {
@@ -467,11 +461,10 @@ public class CreateEventActivity extends AppCompatActivity {
             ticket.put("price", price);
             ticket.put("quota", quota);
             ticket.put("sold", 0);
-// ✅ Chỉ lưu field "seats" nếu có cấu hình
+            // ✅ Chỉ lưu field "seats" nếu có cấu hình
             if (!seats.isEmpty()) {
                 ticket.put("seats", seats);
             }
-
 
             ticketTypes.add(ticket);
 
@@ -645,26 +638,88 @@ public class CreateEventActivity extends AppCompatActivity {
                                  String eventId,
                                  List<Map<String, Object>> ticketTypes) {
 
-        db.collection("events")
-                .document(eventId)
-                .collection("ticketTypes")
-                .get()
-                .addOnSuccessListener(snap -> {
-                    for (com.google.firebase.firestore.DocumentSnapshot d : snap.getDocuments()) {
-                        d.getReference().delete();
-                    }
+        if (ticketTypes == null || ticketTypes.isEmpty()) {
+            return;
+        }
 
-                    if (ticketTypes == null || ticketTypes.isEmpty()) {
-                        return;
-                    }
+        // Nếu đang EDIT: xoá ticketTypes + seats cũ
+        if (editingEventId != null) {
+            db.collection("events")
+                    .document(eventId)
+                    .collection("ticketTypes")
+                    .get()
+                    .addOnSuccessListener(snap -> {
+                        for (DocumentSnapshot d : snap.getDocuments()) {
+                            d.getReference().delete();
+                        }
+                    });
 
-                    for (Map<String, Object> ticket : ticketTypes) {
-                        db.collection("events")
-                                .document(eventId)
-                                .collection("ticketTypes")
-                                .add(ticket);
-                    }
-                });
+            db.collection("events")
+                    .document(eventId)
+                    .collection("seats")
+                    .get()
+                    .addOnSuccessListener(snap -> {
+                        for (DocumentSnapshot d : snap.getDocuments()) {
+                            d.getReference().delete();
+                        }
+                    });
+        }
+
+        // Ghi ticketTypes + tạo seats mới
+        for (Map<String, Object> ticket : ticketTypes) {
+            String ticketName  = (String) ticket.get("name");
+
+            Double priceObj    = (Double) ticket.get("price");
+            long seatPrice     = priceObj == null ? 0L : priceObj.longValue();
+
+            @SuppressWarnings("unchecked")
+            List<String> seatCodes =
+                    (List<String>) ticket.get("seats"); // list ["A1","A2",...]
+
+            // Lưu ticketType
+            db.collection("events")
+                    .document(eventId)
+                    .collection("ticketTypes")
+                    .add(ticket)
+                    .addOnSuccessListener(ticketDoc -> {
+
+                        // Loại vé không cấu hình sơ đồ ghế → không tạo seats
+                        if (seatCodes == null || seatCodes.isEmpty()) {
+                            return;
+                        }
+
+                        // Tạo từng document ghế cho collection seats
+                        for (String code : seatCodes) {
+                            Map<String, Object> seat = new HashMap<>();
+
+                            String row = "";
+                            int number = 0;
+                            try {
+                                if (code != null && code.length() > 0) {
+                                    row = code.substring(0, 1);          // "A"
+                                    if (code.length() > 1) {
+                                        number = Integer.parseInt(code.substring(1)); // "5" -> 5
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+
+                            seat.put("label", code);     // "A5" (optional, cho vui)
+                            seat.put("row", row);        // field khớp với Seat.row
+                            seat.put("number", number);  // field khớp với Seat.number
+                            seat.put("type", ticketName);     // VIP / Thường
+                            seat.put("price", seatPrice);     // long
+                            seat.put("status", "available");  // trạng thái ghế
+                            seat.put("eventId", eventId);
+
+                            db.collection("events")
+                                    .document(eventId)
+                                    .collection("seats")
+                                    .document(code)  // docId = "A5"
+                                    .set(seat);
+                        }
+
+                    });
+        }
     }
 
     /* ========= LOAD EDIT ========= */

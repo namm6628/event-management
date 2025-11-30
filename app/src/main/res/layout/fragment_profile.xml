@@ -469,5 +469,16 @@
             android:text="Đăng ký tổ chức sự kiện"
             android:layout_marginTop="8dp" />
 
+        <!-- 🔹 NÚT MỚI: Dành cho nhân viên check-in -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStaffCheckin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dành cho nhân viên check-in"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:textColor="@android:color/white"
+            app:backgroundTint="?attr/colorPrimary" />
+
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

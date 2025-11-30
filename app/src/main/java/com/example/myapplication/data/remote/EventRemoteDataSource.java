@@ -4,37 +4,33 @@ import androidx.annotation.NonNull;
 
 import com.example.myapplication.common.model.Event;
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
 
-import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * EventRemoteDataSource:
- * - Quản lý lấy dữ liệu từ Firestore (collection "events").
- * - Hỗ trợ phân trang, lọc, search client-side.
- * - Có thêm các API cho Trending / ForYou / Weekend / Video.
- */
 public class EventRemoteDataSource {
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-    /** Functional callbacks dùng cho code cũ (nếu còn dùng) */
     public interface Success<T> { void accept(T t); }
     public interface Failure { void accept(Exception e); }
 
     // ================== PHÂN TRANG CHÍNH ==================
 
-    /** Trang đầu cho list chính (có filter category) */
     public Task<QuerySnapshot> loadFirstPage(String category, int limit) {
         Query q = db.collection("events").orderBy("startTime");
         if (category != null && !"Tất cả".equalsIgnoreCase(category)) {
@@ -43,7 +39,6 @@ public class EventRemoteDataSource {
         return q.limit(limit).get();
     }
 
-    /** Trang tiếp theo */
     public Task<QuerySnapshot> loadNextPage(String category, int limit, DocumentSnapshot lastVisible) {
         Query q = db.collection("events").orderBy("startTime");
         if (category != null && !"Tất cả".equalsIgnoreCase(category)) {
@@ -57,10 +52,6 @@ public class EventRemoteDataSource {
 
     // ================== TRENDING ==================
 
-    /**
-     * Sự kiện xu hướng:
-     * lấy các event tương lai, gần hiện tại nhất.
-     */
     public Task<QuerySnapshot> loadTrendingEvents(int limit) {
         Date now = new Date();
 
@@ -74,34 +65,7 @@ public class EventRemoteDataSource {
 
     // ================== FOR YOU (AI) ==================
 
-    /**
-     * Dành cho bạn:
-     * - Nếu biết userInterest -> lọc theo category đó.
-     * - Nếu không -> gợi ý các sự kiện tương lai có nhiều chỗ trống (availableSeats) nhất.
-     *
-     * ⚠️ Nhiều khả năng Firestore sẽ yêu cầu composite index cho:
-     *   startTime (ASC) + availableSeats (DESC) [+ category]
-     */
-//    public Task<QuerySnapshot> loadForYouEvents(int limit, String userInterest) {
-//        Date now = new Date();
-//
-//        Query q = db.collection("events")
-//                .whereGreaterThanOrEqualTo("startTime", new Timestamp(now))
-//                .orderBy("startTime", Query.Direction.ASCENDING);
-//
-//        if (userInterest != null && !userInterest.isEmpty()) {
-//            // Người dùng đã có “sở thích” -> lọc category
-//            q = q.whereEqualTo("category", userInterest)
-//                    .orderBy("availableSeats", Query.Direction.DESCENDING);
-//        } else {
-//            // Người mới -> ưu tiên sự kiện còn nhiều chỗ
-//            q = q.orderBy("availableSeats", Query.Direction.DESCENDING);
-//        }
-//
-//        return q.limit(limit).get();
-//    }
     public Task<QuerySnapshot> loadForYouEvents(int limit, String userInterest) {
-        // [SỬA TẠM] - Bỏ hết điều kiện thời gian, chỉ lọc theo tên category
         Query q = db.collection("events");
 
         if (userInterest != null && !userInterest.isEmpty()) {
@@ -115,10 +79,6 @@ public class EventRemoteDataSource {
 
     // ================== CUỐI TUẦN ==================
 
-    /**
-     * Sự kiện cuối tuần:
-     * từ 00:00 Thứ Sáu đến 23:59 Chủ Nhật gần nhất.
-     */
     public Task<QuerySnapshot> loadEventsForWeekend(int limit) {
         Date[] weekend = getWeekendDates();
         Date fridayStart = weekend[0];
@@ -133,24 +93,20 @@ public class EventRemoteDataSource {
         return q.get();
     }
 
-    /** Tính mốc T.Sáu 00:00 và T.Nhật 23:59 cho “cuối tuần này” */
     private Date[] getWeekendDates() {
         Calendar calendar = Calendar.getInstance();
 
-        // Nếu hôm nay sau Thứ Sáu -> nhảy sang tuần sau
         if (calendar.get(Calendar.DAY_OF_WEEK) > Calendar.FRIDAY) {
             calendar.add(Calendar.WEEK_OF_YEAR, 1);
         }
         calendar.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY);
 
-        // Thứ Sáu 00:00:00
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
         Date fridayStart = calendar.getTime();
 
-        // Chủ Nhật (Thứ Sáu + 2 ngày)
         calendar.add(Calendar.DAY_OF_MONTH, 2);
         calendar.set(Calendar.HOUR_OF_DAY, 23);
         calendar.set(Calendar.MINUTE, 59);
@@ -163,11 +119,6 @@ public class EventRemoteDataSource {
 
     // ================== VIDEO EVENTS ==================
 
-    /**
-     * Sự kiện có video giới thiệu:
-     * - `hasVideo == true`
-     * - Sự kiện tương lai
-     */
     public Task<QuerySnapshot> loadVideoEvents(int limit) {
         Query q = db.collection("events")
                 .whereEqualTo("hasVideo", true)
@@ -177,10 +128,8 @@ public class EventRemoteDataSource {
         return q.get();
     }
 
-
     // ================== HÀM CŨ HỖ TRỢ REPO ==================
 
-    /** Lấy tất cả events (không phân trang) */
     public void fetchAll(@NonNull Success<List<Event>> onSuccess,
                          @NonNull Failure onError) {
         db.collection("events")
@@ -190,7 +139,6 @@ public class EventRemoteDataSource {
                 .addOnFailureListener(onError::accept);
     }
 
-    /** Lấy tất cả events theo category (không phân trang) */
     public void fetchByCategory(@NonNull String category,
                                 @NonNull Success<List<Event>> onSuccess,
                                 @NonNull Failure onError) {
@@ -205,21 +153,19 @@ public class EventRemoteDataSource {
 
     // ================== UTIL: MAP & FILTER ==================
 
-    /** Map Firestore snapshot -> List<Event> */
     public static List<Event> map(QuerySnapshot snap) {
         List<Event> list = new ArrayList<>();
         if (snap == null) return list;
         for (DocumentSnapshot doc : snap.getDocuments()) {
             Event e = doc.toObject(Event.class);
             if (e != null) {
-                e.setId(doc.getId()); // luôn gán documentId
+                e.setId(doc.getId());
                 list.add(e);
             }
         }
         return list;
     }
 
-    /** Lọc client-side theo query text (title hoặc location) */
     public static List<Event> filterClient(List<Event> events, String query) {
         if (events == null || events.isEmpty()) return new ArrayList<>();
         if (query == null || query.trim().isEmpty()) return events;
@@ -233,5 +179,73 @@ public class EventRemoteDataSource {
                                         e.getLocation().toLowerCase(Locale.getDefault()).contains(q))
                 )
                 .collect(Collectors.toList());
+    }
+
+    // ================== COLLABORATORS SUBCOLLECTION ==================
+
+    // KHÔNG normalize nữa – dùng docId = email gốc
+    public Task<Void> addCollaborator(String eventId, String email, String role) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("email", email);
+        data.put("role", role);
+        data.put("createdAt", FieldValue.serverTimestamp());
+
+        return db.collection("events")
+                .document(eventId)
+                .collection("collaborators")
+                .document(email)     // docId = email
+                .set(data, SetOptions.merge());
+    }
+
+    public Task<Void> removeCollaborator(String eventId, String email) {
+        return db.collection("events")
+                .document(eventId)
+                .collection("collaborators")
+                .document(email)     // docId = email
+                .delete();
+    }
+
+    public Task<QuerySnapshot> getCollaborators(String eventId) {
+        return db.collection("events")
+                .document(eventId)
+                .collection("collaborators")
+                .get();
+    }
+
+    /**
+     * true nếu:
+     *  - currentUid là ownerId của event, hoặc
+     *  - email nằm trong collaborators với role = "checkin".
+     */
+    public Task<Boolean> canUserCheckin(String eventId, String email, String currentUid) {
+        Task<DocumentSnapshot> eventTask = db.collection("events")
+                .document(eventId)
+                .get();
+
+        Task<DocumentSnapshot> collabTask = db.collection("events")
+                .document(eventId)
+                .collection("collaborators")
+                .document(email)   // docId = email, khớp với rules
+                .get();
+
+        return Tasks.whenAllSuccess(eventTask, collabTask)
+                .continueWith(task -> {
+                    DocumentSnapshot eventSnap = eventTask.getResult();
+                    DocumentSnapshot collabSnap = collabTask.getResult();
+
+                    boolean isOwner = false;
+                    if (eventSnap.exists()) {
+                        String ownerId = eventSnap.getString("ownerId");
+                        isOwner = ownerId != null && ownerId.equals(currentUid);
+                    }
+
+                    boolean isCollab = false;
+                    if (collabSnap.exists()) {
+                        String role = collabSnap.getString("role");
+                        isCollab = "checkin".equals(role);
+                    }
+
+                    return isOwner || isCollab;
+                });
     }
 }
