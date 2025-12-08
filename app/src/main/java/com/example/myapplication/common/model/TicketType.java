@@ -18,7 +18,6 @@ public class TicketType implements Serializable {
     private int sold;      // đã bán
 
     // 🔹 ƯU ĐÃI
-    // các field này sẽ được lưu trên Firestore (KHÔNG @Exclude)
     private Double earlyBirdPrice;      // giá đặt sớm
     private Timestamp earlyBirdUntil;   // (optional) đến thời điểm này là hết ưu đãi sớm
     private Double memberPrice;         // giá cho thành viên
@@ -33,7 +32,6 @@ public class TicketType implements Serializable {
     private List<String> selectedSeatIds = new ArrayList<>();
 
     public TicketType() {
-        // Firestore cần constructor rỗng
     }
 
     public TicketType(String id, String name, double price, int quota, int sold) {
@@ -52,7 +50,6 @@ public class TicketType implements Serializable {
     }
 
     // ===== Getters & Setters =====
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -68,8 +65,6 @@ public class TicketType implements Serializable {
     public int getSold() { return sold; }
     public void setSold(int sold) { this.sold = sold; }
 
-    // ===== ƯU ĐÃI =====
-
     public Double getEarlyBirdPrice() { return earlyBirdPrice; }
     public void setEarlyBirdPrice(Double earlyBirdPrice) { this.earlyBirdPrice = earlyBirdPrice; }
 
@@ -81,8 +76,6 @@ public class TicketType implements Serializable {
 
     public Integer getEarlyBirdLimit() { return earlyBirdLimit; }
     public void setEarlyBirdLimit(Integer earlyBirdLimit) { this.earlyBirdLimit = earlyBirdLimit; }
-
-    // ==== Field chỉ dùng trong app (không lưu Firestore) ====
 
     @Exclude
     public int getSelectedQuantity() { return selectedQuantity; }
@@ -100,13 +93,11 @@ public class TicketType implements Serializable {
         this.selectedSeatIds = selectedSeatIds;
     }
 
-    // tiện cho check còn vé không
     @Exclude
     public int getRemainingQuota() {
         return quota - sold;
     }
 
-    // tiện cho check hết vé chưa
     @Exclude
     public boolean isSoldOut() {
         return getRemainingQuota() <= 0;
@@ -120,25 +111,23 @@ public class TicketType implements Serializable {
 
         boolean stillInTime = true;
         if (earlyBirdUntil != null) {
-            // nếu không set earlyBirdUntil thì coi như luôn trong thời gian
             stillInTime = now.compareTo(earlyBirdUntil) < 0;
         }
 
         Integer limit = earlyBirdLimit;
         boolean stillInQuota = true;
         if (limit != null && limit > 0) {
-            // 🔥 giới hạn số vé early: chỉ áp nếu đã bán < limit
             stillInQuota = sold < limit;
         }
 
-        // 1. Ưu đãi đặt sớm (ưu tiên cao nhất)
+        // 1. Ưu đãi đặt sớm
         if (earlyBirdPrice != null && earlyBirdPrice > 0
                 && stillInTime
                 && stillInQuota) {
             return earlyBirdPrice;
         }
 
-        // 2. Giá thành viên (nếu sau này dùng)
+        // 2. Giá thành viên
         if (isMember && memberPrice != null && memberPrice > 0) {
             return memberPrice;
         }
@@ -147,7 +136,6 @@ public class TicketType implements Serializable {
         return base;
     }
 
-    // Label để hiện dưới loại vé: "Ưu đãi đặt sớm"
     @Exclude
     public String getPromoLabel(boolean isMember) {
         Timestamp now = Timestamp.now();

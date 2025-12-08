@@ -8,17 +8,20 @@ public class Seat {
     private String status;  // "available", "booked", "hold"
     private long price;     // giá theo ghế
 
+    private String ticketTypeId;  // Thêm ID của loại vé (từ ticketTypes)
+
     public Seat() {
         // Firestore cần constructor rỗng
     }
 
-    public Seat(String id, String row, int number, String type, String status, long price) {
+    public Seat(String id, String row, int number, String type, String status, long price, String ticketTypeId) {
         this.id = id;
         this.row = row;
         this.number = number;
         this.type = type;
         this.status = status;
         this.price = price;
+        this.ticketTypeId = ticketTypeId;
     }
 
     public String getId() { return id; }
@@ -46,7 +49,13 @@ public class Seat {
 
     public void setPrice(long price) { this.price = price; }
 
+    public String getTicketTypeId() { return ticketTypeId; }
+    public void setTicketTypeId(String ticketTypeId) { this.ticketTypeId = ticketTypeId; }
+
+
     public String getLabel() {
-        return row + number; // "A1"
+        String r = row == null ? "" : row;
+        return r + number;
     }
+
 }

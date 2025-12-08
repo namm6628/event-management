@@ -94,7 +94,7 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
 
         db.collection("orders")
                 .whereEqualTo("userId", uid)
-                .whereEqualTo("status", "paid")
+                .whereEqualTo("status", "PAID")
                 .get()
                 .addOnSuccessListener(orderSnap -> {
                     if (orderSnap.isEmpty()) {

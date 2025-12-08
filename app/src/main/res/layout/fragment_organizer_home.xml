@@ -7,14 +7,15 @@
     android:background="?attr/colorSurface"
     android:padding="16dp">
 
-    <!-- ⭐ KHUNG THỐNG KÊ -->
+    <!-- ⭐ KHUNG THỐNG KÊ – GIỜ ẨN ĐI, KHÔNG CHE LIST SỰ KIỆN -->
     <LinearLayout
         android:id="@+id/cardStats"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_stats_panel"
         android:padding="16dp"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="16dp"
+        android:visibility="gone">
 
         <LinearLayout
             android:orientation="vertical"
@@ -37,9 +38,8 @@
                 android:text="Doanh thu: 0 đ"
                 android:layout_marginTop="8dp"
                 android:textColor="?attr/colorPrimary"
-            android:textStyle="bold"
-            android:textSize="20sp"/>
-
+                android:textStyle="bold"
+                android:textSize="20sp"/>
 
             <TextView
                 android:id="@+id/tvTotalTickets"
@@ -136,7 +136,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ⭐ 2 Ô DASHBOARD NẰM NGANG -->
+    <!-- ⭐ 3 Ô DASHBOARD NẰM NGANG -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -174,6 +174,44 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Hồ sơ BTC"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textStyle="bold"
+                    android:layout_marginTop="6dp"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Ô THỐNG KÊ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnStats"
+            android:layout_width="0dp"
+            android:layout_height="100dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@android:drawable/ic_menu_sort_by_size"
+                    app:tint="?attr/colorOnSurface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Thống kê"
                     android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"
                     android:layout_marginTop="6dp"

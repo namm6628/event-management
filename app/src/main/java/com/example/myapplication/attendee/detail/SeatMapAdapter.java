@@ -30,7 +30,7 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
     private final List<Seat> data = new ArrayList<>();
     private final Set<String> selectedIds = new HashSet<>();
 
-    public SeatMapAdapter(String ticketLabel, int maxSeats, OnSelectionChange listener) {
+    public SeatMapAdapter(int maxSeats, OnSelectionChange listener) {
         this.maxSeats = maxSeats;
         this.selectionListener = listener;
     }
@@ -147,7 +147,7 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
                         Toast.makeText(
                                 itemView.getContext(),
                                 String.format(Locale.getDefault(),
-                                        "Bạn chỉ được chọn đúng %d ghế", maxSeats),
+                                        "Bạn chỉ được chọn tối đa %d ghế", maxSeats),
                                 Toast.LENGTH_SHORT
                         ).show();
                         return;

@@ -49,6 +49,9 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import com.example.myapplication.attendee.detail.EventDetailActivity;
+
+
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -309,20 +312,50 @@ public class ProfileFragment extends Fragment {
     private void setupStaffCheckinButton() {
         if (btnStaffCheckin == null) return;
 
+        // Ẩn mặc định, tránh nháy nút
+        btnStaffCheckin.setVisibility(View.GONE);
+        btnStaffCheckin.setOnClickListener(null);
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || user.getEmail() == null || user.getEmail().isEmpty()) {
-            btnStaffCheckin.setVisibility(View.GONE);
+            // Chưa login / không có email → ẩn
             return;
         }
 
-        // Đơn giản: user nào có email (đăng nhập) là thấy nút
-        btnStaffCheckin.setVisibility(View.VISIBLE);
-        btnStaffCheckin.setOnClickListener(v -> {
-            Context ctx = requireContext();
-            Intent i = new Intent(ctx, StaffCheckinEventListActivity.class);
-            ctx.startActivity(i);
-        });
+        String email = user.getEmail();
+
+        // Check xem email này có được gán role "checkin" ở bất kỳ event nào không
+        db.collectionGroup("collaborators")
+                .whereEqualTo("email", email)
+                .whereEqualTo("role", "checkin")
+                .limit(1) // chỉ cần biết có hay không
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (!isAdded()) return;
+
+                    if (snap != null && !snap.isEmpty()) {
+                        // ✅ Có ít nhất 1 event gán role checkin → hiện nút
+                        btnStaffCheckin.setVisibility(View.VISIBLE);
+                        btnStaffCheckin.setOnClickListener(v -> {
+                            Context ctx = requireContext();
+                            Intent i = new Intent(ctx, StaffCheckinEventListActivity.class);
+                            ctx.startActivity(i);
+                        });
+                    } else {
+                        // ❌ Không được phân công → ẩn nút
+                        btnStaffCheckin.setVisibility(View.GONE);
+                        btnStaffCheckin.setOnClickListener(null);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    // Lỗi thì cứ ẩn cho an toàn
+                    btnStaffCheckin.setVisibility(View.GONE);
+                    btnStaffCheckin.setOnClickListener(null);
+                });
     }
+
+
 
     /* -------------------------- UI logic -------------------------- */
 
@@ -651,8 +684,17 @@ public class ProfileFragment extends Fragment {
             }
 
             row.setOnClickListener(v -> {
-                // TODO: điều hướng sang EventDetail nếu muốn
+                if (fe.id == null || fe.id.trim().isEmpty()) {
+                    toast("Sự kiện này không còn tồn tại");
+                    return;
+                }
+
+                Context ctx = v.getContext();
+                Intent intent = new Intent(ctx, EventDetailActivity.class);
+                intent.putExtra(EventDetailActivity.EXTRA_EVENT_ID, fe.id);
+                ctx.startActivity(intent);
             });
+
 
             container.addView(row);
         }

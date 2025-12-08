@@ -62,7 +62,6 @@ public class EventDetailActivity extends AppCompatActivity {
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
 
     private static final String WEATHER_API_KEY = "d217750b1e400fc2300711ab107183f2";
-
     private static final int REQ_PICK_REVIEW_MEDIA = 1001;
 
     private RequestQueue volleyQueue;
@@ -114,6 +113,9 @@ public class EventDetailActivity extends AppCompatActivity {
     @Nullable
     private ImageView dialogMediaPreview = null;
 
+    // Member flag
+    private boolean isMember = false;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -122,6 +124,9 @@ public class EventDetailActivity extends AppCompatActivity {
 
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) currentUserId = currentUser.getUid();
+
+        // 🔹 load trạng thái member/vip của user
+        loadCurrentUserMembership();
 
         volleyQueue = Volley.newRequestQueue(this);
 
@@ -546,7 +551,6 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                 });
     }
-
 
     // ======= FOLLOW =======
 
@@ -1377,15 +1381,24 @@ public class EventDetailActivity extends AppCompatActivity {
                                    double totalPrice,
                                    String ticketType,
                                    String ticketNames) {
+
         Intent intent = new Intent(this, SeatSelectionActivity.class);
         intent.putExtra("eventId", eventId);
         intent.putExtra("eventTitle", eventTitle);
-        intent.putExtra("quantity", 0);
-        intent.putExtra("totalPrice", 0d);
+
+        // base quantity / price (chủ yếu dùng fallback nếu không có sơ đồ ghế)
+        intent.putExtra("quantity", quantity);
+        intent.putExtra("totalPrice", totalPrice);
+
         intent.putExtra("ticketType", ticketType);
         intent.putExtra("ticketNames", ticketNames);
 
+        // member flag cho seat-pricing
+        intent.putExtra("isMember", isMember);
+
+        // giới hạn tối đa ghế
         intent.putExtra("maxSeats", 10);
+
         startActivity(intent);
     }
 
@@ -1394,6 +1407,7 @@ public class EventDetailActivity extends AppCompatActivity {
         Intent i = new Intent(this, SelectTicketQuantityActivity.class);
         i.putExtra("eventId", eventId);
         i.putExtra("eventTitle", event != null ? event.getTitle() : "");
+        i.putExtra("isMember", isMember);
         startActivity(i);
     }
 
@@ -1523,4 +1537,29 @@ public class EventDetailActivity extends AppCompatActivity {
 
         dialog.show();
     }
+
+    private void loadCurrentUserMembership() {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) {
+            isMember = false;
+            return;
+        }
+        db.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        String tier = doc.getString("membershipTier");
+                        isMember = tier != null
+                                && (tier.equalsIgnoreCase("member")
+                                || tier.equalsIgnoreCase("vip"));
+                    } else {
+                        isMember = false;
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    isMember = false;
+                });
+    }
+
 }

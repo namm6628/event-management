@@ -86,8 +86,6 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
             btnScanQr = itemView.findViewById(R.id.btnScanQr);
             btnCheckinList = itemView.findViewById(R.id.btnCheckinList);
             btnManageStaff = itemView.findViewById(R.id.btnManageStaff);
-
-
         }
 
         void bind(Event e, Listener listener) {
@@ -190,11 +188,25 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
                 v.getContext().startActivity(i);
             });
 
-
             // card click = edit
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onEdit(e);
             });
+        }
+
+        /** kiểm tra sự kiện đã kết thúc chưa (dùng cho trạng thái loại vé) */
+        private boolean isEventFinished(@NonNull Event event) {
+            Timestamp startTs = event.getStartTime();
+            Timestamp endTs   = event.getEndTime();
+            long now = System.currentTimeMillis();
+
+            if (endTs != null) {
+                return endTs.toDate().getTime() < now;
+            }
+            if (startTs != null) {
+                return startTs.toDate().getTime() < now;
+            }
+            return false;
         }
 
         private void loadTicketTypes(Event event, TextView tv) {
@@ -205,6 +217,8 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
             }
 
             tv.setText("Đang tải loại vé...");
+
+            final boolean eventFinished = isEventFinished(event);
 
             db.collection("events")
                     .document(eventId)
@@ -244,13 +258,20 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
                             sb.append(" | Đã bán: ").append(s).append("/").append(q)
                                     .append(" | ");
 
-                            if (s >= q) sb.append("Hết vé");
-                            else sb.append("Đang mở bán");
+                            // 🔥 Trạng thái từng loại vé
+                            if (eventFinished) {
+                                sb.append("Đã đóng");
+                            } else if (q > 0 && s >= q) {
+                                sb.append("Hết vé");
+                            } else {
+                                sb.append("Đang mở bán");
+                            }
                         }
 
                         tv.setText(sb.toString());
                     })
-                    .addOnFailureListener(e -> tv.setText("Không tải được loại vé"));
+                    .addOnFailureListener(e ->
+                            tv.setText("Không tải được loại vé"));
         }
     }
 }

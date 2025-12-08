@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- DÙNG LẠI KHUNG THỐNG KÊ CŨ -->
+        <LinearLayout
+            android:id="@+id/cardStats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_stats_panel"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tvOrgName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Ban tổ chức"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:id="@+id/tvTotalRevenue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Doanh thu: 0 đ"
+                    android:layout_marginTop="8dp"
+                    android:textColor="?attr/colorPrimary"
+                    android:textStyle="bold"
+                    android:textSize="20sp"/>
+
+                <TextView
+                    android:id="@+id/tvTotalTickets"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tổng vé đã bán: 0"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/tvTotalOrders"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tổng lượt mua: 0"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/tvTotalEvents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tổng số sự kiện đã tạo: 0"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <!-- Doanh thu theo thời gian -->
+                <TextView
+                    android:id="@+id/tvRevenueToday"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Doanh thu hôm nay: 0 đ"
+                    android:layout_marginTop="6dp"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/tvRevenueMonth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Doanh thu tháng này: 0 đ"
+                    android:layout_marginTop="2dp"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/tvEventsThisMonth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Sự kiện diễn ra trong tháng này: 0"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <!-- Hiệu suất & top event -->
+                <TextView
+                    android:id="@+id/tvAvgFillRate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tỉ lệ lấp đầy TB: 0%"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/tvTopEvent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Sự kiện bán chạy: Chưa có dữ liệu"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <!-- Trạng thái đơn hàng -->
+                <TextView
+                    android:id="@+id/tvOrderStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Đơn đã thanh toán: 0 | Đang chờ: 0 | Khác: 0"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"/>
+
+                <TextView
+                    android:id="@+id/tvAnalyticsHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Thống kê &amp; phân tích: báo cáo doanh thu, số lượng vé bán theo thời gian, loại vé được ưa chuộng."
+                    android:layout_marginTop="8dp"
+                    android:textColor="#6B7280"
+                    android:textSize="11sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

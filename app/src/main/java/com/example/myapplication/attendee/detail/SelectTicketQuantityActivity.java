@@ -2,10 +2,13 @@ package com.example.myapplication.attendee.detail;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -40,6 +43,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private TicketQuantityAdapter adapter;
+    private boolean isMember = false;
 
     private TextView tvTotalQty, tvTotalPrice;
     private MaterialButton btnContinue;
@@ -57,6 +61,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
         Intent intent = getIntent();
         eventId    = intent.getStringExtra("eventId");
         eventTitle = intent.getStringExtra("eventTitle");
+        isMember   = intent.getBooleanExtra("isMember", false);
 
         if (eventId == null || eventId.isEmpty()) {
             Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
@@ -84,7 +89,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
         tvTotalPrice = findViewById(R.id.tvTotalPrice);
         btnContinue  = findViewById(R.id.btnContinue);
 
-        adapter = new TicketQuantityAdapter(ticketTypes, this::updateSummary);
+        adapter = new TicketQuantityAdapter(ticketTypes, isMember, this::updateSummary);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
@@ -125,13 +130,15 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
             int qty = t.getSelectedQuantity();
             if (qty <= 0) continue;
 
-            double unitPrice = t.getEffectivePrice(false); // chỉ early-bird
+            // dùng cùng logic với Payment: đã tính early-bird + member
+            double unitPrice = t.getEffectivePrice(isMember);
 
             if (unitPrice > 0) {
                 totalQty += qty;
                 totalAmount += unitPrice * qty;
             } else {
-                totalQty += qty; // vé miễn phí
+                // vé miễn phí
+                totalQty += qty;
             }
         }
 
@@ -157,7 +164,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
             int qty = t.getSelectedQuantity();
             if (qty <= 0) continue;
 
-            double unitPrice = t.getEffectivePrice(false); // dùng giá đã áp dụng (early-bird)
+            double unitPrice = t.getEffectivePrice(isMember); // dùng giá đã áp dụng (early-bird + member)
 
             totalQty += qty;
             totalAmount += unitPrice * qty;
@@ -171,6 +178,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
             // map truyền sang PaymentActivity
             HashMap<String, Object> m = new HashMap<>();
+            m.put("ticketTypeId", t.getId());
             m.put("label", "");                 // không có ghế cụ thể
             m.put("type", t.getName());         // tên loại vé
             m.put("price", unitPrice);          // giá sau ưu đãi
@@ -205,25 +213,29 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
         private final List<TicketType> data;
         private final OnQuantityChange callback;
+        private final boolean isMember;
         private final NumberFormat nf =
                 NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
-        public TicketQuantityAdapter(List<TicketType> data, OnQuantityChange callback) {
+        public TicketQuantityAdapter(List<TicketType> data,
+                                     boolean isMember,
+                                     OnQuantityChange callback) {
             this.data = data;
+            this.isMember = isMember;
             this.callback = callback;
         }
 
-        @Nullable
+        @NonNull
         @Override
-        public VH onCreateViewHolder(@Nullable android.view.ViewGroup parent, int viewType) {
-            View v = android.view.LayoutInflater.from(parent.getContext())
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_select_ticket_type, parent, false);
             return new VH(v);
         }
 
         @Override
-        public void onBindViewHolder(@Nullable VH holder, int position) {
-            holder.bind(data.get(position), callback, nf);
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            holder.bind(data.get(position), callback, nf, isMember);
         }
 
         @Override
@@ -235,7 +247,7 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
             TextView tvName, tvPrice, tvRemain, tvQuantity;
             View btnMinus, btnPlus;
 
-            VH(@Nullable View itemView) {
+            VH(@NonNull View itemView) {
                 super(itemView);
                 tvName     = itemView.findViewById(R.id.tvTicketName);
                 tvPrice    = itemView.findViewById(R.id.tvTicketPrice);
@@ -247,16 +259,27 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
             void bind(TicketType t,
                       OnQuantityChange callback,
-                      NumberFormat nf) {
+                      NumberFormat nf,
+                      boolean isMember) {
 
                 tvName.setText(t.getName() == null ? "Loại vé" : t.getName());
 
-                // 🔥 Giá đang áp dụng (có early-bird)
-                double unitPrice = t.getEffectivePrice(false); // hiện tại chưa dùng member
+                // 🔥 Giá đang áp dụng (early-bird + member nếu có)
+                double unitPrice = t.getEffectivePrice(isMember);
                 String priceStr = (unitPrice == 0d)
                         ? "Miễn phí"
                         : nf.format(unitPrice) + " ₫";
                 tvPrice.setText(priceStr);
+
+                // Badge "Ưu đãi đặt sớm" / "Giá thành viên"
+                TextView tvEarlyBird = itemView.findViewById(R.id.tvEarlyBird);
+                String promoLabel = t.getPromoLabel(isMember); // "Ưu đãi đặt sớm" / "Giá thành viên" / null
+                if (promoLabel != null) {
+                    tvEarlyBird.setText(promoLabel);
+                    tvEarlyBird.setVisibility(View.VISIBLE);
+                } else {
+                    tvEarlyBird.setVisibility(View.GONE);
+                }
 
                 int quota = t.getQuota();
                 int sold  = t.getSold();
@@ -266,11 +289,13 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
                 tvQuantity.setText(String.valueOf(t.getSelectedQuantity()));
 
                 // ====== ƯU ĐÃI ĐẶT SỚM: CÒN X/limit VÉ ƯU ĐÃI ======
-                TextView tvPromo = itemView.findViewById(R.id.tvPromo); // thêm trong XML
+                TextView tvPromo = itemView.findViewById(R.id.tvPromo);
                 if (tvPromo != null) {
                     Integer limit = t.getEarlyBirdLimit();
-                    if (limit != null && limit > 0 && sold < limit
-                            && t.getEarlyBirdPrice() != null && t.getEarlyBirdPrice() > 0) {
+                    if (limit != null && limit > 0
+                            && sold < limit
+                            && t.getEarlyBirdPrice() != null
+                            && t.getEarlyBirdPrice() > 0) {
 
                         int remainingEarly = limit - sold;
                         if (remainingEarly < 0) remainingEarly = 0;
@@ -309,7 +334,6 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
                     }
                 });
             }
-
         }
     }
 }
