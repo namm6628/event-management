@@ -9,25 +9,21 @@ import java.util.List;
 
 public class TicketType implements Serializable {
 
-    // id document trong subcollection ticketTypes
     private String id;
 
-    private String name;   // VIP, Standard, sinh viên, học sinh...
+    private String name;
     private double price;
-    private int quota;     // tổng số vé
-    private int sold;      // đã bán
+    private int quota;
+    private int sold;
 
-    // 🔹 ƯU ĐÃI
-    private Double earlyBirdPrice;      // giá đặt sớm
-    private Timestamp earlyBirdUntil;   // (optional) đến thời điểm này là hết ưu đãi sớm
-    private Double memberPrice;         // giá cho thành viên
-    private Integer earlyBirdLimit;     // 🔥 số vé tối đa được hưởng early-bird (VD: 10)
+    private Double earlyBirdPrice;
+    private Timestamp earlyBirdUntil;
+    private Double memberPrice;
+    private Integer earlyBirdLimit;
 
-    // Chỉ dùng trong app (UI chọn vé, không lưu Firestore)
     @Exclude
     private int selectedQuantity = 0;
 
-    // ====== DANH SÁCH GHẾ ĐÃ CHỌN CHO LOẠI VÉ NÀY (CHỈ DÙNG TRONG APP) ======
     @Exclude
     private List<String> selectedSeatIds = new ArrayList<>();
 
@@ -103,7 +99,6 @@ public class TicketType implements Serializable {
         return getRemainingQuota() <= 0;
     }
 
-    // ===== Helper: tính giá đang áp dụng cho attendee =====
     @Exclude
     public double getEffectivePrice(boolean isMember) {
         double base = price; // giá gốc
@@ -120,19 +115,16 @@ public class TicketType implements Serializable {
             stillInQuota = sold < limit;
         }
 
-        // 1. Ưu đãi đặt sớm
         if (earlyBirdPrice != null && earlyBirdPrice > 0
                 && stillInTime
                 && stillInQuota) {
             return earlyBirdPrice;
         }
 
-        // 2. Giá thành viên
         if (isMember && memberPrice != null && memberPrice > 0) {
             return memberPrice;
         }
 
-        // 3. Không ưu đãi
         return base;
     }
 

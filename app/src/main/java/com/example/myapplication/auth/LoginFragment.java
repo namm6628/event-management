@@ -12,19 +12,21 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-
-
 import com.example.myapplication.R;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginFragment extends Fragment {
 
     private FirebaseAuth auth;
 
-    @Nullable @Override
-    public View onCreateView(@NonNull LayoutInflater inf, @Nullable ViewGroup c, @Nullable Bundle b) {
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inf,
+                             @Nullable ViewGroup c,
+                             @Nullable Bundle b) {
         return inf.inflate(R.layout.fragment_login, c, false);
     }
 
@@ -37,48 +39,89 @@ public class LoginFragment extends Fragment {
         TextInputEditText edtEmail = v.findViewById(R.id.edtEmail);
         TextInputEditText edtPass  = v.findViewById(R.id.edtPassword);
 
-        // nút back trên cùng
         View btnBack = v.findViewById(R.id.btnBackToProfile);
         if (btnBack != null) {
-            btnBack.setOnClickListener(x -> {
-                // quay về (đóng fragment hiện tại)
-                NavHostFragment.findNavController(this).popBackStack();
-            });
+            btnBack.setOnClickListener(x ->
+                    NavHostFragment.findNavController(this).popBackStack()
+            );
         }
 
         v.findViewById(R.id.btnLogin).setOnClickListener(x -> {
             String email = text(edtEmail), pass = text(edtPass);
             if (TextUtils.isEmpty(email) || TextUtils.isEmpty(pass)) {
-                Toast.makeText(requireContext(), "Nhập email & mật khẩu", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(),
+                        "Nhập email & mật khẩu", Toast.LENGTH_SHORT).show();
                 return;
             }
+
             auth.signInWithEmailAndPassword(email, pass)
                     .addOnSuccessListener(result -> {
                         FirebaseUser user = result.getUser();
-                        String name = (user != null && user.getDisplayName() != null && !user.getDisplayName().isEmpty())
-                                ? user.getDisplayName()
-                                : email.split("@")[0];
+                        if (user == null) {
+                            Toast.makeText(requireContext(),
+                                    "Lỗi: user null", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
 
-                        // Lưu info vào SharedPreferences như cũ (để ProfileFragment dùng)
-                        AuthManager.login(requireContext(), name, email);
+                        String uid = user.getUid();
+                        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-                        // ✅ Luôn đi thẳng tới Home sau khi đăng nhập
-                        NavHostFragment.findNavController(this)
-                                .navigate(R.id.homeFragment);
+                        db.collection("users").document(uid)
+                                .get()
+                                .addOnSuccessListener(doc -> {
+                                    String nameFromDoc = null;
+                                    String phoneFromDoc = null;
+                                    if (doc.exists()) {
+                                        nameFromDoc = doc.getString("displayName");
+                                        phoneFromDoc = doc.getString("phone");
+                                    }
+
+                                    String finalName;
+                                    if (!TextUtils.isEmpty(nameFromDoc)) {
+                                        finalName = nameFromDoc;
+                                    } else if (user.getDisplayName() != null
+                                            && !user.getDisplayName().isEmpty()) {
+                                        finalName = user.getDisplayName();
+                                    } else {
+                                        finalName = email.split("@")[0];
+                                    }
+
+                                    AuthManager.login(requireContext(),
+                                            finalName,
+                                            email,
+                                            phoneFromDoc);
+
+                                    NavHostFragment.findNavController(this)
+                                            .navigate(R.id.homeFragment);
+                                })
+                                .addOnFailureListener(e2 -> {
+                                    String name;
+                                    if (user.getDisplayName() != null
+                                            && !user.getDisplayName().isEmpty()) {
+                                        name = user.getDisplayName();
+                                    } else {
+                                        name = email.split("@")[0];
+                                    }
+
+                                    AuthManager.login(requireContext(), name, email);
+                                    NavHostFragment.findNavController(this)
+                                            .navigate(R.id.homeFragment);
+                                });
                     })
                     .addOnFailureListener(e -> {
                         Toast.makeText(requireContext(),
                                 "Đăng nhập thất bại: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show();
                     });
-
-
         });
 
         v.findViewById(R.id.tvGoRegister).setOnClickListener(x ->
-                NavHostFragment.findNavController(this).navigate(R.id.action_login_to_register)
+                NavHostFragment.findNavController(this)
+                        .navigate(R.id.action_login_to_register)
         );
     }
 
-    private String text(TextInputEditText e){ return e == null ? "" : String.valueOf(e.getText()).trim(); }
+    private String text(TextInputEditText e) {
+        return e == null ? "" : String.valueOf(e.getText()).trim();
+    }
 }

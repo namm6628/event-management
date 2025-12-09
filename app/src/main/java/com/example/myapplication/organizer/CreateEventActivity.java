@@ -42,7 +42,6 @@ public class CreateEventActivity extends AppCompatActivity {
     private ImageView ivPreview;
     private MaterialButton btnPickDateTime, btnPickImage, btnSave;
 
-    // 🔹 Marketing
     private SwitchMaterial switchFeatured;
     private EditText edtPromoTag;
 
@@ -54,10 +53,8 @@ public class CreateEventActivity extends AppCompatActivity {
     private LinearLayout layoutTicketContainer;
     private MaterialButton btnAddTicketType;
 
-    // id dùng chung cho event + sơ đồ ghế tạm
     private String eventIdForSeats;
 
-    // lưu các dòng nhập loại vé
     private final List<TicketRow> ticketRows = new ArrayList<>();
 
     @Override
@@ -65,7 +62,6 @@ public class CreateEventActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_event);
 
-        // ánh xạ view
         edtTitle          = findViewById(R.id.edtTitle);
         edtArtist         = findViewById(R.id.edtArtist);
         edtCategory       = findViewById(R.id.edtCategory);
@@ -83,15 +79,12 @@ public class CreateEventActivity extends AppCompatActivity {
         layoutTicketContainer = findViewById(R.id.layoutTicketContainer);
         btnAddTicketType      = findViewById(R.id.btnAddTicketType);
 
-        // 🔹 Marketing views
         switchFeatured = findViewById(R.id.switchFeatured);
         edtPromoTag    = findViewById(R.id.edtPromoTag);
 
-        // Lấy eventId nếu đang ở chế độ EDIT
         editingEventId = getIntent().getStringExtra("EXTRA_EVENT_ID");
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // Tạo eventIdForSeats
         if (editingEventId != null) {
             eventIdForSeats = editingEventId;
         } else {
@@ -111,7 +104,7 @@ public class CreateEventActivity extends AppCompatActivity {
             loadEventForEdit(editingEventId);
             btnSave.setText("Cập nhật sự kiện");
         } else {
-            addTicketRow(); // tạo sẵn 1 dòng vé
+            addTicketRow();
         }
 
         btnAddTicketType.setOnClickListener(v -> addTicketRow());
@@ -147,7 +140,6 @@ public class CreateEventActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Cập nhật text "Đã chọn X ghế" cho từng dòng vé
         for (TicketRow row : ticketRows) {
             String name = row.edtName.getText().toString().trim();
             if (name.isEmpty()) continue;
@@ -227,7 +219,6 @@ public class CreateEventActivity extends AppCompatActivity {
         TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, tvSeatInfo, rowView);
         ticketRows.add(row);
 
-        // nếu đã có tên (trường hợp edit) → load ghế tạm
         if (name != null) {
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
@@ -377,7 +368,6 @@ public class CreateEventActivity extends AppCompatActivity {
             return;
         }
 
-        // 🔹 LẤY MARKETING
         boolean isFeatured = switchFeatured != null && switchFeatured.isChecked();
         String promoTag = edtPromoTag != null
                 ? edtPromoTag.getText().toString().trim()
@@ -434,7 +424,6 @@ public class CreateEventActivity extends AppCompatActivity {
             row.seatCodes.addAll(seats);
             updateSeatInfoText(row);
 
-            // ✅ Chỉ check quota & trùng ghế NẾU đã cấu hình sơ đồ ghế
             if (!seats.isEmpty()) {
                 // quota == số ghế
                 if (seats.size() != quota) {
@@ -461,7 +450,6 @@ public class CreateEventActivity extends AppCompatActivity {
             ticket.put("price", price);
             ticket.put("quota", quota);
             ticket.put("sold", 0);
-            // ✅ Chỉ lưu field "seats" nếu có cấu hình
             if (!seats.isEmpty()) {
                 ticket.put("seats", seats);
             }
@@ -576,7 +564,6 @@ public class CreateEventActivity extends AppCompatActivity {
         data.put("status", "active");
         data.put("updatedAt", FieldValue.serverTimestamp());
 
-        // 🔹 Marketing fields
         data.put("featured", featured);
         data.put("featuredBoostScore", featuredBoostScore);
         if (promoTag != null && !promoTag.isEmpty()) {
@@ -642,7 +629,6 @@ public class CreateEventActivity extends AppCompatActivity {
             return;
         }
 
-        // Nếu đang EDIT: xoá ticketTypes + seats cũ
         if (editingEventId != null) {
             db.collection("events")
                     .document(eventId)
@@ -665,7 +651,6 @@ public class CreateEventActivity extends AppCompatActivity {
                     });
         }
 
-        // Ghi ticketTypes + tạo seats mới
         for (Map<String, Object> ticket : ticketTypes) {
             String ticketName  = (String) ticket.get("name");
 
@@ -674,7 +659,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
             @SuppressWarnings("unchecked")
             List<String> seatCodes =
-                    (List<String>) ticket.get("seats"); // list ["A1","A2",...]
+                    (List<String>) ticket.get("seats");
 
             // Lưu ticketType
             db.collection("events")
@@ -696,25 +681,25 @@ public class CreateEventActivity extends AppCompatActivity {
                             int number = 0;
                             try {
                                 if (code != null && code.length() > 0) {
-                                    row = code.substring(0, 1);          // "A"
+                                    row = code.substring(0, 1);
                                     if (code.length() > 1) {
-                                        number = Integer.parseInt(code.substring(1)); // "5" -> 5
+                                        number = Integer.parseInt(code.substring(1));
                                     }
                                 }
                             } catch (Exception ignored) {}
 
-                            seat.put("label", code);     // "A5" (optional, cho vui)
-                            seat.put("row", row);        // field khớp với Seat.row
-                            seat.put("number", number);  // field khớp với Seat.number
-                            seat.put("type", ticketName);     // VIP / Thường
-                            seat.put("price", seatPrice);     // long
-                            seat.put("status", "available");  // trạng thái ghế
+                            seat.put("label", code);
+                            seat.put("row", row);
+                            seat.put("number", number);
+                            seat.put("type", ticketName);
+                            seat.put("price", seatPrice);
+                            seat.put("status", "available");
                             seat.put("eventId", eventId);
 
                             db.collection("events")
                                     .document(eventId)
                                     .collection("seats")
-                                    .document(code)  // docId = "A5"
+                                    .document(code)
                                     .set(seat);
                         }
 
@@ -755,7 +740,6 @@ public class CreateEventActivity extends AppCompatActivity {
                         tvPickedDateTime.setText(sdf.format(ts.toDate()));
                     }
 
-                    // 🔹 Marketing
                     Boolean featured = doc.getBoolean("featured");
                     if (featured != null && switchFeatured != null) {
                         switchFeatured.setChecked(featured);

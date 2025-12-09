@@ -27,7 +27,6 @@ import java.util.Objects;
 
 public class ExploreViewModel extends ViewModel {
 
-    // ===== BE MỚI (Room + Paging) =====
     private EventRepository repo;
     private final MutableLiveData<List<Event>> allEvents = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> categoryFilter = new MutableLiveData<>(null);
@@ -39,7 +38,6 @@ public class ExploreViewModel extends ViewModel {
     private boolean isLoading = false;
     private boolean isEndReached = false;
 
-    // ===== Danh sách ngang =====
     private static final int HORIZONTAL_PAGE_SIZE = 10;
     private final EventRemoteDataSource remote = new EventRemoteDataSource();
 
@@ -128,7 +126,6 @@ public class ExploreViewModel extends ViewModel {
         refresh();
     }
 
-    // ===== Refresh / Paging =====
     public void refresh(String userInterest) {
         if (repo == null || isLoading) return;
         isLoading = true;
@@ -190,7 +187,6 @@ public class ExploreViewModel extends ViewModel {
         return n.toLowerCase(Locale.ROOT).trim();
     }
 
-    /** ⭐ FINAL VERSION: applyFilters() có tích hợp featuredBoostScore */
     private void applyFilters() {
         List<Event> src = allEvents.getValue();
         if (src == null) src = new ArrayList<>();
@@ -212,7 +208,6 @@ public class ExploreViewModel extends ViewModel {
             if (catOk && searchOk) out.add(e);
         }
 
-        // ⭐ SORT — ƯU TIÊN featuredBoostScore TRƯỚC
         try {
             Collections.sort(out, (a, b) -> {
 
@@ -223,7 +218,6 @@ public class ExploreViewModel extends ViewModel {
                     return Integer.compare(boostB, boostA); // desc
                 }
 
-                // fallback: sort theo thời gian
                 Timestamp ta = a.getStartTime();
                 Timestamp tb = b.getStartTime();
                 if (ta == null && tb == null) return 0;

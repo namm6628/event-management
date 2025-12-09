@@ -73,7 +73,6 @@ public class CollaboratorAdapter extends RecyclerView.Adapter<CollaboratorAdapte
             btnDelete.setOnClickListener(v -> {
                 if (eventId == null || email == null) return;
 
-                // ❌ không replace nữa – docId = email
                 String docId = email;
 
                 db.collection("events")

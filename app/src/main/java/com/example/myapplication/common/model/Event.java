@@ -8,7 +8,7 @@ import com.google.firebase.firestore.Exclude;
 import java.io.Serializable;
 
 public class Event implements Serializable {
-    private String id;               // set từ document id
+    private String id;
     private String title;
     private String location;
     private String category;
@@ -21,40 +21,32 @@ public class Event implements Serializable {
 
     private String ownerId;
 
-    // ✅ Firestore Timestamp
     private Timestamp startTime;
 
     private Double price;
     private Integer availableSeats;
     private Integer totalSeats;
 
-    // Các field mở rộng
-    private String artist;           // optional
-    private String venue;            // optional
-    private Timestamp endTime;       // optional
-    private Double lat;              // optional
-    private Double lng;              // optional
+    private String artist;
+    private String venue;
+    private Timestamp endTime;
+    private Double lat;
+    private Double lng;
 
     private Boolean hasSeatLayout;
 
-    // 🔹 VIDEO
     @com.google.firebase.firestore.PropertyName("videoUrl")
     private String videoUrl;
 
     @com.google.firebase.firestore.PropertyName("hasVideo")
     private boolean hasVideo;
 
-    // 🔹 MARKETING
-    // featured: sự kiện nổi bật
-    // featuredBoostScore: dùng để sort ưu tiên (0 = bình thường)
-    // promoTag: text ưu đãi hiển thị nổi bật trên Home
     private Boolean featured;
     private Integer featuredBoostScore;
     private String promoTag;
 
     public Event() {}
 
-    // ===== getters/setters cơ bản =====
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -113,7 +105,6 @@ public class Event implements Serializable {
     public Double getLng() { return lng; }
     public void setLng(Double lng) { this.lng = lng; }
 
-    // ===== VIDEO =====
 
     @com.google.firebase.firestore.PropertyName("videoUrl")
     public String getVideoUrl() {
@@ -127,7 +118,6 @@ public class Event implements Serializable {
 
     @com.google.firebase.firestore.PropertyName("hasVideo")
     public boolean getHasVideo() {
-        // null hoặc false -> trả về false
         return Boolean.TRUE.equals(hasVideo);
     }
 
@@ -142,7 +132,6 @@ public class Event implements Serializable {
         return Boolean.TRUE.equals(hasSeatLayout);
     }
 
-    // ===== MARKETING fields =====
 
     public Boolean getFeatured() {
         return featured;
@@ -168,12 +157,6 @@ public class Event implements Serializable {
         this.promoTag = promoTag;
     }
 
-    // ============ Helper ============
-
-    /**
-     * Trả về true nếu sự kiện đã kết thúc (so với thời gian hiện tại)
-     * Ưu tiên so sánh endTime, nếu không có thì fallback về startTime.
-     */
     public boolean isEnded() {
         Timestamp end = getEndTime();
         java.util.Date now = new java.util.Date();
@@ -184,18 +167,14 @@ public class Event implements Serializable {
 
         Timestamp start = getStartTime();
         if (start != null) {
-            // Nếu không khai báo endTime thì coi như qua giờ bắt đầu là "đã diễn ra"
             return start.toDate().before(now);
         }
 
         return false;
     }
 
-    /** Hết vé nếu availableSeats <= 0 (và đã set trên event) */
     public boolean isSoldOut() {
         Integer avail = getAvailableSeats();
         return avail != null && avail <= 0;
     }
-
-    // Bạn có thể override equals/hashCode nếu muốn dùng trong DiffUtil theo id
 }

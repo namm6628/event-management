@@ -10,8 +10,8 @@ public class SeatTemplate {
     private final String name;
     private final int rows;
     private final int cols;
-    private final Set<String> activeSeats;    // danh sách ghế tồn tại
-    private final Map<String, String> zoneBySeat; // A1 -> "VIP", ...
+    private final Set<String> activeSeats;
+    private final Map<String, String> zoneBySeat;
 
     public SeatTemplate(String id,
                         String name,

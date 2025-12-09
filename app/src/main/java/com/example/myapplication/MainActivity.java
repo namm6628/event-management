@@ -62,7 +62,6 @@ public class MainActivity extends AppCompatActivity implements TicketNavigationH
         }
         navController.setGraph(navGraph);
 
-        // Top-level destinations
         appBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.homeFragment,
                 R.id.exploreFragment,
@@ -88,20 +87,15 @@ public class MainActivity extends AppCompatActivity implements TicketNavigationH
             }
         });
 
-        // 👉 Chỉ override tab nếu:
-        // - ĐÃ login
-        // - Intent có EXTRA_START_DEST (ví dụ từ OrderSuccessActivity)
         int requestedDest = getIntent().getIntExtra(EXTRA_START_DEST, -1);
         if (currentUser != null && requestedDest != -1) {
             bottomNav.setSelectedItemId(requestedDest);
         }
     }
 
-    // Xử lý nút "Mua vé ngay" ở ticket tab (đi sang Explore)
     @Override
     public void onBuyTicketClicked() {
         if (navController == null) return;
-        // Chỉ cần setSelectedItemId, NavigationUI sẽ tự navigate
         binding.bottomNav.setSelectedItemId(R.id.exploreFragment);
     }
 

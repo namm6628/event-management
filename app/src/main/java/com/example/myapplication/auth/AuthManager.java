@@ -18,27 +18,36 @@ public class AuthManager {
     private static final String KEY_LOGGED_IN = "logged_in";
     private static final String KEY_NAME = "name";
     private static final String KEY_EMAIL = "email";
+    private static final String KEY_PHONE = "phone";
     private static final String KEY_AVATAR_URI = "avatar_uri";
     private static final String KEY_IS_ORGANIZER = "is_organizer";
 
-    // Callback đơn giản trả về boolean
     public interface BoolCallback {
         void onResult(boolean value);
     }
-
-    // ----------------- STATIC: thông tin basic (tên, email, avatar, login) -----------------
 
     private static SharedPreferences prefs(Context ctx) {
         return ctx.getSharedPreferences(PREFS_AUTH, Context.MODE_PRIVATE);
     }
 
     public static void login(Context ctx, String name, String email) {
-        SharedPreferences p = prefs(ctx);
-        p.edit()
-                .putBoolean(KEY_LOGGED_IN, true)
-                .putString(KEY_NAME, name)
-                .putString(KEY_EMAIL, email)
-                .apply();
+        login(ctx, name, email, null);
+    }
+
+    public static void login(Context ctx,
+                             String name,
+                             String email,
+                             @Nullable String phone) {
+        SharedPreferences.Editor e = prefs(ctx).edit();
+        e.putBoolean(KEY_LOGGED_IN, true);
+        e.putString(KEY_NAME, name);
+        e.putString(KEY_EMAIL, email);
+        if (phone != null) {
+            e.putString(KEY_PHONE, phone);
+        } else {
+            e.remove(KEY_PHONE);
+        }
+        e.apply();
     }
 
     public static void logout(Context ctx) {
@@ -47,6 +56,7 @@ public class AuthManager {
                 .putBoolean(KEY_LOGGED_IN, false)
                 .remove(KEY_NAME)
                 .remove(KEY_EMAIL)
+                .remove(KEY_PHONE)
                 .remove(KEY_AVATAR_URI)
                 .remove(KEY_IS_ORGANIZER)
                 .apply();
@@ -67,6 +77,21 @@ public class AuthManager {
     }
 
     @Nullable
+    public static String getPhone(Context ctx) {
+        return prefs(ctx).getString(KEY_PHONE, null);
+    }
+
+    public static void setPhone(Context ctx, @Nullable String phone) {
+        SharedPreferences.Editor e = prefs(ctx).edit();
+        if (phone == null) {
+            e.remove(KEY_PHONE);
+        } else {
+            e.putString(KEY_PHONE, phone);
+        }
+        e.apply();
+    }
+
+    @Nullable
     public static String getAvatarUri(Context ctx) {
         return prefs(ctx).getString(KEY_AVATAR_URI, null);
     }
@@ -81,8 +106,6 @@ public class AuthManager {
         e.apply();
     }
 
-    // ----------------- STATIC: cache isOrganizer -----------------
-
     public static void cacheOrganizerFlag(Context ctx, boolean isOrganizer) {
         prefs(ctx).edit().putBoolean(KEY_IS_ORGANIZER, isOrganizer).apply();
     }
@@ -91,18 +114,9 @@ public class AuthManager {
         return prefs(ctx).getBoolean(KEY_IS_ORGANIZER, false);
     }
 
-    // ----------------- INSTANCE: refreshOrganizerStatus từ Firestore -----------------
-
-    /**
-     * Đọc isOrganizer từ Firestore:
-     * - Nếu chưa login -> false
-     * - Nếu doc tồn tại & isOrganizer = true -> true
-     * - Lưu cache vào SharedPreferences
-     */
     public void refreshOrganizerStatus(Context ctx, BoolCallback cb) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            // chưa đăng nhập -> chắc chắn không phải organizer
             cacheOrganizerFlag(ctx, false);
             cb.onResult(false);
             return;
@@ -125,13 +139,10 @@ public class AuthManager {
                 })
                 .addOnFailureListener(e -> {
                     e.printStackTrace();
-                    // lỗi mạng / Firestore -> fallback dùng cache
                     boolean cached = isOrganizerCached(ctx);
                     cb.onResult(cached);
                 });
     }
-
-    // ----------------- (Tuỳ chọn) tạo user Firestore khi register -----------------
 
     public static void createUserDocumentIfNeeded(Context ctx) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -143,7 +154,7 @@ public class AuthManager {
         Map<String, Object> data = new HashMap<>();
         data.put("displayName", getName(ctx));
         data.put("email", getEmail(ctx));
-        // không set isOrganizer ở đây, mặc định false bên RegisterFragment hoặc Firestore
+        data.put("phone", getPhone(ctx));
 
         db.collection("users").document(uid).set(data);
     }

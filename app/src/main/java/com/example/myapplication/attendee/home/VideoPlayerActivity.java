@@ -29,7 +29,6 @@ public class VideoPlayerActivity extends AppCompatActivity {
         player = new ExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
 
-        // Tạo một MediaItem từ URL
         MediaItem mediaItem = MediaItem.fromUri(Uri.parse(videoUrl));
         player.setMediaItem(mediaItem);
         player.setPlayWhenReady(true); // Tự động phát

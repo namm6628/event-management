@@ -67,11 +67,4 @@
     <style name="Widget.TicketMate.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
         <item name="itemActiveIndicatorStyle">@null</item>
     </style>
-
-
-
-
-
-
-
 </resources>

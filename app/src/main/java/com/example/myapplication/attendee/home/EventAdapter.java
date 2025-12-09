@@ -34,7 +34,6 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         this.onItemClick = onItemClick;
     }
 
-    // =========== DiffUtil =============
     private static final DiffUtil.ItemCallback<Event> DIFF =
             new DiffUtil.ItemCallback<Event>() {
                 @Override
@@ -86,11 +85,9 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
     public void onBindViewHolder(@NonNull VH h, int position) {
         Event e = getItem(position);
 
-        // Title
         String title = e.getTitle() == null ? "—" : e.getTitle();
         h.tvTitle.setText(title);
 
-        // Time -> "21 Tháng 11, 2025"
         String dateText = "";
         Timestamp ts = e.getStartTime();
         if (ts != null) {
@@ -101,7 +98,6 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         }
         h.tvDate.setText(dateText);
 
-        // ✅ Price / Status
         String priceLabel;
         if (e.isEnded()) {
             priceLabel = "Sự kiện đã kết thúc";
@@ -121,7 +117,6 @@ public class EventAdapter extends ListAdapter<Event, EventAdapter.VH> {
         h.tvPrice.setText(priceLabel);
 
 
-        // Thumbnail ...
         Glide.with(h.itemView.getContext())
                 .load(e.getThumbnail())
                 .placeholder(R.drawable.sample_event)

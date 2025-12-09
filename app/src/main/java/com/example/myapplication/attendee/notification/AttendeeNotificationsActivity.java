@@ -38,7 +38,6 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
     private View layoutEmpty;
     private BroadcastAdapter adapter;
 
-    // giữ list hiện tại để cập nhật lại khi ẩn
     private final List<EventBroadcast> currentList = new ArrayList<>();
 
     private static final String PREF_NAME = "attendee_notifications_prefs";
@@ -59,13 +58,12 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
 
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new BroadcastAdapter();
-        adapter.setListener(this);     // bật nút xoá cho người nhận
+        adapter.setListener(this);
         rv.setAdapter(adapter);
 
         loadNotifications();
     }
 
-    // ===== SharedPreferences: lưu ID thông báo đã ẩn =====
 
     private Set<String> getHiddenIds() {
         SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
@@ -79,7 +77,6 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
         prefs.edit().putStringSet(KEY_HIDDEN_IDS, set).apply();
     }
 
-    // ===== Load thông báo =====
 
     private void loadNotifications() {
         if (auth.getCurrentUser() == null) {
@@ -117,7 +114,6 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
                     List<String> idsList = new ArrayList<>(eventIds);
                     List<Task<QuerySnapshot>> tasks = new ArrayList<>();
 
-                    // whereIn tối đa 10 phần tử → chia batch
                     for (int i = 0; i < idsList.size(); i += 10) {
                         List<String> sub = idsList.subList(i, Math.min(i + 10, idsList.size()));
                         Task<QuerySnapshot> t = db.collection("eventBroadcasts")
@@ -173,7 +169,6 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
         layoutEmpty.setVisibility(View.VISIBLE);
     }
 
-    // ===== Xử lý nút xoá trên từng card =====
 
     @Override
     public void onDismiss(@NonNull EventBroadcast b) {
@@ -183,10 +178,8 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
             return;
         }
 
-        // lưu lại là đã ẩn
         addHiddenId(id);
 
-        // xoá khỏi currentList theo id
         for (int i = 0; i < currentList.size(); i++) {
             EventBroadcast item = currentList.get(i);
             if (id.equals(item.getId())) {
@@ -195,7 +188,6 @@ public class AttendeeNotificationsActivity extends AppCompatActivity
             }
         }
 
-        // cập nhật lại adapter bằng list mới (ListAdapter sẽ diff)
         adapter.submitList(new ArrayList<>(currentList));
 
         if (currentList.isEmpty()) {

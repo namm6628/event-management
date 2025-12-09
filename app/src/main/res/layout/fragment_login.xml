@@ -59,8 +59,6 @@
         android:layout_marginTop="16dp"
         android:text="Đăng nhập" />
 
-    <!-- TextView để hiển thị "Chưa có tài khoản? Đăng ký"
-         phần "Đăng ký" sẽ được tô màu xanh và clickable qua code -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -22,19 +22,16 @@ import java.util.concurrent.TimeUnit;
 
 public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapter.VH> {
 
-    // Listener để màn nhận thông báo ẩn từng cái
     public interface Listener {
         void onDismiss(@NonNull EventBroadcast b);
     }
 
     private Listener listener;
 
-    // constructor mặc định (không xoá được)
     public BroadcastAdapter() {
         super(DIFF);
     }
 
-    // constructor có listener
     public BroadcastAdapter(Listener listener) {
         super(DIFF);
         this.listener = listener;
@@ -42,7 +39,6 @@ public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapt
 
     public void setListener(Listener listener) {
         this.listener = listener;
-        // không cần notify vì chỉ đổi hành vi nút, không đổi dữ liệu
     }
 
     private static final DiffUtil.ItemCallback<EventBroadcast> DIFF =
@@ -101,22 +97,18 @@ public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapt
         }
 
         void bind(EventBroadcast b, Listener listener) {
-            // Tên sự kiện
             String event = b.getEventTitle();
             tvEventTitle.setText(
                     (event == null || event.isEmpty()) ? "(Sự kiện không tên)" : event
             );
 
-            // Tiêu đề thông báo (label nhỏ)
             String title = b.getTitle();
             tvBroadcastTitle.setText(
                     (title == null || title.isEmpty()) ? "Thông báo từ BTC" : title
             );
 
-            // Nội dung
             tvMessage.setText(b.getMessage() != null ? b.getMessage() : "");
 
-            // Thời gian tương đối
             Timestamp ts = b.getCreatedAt();
             if (ts == null) {
                 tvTime.setText("");
@@ -124,7 +116,6 @@ public class BroadcastAdapter extends ListAdapter<EventBroadcast, BroadcastAdapt
                 tvTime.setText(formatRelativeTime(ts.toDate()));
             }
 
-            // Nút xoá: nếu không có listener (màn BTC) thì ẩn
             if (btnDismiss != null) {
                 if (listener == null) {
                     btnDismiss.setVisibility(View.GONE);

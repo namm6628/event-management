@@ -33,11 +33,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Vé SẮP DIỄN RA (chưa kết thúc):
- * - Có vé: hiển thị rvTickets
- * - Không vé: empty + "Có thể bạn cũng thích"
- */
 public class UpcomingTicketsFragment extends Fragment {
 
     private RecyclerView rvTickets;
@@ -65,7 +60,6 @@ public class UpcomingTicketsFragment extends Fragment {
         rvSuggestions = v.findViewById(R.id.rvSuggestions);
         btnBuyNow = v.findViewById(R.id.btnBuyNow);
 
-        // List vé (dọc)
         rvTickets.setLayoutManager(new LinearLayoutManager(getContext()));
         ticketAdapter = new TicketAdapter(item -> {
             Context c = requireContext();
@@ -75,7 +69,6 @@ public class UpcomingTicketsFragment extends Fragment {
         });
         rvTickets.setAdapter(ticketAdapter);
 
-        // List gợi ý (ngang)
         LinearLayoutManager lm = new LinearLayoutManager(
                 getContext(), LinearLayoutManager.HORIZONTAL, false);
         rvSuggestions.setLayoutManager(lm);
@@ -151,14 +144,11 @@ public class UpcomingTicketsFragment extends Fragment {
                                     ? endTs.toDate().getTime()
                                     : start + 2 * 60 * 60 * 1000;   // default 2h
 
-                            // SỰ KIỆN SẮP DIỄN RA (chưa kết thúc)
                             if (end <= nowMillis) return;
 
-                            // ===== Map tickets từ order =====
                             List<?> ticketsArr = (List<?>) orderDoc.get("tickets");
 
                             if (ticketsArr == null || ticketsArr.isEmpty()) {
-                                // Fallback: 1 dòng / order
                                 TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
                                 item.orderId = orderDoc.getId();
                                 item.eventId = eventId;
@@ -171,7 +161,6 @@ public class UpcomingTicketsFragment extends Fragment {
                                 item.venue = e.getLocation();
                                 item.addressDetail = e.getAddressDetail();
 
-                                // Dùng tổng số vé / tổng tiền nếu có
                                 Number totalTicketsNum = (Number) orderDoc.get("totalTickets");
                                 Number totalAmountNum = (Number) orderDoc.get("totalAmount");
 
@@ -183,20 +172,16 @@ public class UpcomingTicketsFragment extends Fragment {
                                         ? totalAmount / totalTickets
                                         : totalAmount;
 
-                                // Tên loại vé chung
                                 String ticketType = orderDoc.getString("ticketType");
                                 item.ticketTypeName = ticketType;
 
-                                // seatSummary: kiểu fallback này thường không có ghế riêng -> để null
                                 item.seatSummary = null;
 
-                                // Giá min của event
                                 Double price = e.getPrice();
                                 item.minPrice = price != null ? price.longValue() : 0L;
 
                                 result.add(item);
                             } else {
-                                // 1 dòng / vé trong tickets array
                                 for (Object obj : ticketsArr) {
                                     if (!(obj instanceof Map)) continue;
                                     Map<?, ?> tk = (Map<?, ?>) obj;
@@ -213,15 +198,13 @@ public class UpcomingTicketsFragment extends Fragment {
                                     item.venue = e.getLocation();
                                     item.addressDetail = e.getAddressDetail();
 
-                                    // type, price từ map
                                     String typeName = (String) tk.get("type");
                                     Number pNum = (Number) tk.get("price");
 
                                     item.ticketTypeName = typeName;
-                                    item.ticketQuantity = 1L; // mỗi phần tử = 1 vé
+                                    item.ticketQuantity = 1L;
                                     item.ticketPrice = pNum != null ? pNum.longValue() : 0L;
 
-                                    // ✅ Dùng đúng field trong Firestore: label / seatId
                                     String seatLabel = null;
 
                                     Object labelObj = tk.get("label");
@@ -234,10 +217,8 @@ public class UpcomingTicketsFragment extends Fragment {
                                         }
                                     }
 
-                                    item.seatSummary = seatLabel;  // có thể là "A5", "B1" hoặc null
+                                    item.seatSummary = seatLabel;
 
-
-                                    // Giá min của event
                                     Double price = e.getPrice();
                                     item.minPrice = price != null ? price.longValue() : 0L;
 

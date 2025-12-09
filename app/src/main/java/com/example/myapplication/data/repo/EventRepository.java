@@ -21,16 +21,6 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Tasks;
 
-
-/**
- * EventRepository (phiên bản khớp EventDao của bạn)
- * -------------------------------------------------
- * - Local: Room (EventDao, EventEntity)
- * - Remote: Firestore (EventRemoteDataSource)
- * - Dùng executor để tránh block UI khi ghi local.
- *
- * 👉 ExploreViewModel có thể gọi repo để tải & đồng bộ dữ liệu.
- */
 public class EventRepository {
 
     @Nullable
@@ -40,7 +30,6 @@ public class EventRepository {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    // --- Constructors ---
     public EventRepository(@Nullable EventDao local, @NonNull EventRemoteDataSource remote) {
         this.local = local;
         this.remote = remote;
@@ -50,7 +39,6 @@ public class EventRepository {
         this(null, remote);
     }
 
-    // --- Local: LiveData đọc từ DB ---
     public LiveData<List<EventEntity>> getAllLocal() {
         if (local == null) return null;
         return local.getAll();
@@ -73,10 +61,9 @@ public class EventRepository {
                     entity.setCategory(e.getCategory());
                     entity.setThumbnail(e.getThumbnail());
 
-                    // ... trong refreshAll(...)
                     Long millis = null;
                     if (e.getStartTime() != null && e.getStartTime().toDate() != null) {
-                        millis = e.getStartTime().toDate().getTime();   // ✅ startTime là Timestamp
+                        millis = e.getStartTime().toDate().getTime();
                     }
                     entity.setStartTime(millis);
 
@@ -95,14 +82,11 @@ public class EventRepository {
 
 
     }
-
-    /** Dùng trực tiếp remote khi không có local (Room). */
     public void fetchAllDirect(@NonNull EventRemoteDataSource.Success<java.util.List<Event>> onSuccess,
                                @NonNull EventRemoteDataSource.Failure onError) {
         remote.fetchAll(onSuccess, onError);
     }
 
-    // --- Remote: phân trang ---
     public Task<QuerySnapshot> loadFirstPage(String category, int limit) {
         return remote.loadFirstPage(category, limit);
     }
@@ -111,13 +95,9 @@ public class EventRepository {
         return remote.loadNextPage(category, limit, lastVisible);
     }
 
-    // --- Local utility ---
     public void clearLocal() {
         if (local != null) executor.execute(local::clear);
     }
-
-
-    // EventRepository.java
     public void upsertFromRemote(@NonNull List<com.example.myapplication.common.model.Event> events) {
         if (local == null) return;
         executor.execute(() -> {
@@ -139,40 +119,24 @@ public class EventRepository {
                 entity.setTotalSeats(e.getTotalSeats() == null ? 0 : e.getTotalSeats());
                 list.add(entity);
             }
-            local.upsertAll(list); // ✅ append qua Room
+            local.upsertAll(list);
         });
     }
-    // ================== COLLABORATOR (CTV CHECK-IN) ==================
 
-    /**
-     * Thêm / cập nhật cộng tác viên check-in cho sự kiện.
-     */
     public Task<Void> addCollaborator(String eventId, String email, String role) {
         return remote.addCollaborator(eventId, email, role);
     }
 
-    /**
-     * Xoá cộng tác viên khỏi sự kiện.
-     */
     public Task<Void> removeCollaborator(String eventId, String email) {
         return remote.removeCollaborator(eventId, email);
     }
 
-    /**
-     * Lấy danh sách cộng tác viên (documents trong subcollection collaborators).
-     */
     public Task<QuerySnapshot> getCollaborators(String eventId) {
         return remote.getCollaborators(eventId);
     }
 
-    /**
-     * Kiểm tra user (email hiện tại) có quyền check-in sự kiện này không.
-     * - true nếu là owner hoặc là collaborator role "checkin".
-     */
     public Task<Boolean> canUserCheckin(String eventId, String email, String currentUid) {
         return remote.canUserCheckin(eventId, email, currentUid);
     }
-
-
 
 }

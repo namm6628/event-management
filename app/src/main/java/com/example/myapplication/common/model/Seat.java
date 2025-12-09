@@ -1,17 +1,16 @@
 package com.example.myapplication.common.model;
 
 public class Seat {
-    private String id;      // documentId = "A1"
-    private String row;     // "A"
-    private int number;     // 1
-    private String type;    // "VIP", "Standard", ...
-    private String status;  // "available", "booked", "hold"
-    private long price;     // giá theo ghế
+    private String id;
+    private String row;
+    private int number;
+    private String type;
+    private String status;
+    private long price;
 
-    private String ticketTypeId;  // Thêm ID của loại vé (từ ticketTypes)
+    private String ticketTypeId;
 
     public Seat() {
-        // Firestore cần constructor rỗng
     }
 
     public Seat(String id, String row, int number, String type, String status, long price, String ticketTypeId) {

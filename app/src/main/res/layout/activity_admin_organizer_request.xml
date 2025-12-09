@@ -13,7 +13,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorSurface"
         android:theme="@style/ThemeOverlay.MaterialComponents.ActionBar"
-        app:title="Duyệt Organizer" />
+        app:title="Duyệt BTC" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerRequests"

@@ -104,7 +104,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
             tvStatusChip.setText("Thành công");
             tvTicketTypeChip.setText("Vé điện tử");
 
-            // Click vào chip "Vé điện tử" -> show QR
             tvTicketTypeChip.setOnClickListener(v -> showQrDialog(v.getContext(), item));
 
             // ===== Order code =====
@@ -173,10 +172,10 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                     line.append(item.ticketTypeName);
                 }
 
-                // Ghế (nếu có)
+                // Ghế
                 if (item.seatSummary != null && !item.seatSummary.isEmpty()) {
                     if (line.length() > 0) line.append(" – ");
-                    line.append(item.seatSummary); // ví dụ "A1, A2"
+                    line.append(item.seatSummary);
                 }
 
                 // Giá
@@ -193,7 +192,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
                 tvPrice.setVisibility(View.GONE);
             }
 
-            // Click cả item -> mở EventDetail
             itemView.setOnClickListener(v -> {
                 if (onClick != null) onClick.onClick(item);
             });
@@ -202,7 +200,6 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
 
     // ================== QR dialog ==================
     private void showQrDialog(Context context, TicketItem item) {
-        // Nội dung QR: cho BTC quét check-in
         String qrContent = "eventId=" + item.eventId
                 + ";orderId=" + item.orderId
                 + ";userId=" + item.userId;
@@ -237,17 +234,16 @@ public class TicketAdapter extends ListAdapter<TicketAdapter.TicketItem, TicketA
     public static class TicketItem {
         public String orderId;
         public String eventId;
-        public String userId;        // dùng cho QR
+        public String userId;
         public String title;
 
-        public String venue;          // địa điểm ngắn
-        public String addressDetail;  // địa chỉ chi tiết
+        public String venue;
+        public String addressDetail;
 
-        public String ticketTypeName; // tên loại vé
-        public long ticketPrice;      // giá đúng loại vé
-        public long ticketQuantity;   // 3, 2, 1...
+        public String ticketTypeName;
+        public long ticketPrice;
+        public long ticketQuantity;
 
-        // tổng hợp ghế, ví dụ "A1, A2, B3"
         public String seatSummary;
 
         public long startTimeMillis;

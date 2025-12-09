@@ -26,7 +26,6 @@ public abstract class AppDatabase extends RoomDatabase {
                                     AppDatabase.class,
                                     "event_db"
                             )
-                            // Dev stage: nếu thay đổi schema, xoá & tạo lại DB
                             .fallbackToDestructiveMigration()
                             .build();
                 }

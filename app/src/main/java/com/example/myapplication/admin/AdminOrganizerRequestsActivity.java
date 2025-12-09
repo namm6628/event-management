@@ -77,7 +77,6 @@ public class AdminOrganizerRequestsActivity extends AppCompatActivity {
                 );
     }
 
-    /* ===== Adapter ===== */
 
     private static class Item {
         String docId;

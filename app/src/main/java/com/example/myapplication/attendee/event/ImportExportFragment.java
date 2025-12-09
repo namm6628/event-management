@@ -1,63 +1,115 @@
 package com.example.myapplication.attendee.event;
 
-// ImportExportFragment.java
-
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.myapplication.R;
-import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
-import java.util.Collections;
+import java.util.Locale;
 
 public class ImportExportFragment extends Fragment {
 
     private FirebaseStorage storage;
-    private Button btnImport, btnExport;
+    private Button btnImport;
+    private Button btnExport;
 
+    private String eventId;
+
+    private ActivityResultLauncher<String> pickCsvLauncher;
+
+    @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+
         View rootView = inflater.inflate(R.layout.fragment_import_export, container, false);
 
         storage = FirebaseStorage.getInstance();
         btnImport = rootView.findViewById(R.id.btnImport);
         btnExport = rootView.findViewById(R.id.btnExport);
 
-        btnImport.setOnClickListener(v -> {
-            // Xử lý nhập CSV
-            Uri fileUri = null; // Đọc file từ file picker
-                    StorageReference storageRef = storage.getReference().child("imports/" + fileUri.getLastPathSegment());
+        if (getArguments() != null) {
+            eventId = getArguments().getString("eventId");
+        }
+        if (eventId == null) {
+            eventId = "demoEventId";
+        }
 
-            storageRef.putFile(fileUri).addOnSuccessListener(taskSnapshot -> {
-                // Cloud Function sẽ tự động xử lý khi tệp được tải lên
-                FirebaseFunctions.getInstance()
-                        .getHttpsCallable("importAttendees")
-                        .call(Collections.singletonMap("filePath", storageRef.getPath()));
+        setupPickCsvLauncher();
+
+        btnImport.setOnClickListener(v -> pickCsvLauncher.launch("text/*"));
+
+        if (btnExport != null) {
+            btnExport.setOnClickListener(v -> {
+                Toast.makeText(getContext(),
+                        "Export Excel/PDF đang dùng ở màn Export riêng.",
+                        Toast.LENGTH_SHORT).show();
             });
-        });
-
-        btnExport.setOnClickListener(v -> {
-            // Xuất CSV
-            FirebaseFunctions.getInstance()
-                    .getHttpsCallable("exportAttendees")
-                    .call(Collections.singletonMap("eventId", "event123"))
-                    .addOnSuccessListener(result -> {
-                        // Xử lý khi xuất thành công
-                    });
-        });
+        }
 
         return rootView;
     }
-}
+    private void setupPickCsvLauncher() {
+        pickCsvLauncher =
+                registerForActivityResult(new ActivityResultContracts.GetContent(),
+                        uri -> {
+                            if (uri == null) {
+                                Toast.makeText(getContext(),
+                                        "Chưa chọn file CSV",
+                                        Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            uploadCsvToStorage(uri);
+                        });
+    }
 
+    private void uploadCsvToStorage(@NonNull Uri fileUri) {
+        if (eventId == null) {
+            Toast.makeText(getContext(),
+                    "Thiếu eventId để import.",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String fileName = String.format(
+                Locale.getDefault(),
+                "attendees-%d.csv",
+                System.currentTimeMillis()
+        );
+
+        StorageReference storageRef = storage.getReference()
+                .child("imports")
+                .child(eventId)
+                .child(fileName);
+
+        Toast.makeText(getContext(),
+                "Đang upload CSV...",
+                Toast.LENGTH_SHORT).show();
+
+        storageRef.putFile(fileUri)
+                .addOnSuccessListener(taskSnapshot -> {
+                    Toast.makeText(getContext(),
+                            "Upload CSV thành công. Server đang xử lý import.",
+                            Toast.LENGTH_LONG).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(),
+                            "Upload CSV thất bại: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
+    }
+}

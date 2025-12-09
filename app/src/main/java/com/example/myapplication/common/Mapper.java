@@ -5,7 +5,6 @@ import com.example.myapplication.data.local.EventEntity;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 
-// Mapper.java
 public class Mapper {
 
     public static Event toEvent(EventEntity entity) {
@@ -42,7 +41,6 @@ public class Mapper {
         entity.setAvailableSeats(e.getAvailableSeats());
         entity.setTotalSeats(e.getTotalSeats());
 
-        // ✅ startTime trong Event là Timestamp → đổi sang millis (Long)
         com.google.firebase.Timestamp ts = e.getStartTime();
         entity.setStartTime(ts != null ? ts.toDate().getTime() : null);
         return entity;

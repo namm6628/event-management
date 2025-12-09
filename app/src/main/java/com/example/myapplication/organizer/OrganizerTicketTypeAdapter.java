@@ -38,7 +38,6 @@ public class OrganizerTicketTypeAdapter
         notifyDataSetChanged();
     }
 
-    // helper nếu bạn load bằng QuerySnapshot
     public void submitFromSnapshot(QuerySnapshot snap) {
         data.clear();
         if (snap != null) {
@@ -80,19 +79,15 @@ public class OrganizerTicketTypeAdapter
             tvName = itemView.findViewById(R.id.tvTicketName);
             tvPrice = itemView.findViewById(R.id.tvTicketPrice);
 
-            // TextView ở dòng dưới tên vé (trước đây là "Số lượng")
-            // Dùng lại để hiển thị trạng thái ghế: "Chưa chọn ghế" / "Đã chọn X ghế"
             tvSeatStatus = itemView.findViewById(R.id.tvTicketQuota);
 
             btnSetupSeats = itemView.findViewById(R.id.btnSetupSeats);
         }
 
         void bind(TicketType t, OnSetupSeatsClickListener listener, int position) {
-            // ===== Tên loại vé =====
             String name = t.getName();
             tvName.setText(name != null ? name : "Loại vé");
 
-            // ===== Giá vé =====
             double price = t.getPrice();
             String priceStr = (price == 0d)
                     ? "Miễn phí"
@@ -100,14 +95,12 @@ public class OrganizerTicketTypeAdapter
                     .format(price) + " ₫";
             tvPrice.setText(priceStr);
 
-            // ===== Trạng thái ghế =====
             if (t.getSelectedSeatIds() == null || t.getSelectedSeatIds().isEmpty()) {
                 tvSeatStatus.setText("Chưa chọn ghế");
             } else {
                 tvSeatStatus.setText("Đã chọn " + t.getSelectedSeatIds().size() + " ghế");
             }
 
-            // ===== Nút Sơ đồ ghế =====
             btnSetupSeats.setOnClickListener(v -> {
                 if (listener != null) listener.onSetupSeats(t, position);
             });

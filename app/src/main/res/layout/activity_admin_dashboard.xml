@@ -37,7 +37,7 @@
             style="@style/Widget.MaterialComponents.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Duyệt yêu cầu Organizer"
+            android:text="Duyệt yêu cầu BTC"
             android:layout_marginBottom="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -45,7 +45,7 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Duyệt yêu cầu Member" />
+            android:text="Duyệt yêu cầu đăng kí thành viên " />
 
 
     </LinearLayout>

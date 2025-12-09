@@ -52,7 +52,6 @@ public class ManageCollaboratorsActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
 
-        // Toolbar
         androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
@@ -66,7 +65,6 @@ public class ManageCollaboratorsActivity extends AppCompatActivity {
         tvEmpty = findViewById(R.id.tvEmpty);
         rvList  = findViewById(R.id.rvCollaborators);
 
-        // Spinner role (tạm thời chỉ cần "checkin")
         String[] roles = new String[] { "checkin" };
         ArrayAdapter<String> roleAdapter = new ArrayAdapter<>(
                 this,
@@ -104,7 +102,6 @@ public class ManageCollaboratorsActivity extends AppCompatActivity {
             return;
         }
 
-        // ❌ KHÔNG còn normalize: docId = email nguyên bản
         String docId = email;
 
         Map<String, Object> data = new HashMap<>();
@@ -133,13 +130,13 @@ public class ManageCollaboratorsActivity extends AppCompatActivity {
                 .addSnapshotListener((snap, e) -> {
                     if (e != null) {
                         tvEmpty.setText("Lỗi tải danh sách: " + e.getMessage());
-                        tvEmpty.setVisibility(View.VISIBLE);     // 🔥
+                        tvEmpty.setVisibility(View.VISIBLE);
                         return;
                     }
 
                     if (snap == null || snap.isEmpty()) {
                         tvEmpty.setText("Chưa có nhân viên / CTV");
-                        tvEmpty.setVisibility(View.VISIBLE);     // 🔥
+                        tvEmpty.setVisibility(View.VISIBLE);
                         adapter.submit(null);
                         return;
                     }

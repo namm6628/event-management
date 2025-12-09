@@ -11,8 +11,6 @@ import com.example.myapplication.common.model.Seat;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -35,24 +33,11 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
         this.selectionListener = listener;
     }
 
-    /** Cập nhật danh sách ghế từ Firestore */
     public void setSeatList(List<Seat> seats) {
         data.clear();
         selectedIds.clear();
 
         if (seats != null) {
-            // 🔹 Sắp xếp theo hàng (A,B,C...) rồi tới số (1,2,3..)
-            Collections.sort(seats, new Comparator<Seat>() {
-                @Override
-                public int compare(Seat a, Seat b) {
-                    String ra = a.getRow() == null ? "" : a.getRow();
-                    String rb = b.getRow() == null ? "" : b.getRow();
-                    int cmp = ra.compareTo(rb);
-                    if (cmp != 0) return cmp;
-                    return Integer.compare(a.getNumber(), b.getNumber());
-                }
-            });
-
             for (Seat s : seats) {
                 if (s.getStatus() == null || s.getStatus().trim().isEmpty()) {
                     s.setStatus("available");
@@ -65,7 +50,6 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
         notifySelectionChanged();
     }
 
-    /** Trả về danh sách ghế đang được chọn */
     public List<Seat> getSelectedSeats() {
         List<Seat> res = new ArrayList<>();
         for (Seat s : data) {
@@ -115,7 +99,6 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
 
             String status = seat.getStatus() == null ? "available" : seat.getStatus();
 
-            // 🔹 Ghế bị khóa / đã đặt / đang hold → xám, không click
             if ("booked".equalsIgnoreCase(status)
                     || "blocked".equalsIgnoreCase(status)
                     || "hold".equalsIgnoreCase(status)) {
@@ -123,13 +106,13 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
                 btnSeat.setBackgroundTintList(
                         androidx.core.content.ContextCompat.getColorStateList(
                                 itemView.getContext(),
-                                R.color.seat_booked   // màu xám
+                                R.color.seat_booked
                         )
                 );
+                btnSeat.setOnClickListener(null);
                 return;
             }
 
-            // 🔹 Ghế đang trống
             btnSeat.setEnabled(true);
             btnSeat.setBackgroundTintList(
                     androidx.core.content.ContextCompat.getColorStateList(
@@ -142,7 +125,6 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
                 boolean currentlySelected = selectedIds.contains(seat.getId());
 
                 if (!currentlySelected) {
-                    // Đang muốn chọn thêm
                     if (selectedIds.size() >= maxSeats) {
                         Toast.makeText(
                                 itemView.getContext(),
@@ -154,7 +136,6 @@ public class SeatMapAdapter extends RecyclerView.Adapter<SeatMapAdapter.SeatVH> 
                     }
                     selectedIds.add(seat.getId());
                 } else {
-                    // Bỏ chọn
                     selectedIds.remove(seat.getId());
                 }
 

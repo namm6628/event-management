@@ -4,15 +4,14 @@ import com.google.firebase.Timestamp;
 
 public class EventBroadcast {
 
-    private String id;          // document id (set bằng tay)
+    private String id;
     private String eventId;
-    private String eventTitle;  // tên sự kiện (optional nhưng nên lưu)
-    private String title;       // tiêu đề thông báo
-    private String message;     // nội dung
+    private String eventTitle;
+    private String title;
+    private String message;
     private Timestamp createdAt;
 
     public EventBroadcast() {
-        // Firestore cần constructor rỗng
     }
 
     public String getId() {

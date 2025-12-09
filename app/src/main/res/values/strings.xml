@@ -3,7 +3,6 @@
     <string name="app_name">Event Management</string>
     <string name="price_format">Giá: %s</string>
     <string name="free">Miễn phí</string>
-    <!-- Explore / Search common -->
     <string name="search_hint">Tìm sự kiện, nghệ sĩ, địa điểm…</string>
     <string name="city">Thành phố</string> <string name="category">Danh mục</string>
     <string name="from_date">Từ ngày</string> <string name="to_date">Đến ngày</string>
@@ -14,12 +13,11 @@
     <string name="sort_asc">Tăng dần</string>
     <string name="reset">Thiết lập lại</string>
     <string name="apply">Áp dụng</string>
-    <!-- Cities --> <string name="nationwide">Toàn quốc</string>
+    <string name="nationwide">Toàn quốc</string>
     <string name="hanoi">Hà Nội</string>
     <string name="hcm">TP.HCM</string>
     <string name="dalat">Đà Lạt</string>
     <string name="other_place">Vị trí khác</string>
-    <!-- Categories (nếu bạn đang dùng) -->
     <string name="cat_all">Tất cả</string>
     <string name="cat_music">Âm nhạc</string>
     <string name="cat_art">Sân khấu &amp; nghệ thuật</string>
@@ -34,7 +32,6 @@
     <string name="city_other">Thành phố khác</string>
     <string name="all_categories">Tất cả danh mục</string>
     <string name="event_image">Ảnh sự kiện</string>
-    <!-- nếu trước đó chưa có thì thêm luôn mấy cái này để khỏi báo tiếp -->
     <string name="sort_start_at">Ngày bắt đầu</string>
     <string name="sort_created_at">Ngày tạo</string>
     <string name="sort_price">Giá vé</string>

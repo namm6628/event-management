@@ -30,12 +30,10 @@ public class HeroVideoAdapter extends RecyclerView.Adapter<HeroVideoAdapter.VH> 
     private final OnHeroClick onHeroClick;
     private final List<Event> items = new ArrayList<>();
 
-    // 🔥 1 player dùng chung
     private final ExoPlayer player;
     private boolean isMuted = true;
     private int currentIndex = 0;
 
-    // Lưu ViewHolder theo position để gắn / tháo player đúng slide
     private final SparseArray<VH> holderMap = new SparseArray<>();
 
     public HeroVideoAdapter(Context context, OnHeroClick click) {
@@ -44,7 +42,7 @@ public class HeroVideoAdapter extends RecyclerView.Adapter<HeroVideoAdapter.VH> 
 
         player = new ExoPlayer.Builder(context).build();
         player.setRepeatMode(Player.REPEAT_MODE_ONE);
-        player.setVolume(0f); // default mute
+        player.setVolume(0f);
     }
 
     public void submitList(List<Event> list) {
@@ -72,7 +70,6 @@ public class HeroVideoAdapter extends RecyclerView.Adapter<HeroVideoAdapter.VH> 
         return items.size();
     }
 
-    // ============= QUẢN LÝ HOLDER GẮN PLAYER =============
 
     @Override
     public void onViewAttachedToWindow(@NonNull VH holder) {
@@ -98,12 +95,10 @@ public class HeroVideoAdapter extends RecyclerView.Adapter<HeroVideoAdapter.VH> 
     }
 
     private void attachPlayerTo(int position) {
-        // Tháo player khỏi tất cả holder
         for (int i = 0; i < holderMap.size(); i++) {
             VH h = holderMap.valueAt(i);
             h.playerView.setPlayer(null);
         }
-        // Gắn player vào holder của position hiện tại
         VH target = holderMap.get(position);
         if (target != null) {
             target.playerView.setPlayer(player);
@@ -114,16 +109,13 @@ public class HeroVideoAdapter extends RecyclerView.Adapter<HeroVideoAdapter.VH> 
         }
     }
 
-    // ============= API Fragment gọi =============
-
-    /** Gọi khi page hero đổi hoặc khi resume Home */
     public void onPageSelected(int position) {
         if (items.isEmpty()) return;
         if (position < 0 || position >= items.size()) return;
 
         currentIndex = position;
-        attachPlayerTo(position);   // gắn player vào đúng PlayerView
-        playAt(position);           // và play video tương ứng
+        attachPlayerTo(position);
+        playAt(position);
     }
 
     private void playAt(int position) {
@@ -176,9 +168,7 @@ public class HeroVideoAdapter extends RecyclerView.Adapter<HeroVideoAdapter.VH> 
         }
 
         void bind(Event e, HeroVideoAdapter adapter, OnHeroClick click) {
-            // KHÔNG setPlayer ở đây nữa, để adapter.attachPlayerTo() lo
 
-            // icon mute đúng trạng thái hiện tại
             btnMute.setImageResource(
                     adapter.isMuted()
                             ? R.drawable.ic_volume_off_white_24

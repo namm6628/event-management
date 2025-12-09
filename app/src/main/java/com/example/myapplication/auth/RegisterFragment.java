@@ -1,6 +1,7 @@
 package com.example.myapplication.auth;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,7 +26,7 @@ public class RegisterFragment extends Fragment {
 
     private FirebaseAuth auth;
 
-    // Khai báo view
+    // View
     private TextInputEditText edtName, edtEmail, edtPhone, edtPassword, edtRePassword;
     private View btnRegister;
 
@@ -43,15 +44,13 @@ public class RegisterFragment extends Fragment {
 
         auth = FirebaseAuth.getInstance();
 
-        // Ánh xạ view
         edtName       = v.findViewById(R.id.edtName);
         edtEmail      = v.findViewById(R.id.edtEmail);
-        edtPhone      = v.findViewById(R.id.edtPhone);       // cần có trong XML
+        edtPhone      = v.findViewById(R.id.edtPhone);
         edtPassword   = v.findViewById(R.id.edtPassword);
-        edtRePassword = v.findViewById(R.id.edtRePassword);  // cần có trong XML
+        edtRePassword = v.findViewById(R.id.edtRePassword);
         btnRegister   = v.findViewById(R.id.btnRegister);
 
-        // Nút back về Profile (như cũ)
         View btnBack = v.findViewById(R.id.btnBackToProfile2);
         if (btnBack != null) {
             btnBack.setOnClickListener(x -> {
@@ -65,10 +64,8 @@ public class RegisterFragment extends Fragment {
             });
         }
 
-        // Đăng ký
         btnRegister.setOnClickListener(view -> doRegister());
 
-        // Text "Đã có tài khoản? Đăng nhập"
         v.findViewById(R.id.tvGoLogin).setOnClickListener(x ->
                 NavHostFragment.findNavController(this).navigateUp()
         );
@@ -81,40 +78,53 @@ public class RegisterFragment extends Fragment {
         String pass    = getText(edtPassword);
         String repass  = getText(edtRePassword);
 
-        // --- Validate cơ bản ---
-        if (name.isEmpty()) {
+        if (TextUtils.isEmpty(name)) {
             edtName.setError("Nhập tên");
-            return;
-        }
-        if (email.isEmpty()) {
-            edtEmail.setError("Nhập email");
+            edtName.requestFocus();
             return;
         }
 
-        // --- Email phải @gmail.com ---
+        if (TextUtils.isEmpty(email)) {
+            edtEmail.setError("Nhập email");
+            edtEmail.requestFocus();
+            return;
+        }
+
         if (!email.toLowerCase().endsWith("@gmail.com")) {
             edtEmail.setError("Email phải có đuôi @gmail.com");
+            edtEmail.requestFocus();
             return;
         }
 
-        // --- Password ---
+        if (TextUtils.isEmpty(phone)) {
+            edtPhone.setError("Nhập số điện thoại");
+            edtPhone.requestFocus();
+            return;
+        }
+        if (phone.length() < 9) {
+            edtPhone.setError("Số điện thoại không hợp lệ");
+            edtPhone.requestFocus();
+            return;
+        }
+
         if (pass.length() < 6) {
             edtPassword.setError("Mật khẩu phải ≥ 6 ký tự");
+            edtPassword.requestFocus();
             return;
         }
         if (!pass.equals(repass)) {
             edtRePassword.setError("Mật khẩu nhập lại không khớp");
+            edtRePassword.requestFocus();
             return;
         }
 
-        // Phone: cho phép rỗng -> lưu null
-        String phoneToStore = phone.isEmpty() ? null : phone;
+        btnRegister.setEnabled(false);
 
-        // Tạo account FirebaseAuth
         auth.createUserWithEmailAndPassword(email, pass)
                 .addOnSuccessListener(result -> {
                     FirebaseUser user = result.getUser();
                     if (user == null) {
+                        btnRegister.setEnabled(true);
                         Toast.makeText(requireContext(),
                                 "Lỗi: user null",
                                 Toast.LENGTH_SHORT).show();
@@ -125,19 +135,23 @@ public class RegisterFragment extends Fragment {
                     FirebaseFirestore db = FirebaseFirestore.getInstance();
 
                     Map<String, Object> userDoc = new HashMap<>();
-                    // PHẢI KHỚP RULE isValidUser()
                     userDoc.put("name", name);
                     userDoc.put("email", email);
-                    userDoc.put("phone", phoneToStore);
+                    userDoc.put("phone", phone);
                     userDoc.put("createdAt", FieldValue.serverTimestamp());
-                    // Extra
                     userDoc.put("isOrganizer", false);
+                    userDoc.put("isAdmin", false);
+
+                    userDoc.put("membershipTier", "none");
+                    userDoc.put("loyaltyPoints", 0L);
+                    userDoc.put("lifetimePoints", 0L);
 
                     db.collection("users")
                             .document(uid)
                             .set(userDoc)
                             .addOnSuccessListener(unused -> {
-                                // Đăng ký xong -> signOut, yêu cầu login lại
+                                btnRegister.setEnabled(true);
+
                                 FirebaseAuth.getInstance().signOut();
                                 AuthManager.logout(requireContext());
 
@@ -149,12 +163,14 @@ public class RegisterFragment extends Fragment {
                                         .navigate(R.id.loginFragment);
                             })
                             .addOnFailureListener(e -> {
+                                btnRegister.setEnabled(true);
                                 Toast.makeText(requireContext(),
                                         "Lỗi lưu user: " + e.getMessage(),
                                         Toast.LENGTH_LONG).show();
                             });
                 })
                 .addOnFailureListener(e -> {
+                    btnRegister.setEnabled(true);
                     Toast.makeText(requireContext(),
                             "Đăng ký thất bại: " + e.getMessage(),
                             Toast.LENGTH_SHORT).show();

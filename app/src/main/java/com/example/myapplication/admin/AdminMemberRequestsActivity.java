@@ -160,7 +160,6 @@ public class AdminMemberRequestsActivity extends AppCompatActivity {
 
                 String uid = item.docId;
 
-                // update memberRequests
                 HashMap<String, Object> updatesReq = new HashMap<>();
                 updatesReq.put("status", "approved");
                 updatesReq.put("processedAt", FieldValue.serverTimestamp());

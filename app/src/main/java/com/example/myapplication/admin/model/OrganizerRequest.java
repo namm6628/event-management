@@ -8,7 +8,7 @@ public class OrganizerRequest {
     private String orgName;
     private String orgType;
     private String description;
-    private String status;     // pending / approved / rejected
+    private String status;
     private Timestamp createdAt;
     private Timestamp processedAt;
     private String processedBy;

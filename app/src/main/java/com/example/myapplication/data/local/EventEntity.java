@@ -25,14 +25,12 @@ public class EventEntity {
     @Nullable private String category;
     @Nullable private String thumbnail;
 
-    /** Lưu millis (epoch). Null nếu chưa có */
     @Nullable private Long startTime;
 
     @Nullable private Double price;
     @Nullable private Integer availableSeats;
     @Nullable private Integer totalSeats;
 
-    // --- getters / setters ---
     @Nullable public String getId() { return id; }
     public void setId(@Nullable String id) { this.id = id; }
 

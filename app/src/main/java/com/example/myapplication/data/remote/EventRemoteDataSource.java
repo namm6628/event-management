@@ -201,7 +201,7 @@ public class EventRemoteDataSource {
         return db.collection("events")
                 .document(eventId)
                 .collection("collaborators")
-                .document(email)     // docId = email
+                .document(email)
                 .delete();
     }
 
@@ -212,11 +212,6 @@ public class EventRemoteDataSource {
                 .get();
     }
 
-    /**
-     * true nếu:
-     *  - currentUid là ownerId của event, hoặc
-     *  - email nằm trong collaborators với role = "checkin".
-     */
     public Task<Boolean> canUserCheckin(String eventId, String email, String currentUid) {
         Task<DocumentSnapshot> eventTask = db.collection("events")
                 .document(eventId)
@@ -225,7 +220,7 @@ public class EventRemoteDataSource {
         Task<DocumentSnapshot> collabTask = db.collection("events")
                 .document(eventId)
                 .collection("collaborators")
-                .document(email)   // docId = email, khớp với rules
+                .document(email)
                 .get();
 
         return Tasks.whenAllSuccess(eventTask, collabTask)

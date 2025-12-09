@@ -10,14 +10,12 @@ public class User {
     private String phone;
     private Timestamp createdAt;
 
-    // role / membership
-    private String membershipTier; // "normal", "member", "vip"
-    private Boolean isOrganizer;   // optional
+    private String membershipTier;
+    private Boolean isOrganizer;
 
     public User() {
     }
 
-    // getters / setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

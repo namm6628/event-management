@@ -2,9 +2,9 @@ package com.example.myapplication.attendee.detail;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -24,6 +24,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,12 +43,10 @@ public class SeatSelectionActivity extends AppCompatActivity {
 
     private boolean isMember = false;
 
-    // Giá trị gốc truyền sang – chỉ dùng nếu EVENT KHÔNG có sơ đồ ghế (fallback)
     private int baseQuantity;
     private double baseTotalPrice;
     private int maxSeats;
 
-    // Giá trị được tính lại theo ghế
     private int currentQuantity = 0;
     private long currentTotalPrice = 0L;
     private String currentTicketSummary = "";
@@ -67,8 +66,9 @@ public class SeatSelectionActivity extends AppCompatActivity {
 
     private SeatMapAdapter adapter;
 
-    // ⭐ MAP ticketTypeId -> TicketType để tính early bird / member
     private final Map<String, TicketType> ticketTypeMap = new HashMap<>();
+
+    private final NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -77,7 +77,6 @@ public class SeatSelectionActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
 
-        // ===== Nhận data truyền sang từ EventDetailActivity =====
         Intent baseIntent = getIntent();
         eventId        = baseIntent.getStringExtra("eventId");
         eventTitle     = baseIntent.getStringExtra("eventTitle");
@@ -90,7 +89,6 @@ public class SeatSelectionActivity extends AppCompatActivity {
                 baseQuantity > 0 ? baseQuantity : 10);
         isMember       = baseIntent.getBooleanExtra("isMember", false);
 
-        // ===== Ánh xạ view =====
         toolbar             = findViewById(R.id.toolbar);
         rvSeatMap           = findViewById(R.id.rvSeatMap);
         txtTicketInfo       = findViewById(R.id.txtTicketInfo);
@@ -101,7 +99,6 @@ public class SeatSelectionActivity extends AppCompatActivity {
         tvTicketSummarySeat = findViewById(R.id.tvTicketSummarySeat);
         tvTotalPriceSeat    = findViewById(R.id.tvTotalPriceSeat);
 
-        // ===== Toolbar =====
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Chọn ghế");
@@ -109,23 +106,17 @@ public class SeatSelectionActivity extends AppCompatActivity {
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
-        // ===== Text info ban đầu =====
         tvEventNameSeat.setText(eventTitle != null ? eventTitle : "Sự kiện");
-
         tvTicketSummarySeat.setText("Chọn ghế trên sơ đồ");
         tvTotalPriceSeat.setText("Tổng: 0 ₫");
         txtTicketInfo.setText("Chạm để chọn ghế (có thể chọn nhiều ghế)");
-
         txtSelectedSeats.setText("Đã chọn: 0 ghế");
 
-        // ===== RecyclerView + adapter =====
         adapter = new SeatMapAdapter(
                 maxSeats,
                 this::updateHeaderBySelectedSeats
         );
-
-        // span = số cột template (ở SeatLayoutConfigActivity đang là 12)
-        rvSeatMap.setLayoutManager(new GridLayoutManager(this, 12));
+        rvSeatMap.setLayoutManager(new GridLayoutManager(this, 8));
         rvSeatMap.setAdapter(adapter);
 
         btnConfirmSeats.setEnabled(false);
@@ -140,15 +131,14 @@ public class SeatSelectionActivity extends AppCompatActivity {
             for (Seat s : selected) {
                 seatIds.add(s.getId());
 
-                long price = getEffectiveSeatPrice(s);   // ⭐ GIÁ ĐÃ ÁP DỤNG ƯU ĐÃI
+                long price = getEffectiveSeatPrice(s);
 
                 HashMap<String, Object> map = new HashMap<>();
                 map.put("seatId", s.getId());
-                map.put("label", s.getLabel());      // A7, B3...
-                map.put("type",  s.getType());       // "VIP", "Standard", ...
-                map.put("price", price);             // ⭐ GIÁ SAU ƯU ĐÃI (early bird / member)
+                map.put("label", s.getLabel());
+                map.put("type",  s.getType());
+                map.put("price", price);
 
-                // ⭐ QUAN TRỌNG: thêm ticketTypeId + quantity để PaymentActivity cập nhật sold
                 map.put("ticketTypeId", s.getTicketTypeId());
                 map.put("quantity", 1);
 
@@ -171,14 +161,11 @@ public class SeatSelectionActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // ⭐ Load ticketTypes để tính giá theo early bird / member
         loadTicketTypesForSeatPricing();
 
-        // ⭐ Nghe realtime sơ đồ ghế
         listenSeatRealtime();
     }
 
-    /** ⭐ Load ticketTypes cho event để map ticketTypeId -> TicketType (early bird, member) */
     private void loadTicketTypesForSeatPricing() {
         if (eventId == null) return;
 
@@ -195,29 +182,39 @@ public class SeatSelectionActivity extends AppCompatActivity {
                         ticketTypeMap.put(t.getId(), t);
                     }
 
-                    // Sau khi load loại vé xong, nếu đã có ghế đang chọn thì tính lại header
                     updateHeaderBySelectedSeats(adapter.getSelectedSeats());
                 })
                 .addOnFailureListener(e -> {
-                    // optional: show log / toast
-                    // Toast.makeText(this, "Không tải được loại vé: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
-    /** ⭐ Giá thực tế của 1 ghế theo loại vé + early bird / member. */
     private long getEffectiveSeatPrice(Seat s) {
+        TicketType target = null;
+
         String typeId = s.getTicketTypeId();
         if (typeId != null && ticketTypeMap.containsKey(typeId)) {
-            TicketType t = ticketTypeMap.get(typeId);
-            if (t != null) {
-                double price = t.getEffectivePrice(isMember); // ⭐
-                return (long) price;
+            target = ticketTypeMap.get(typeId);
+        }
+
+        if (target == null) {
+            String seatType = s.getType();
+            if (seatType != null) {
+                for (TicketType tt : ticketTypeMap.values()) {
+                    if (seatType.equalsIgnoreCase(tt.getName())) {
+                        target = tt;
+                        break;
+                    }
+                }
             }
         }
+        if (target != null) {
+            double price = target.getEffectivePrice(isMember);
+            return (long) price;
+        }
+
         return s.getPrice();
     }
 
-    /** Tính lại số lượng, tổng tiền, chuỗi tóm tắt theo các ghế đã chọn */
     private void updateHeaderBySelectedSeats(List<Seat> selectedSeats) {
         currentQuantity = selectedSeats.size();
 
@@ -225,7 +222,7 @@ public class SeatSelectionActivity extends AppCompatActivity {
         Map<String, Integer> typeCount = new HashMap<>();
 
         for (Seat s : selectedSeats) {
-            long price = getEffectiveSeatPrice(s);   // ⭐ DÙNG GIÁ ƯU ĐÃI
+            long price = getEffectiveSeatPrice(s);
             currentTotalPrice += price;
 
             String type = s.getType();
@@ -251,9 +248,7 @@ public class SeatSelectionActivity extends AppCompatActivity {
         if (currentTotalPrice == 0) {
             priceStr = "Tổng: Chưa chọn vị trí";
         } else {
-            priceStr = "Tổng: " + NumberFormat
-                    .getNumberInstance(new Locale("vi", "VN"))
-                    .format(currentTotalPrice) + " ₫";
+            priceStr = "Tổng: " + nf.format(currentTotalPrice) + " ₫";
         }
         tvTotalPriceSeat.setText(priceStr);
 
@@ -261,7 +256,31 @@ public class SeatSelectionActivity extends AppCompatActivity {
         btnConfirmSeats.setEnabled(currentQuantity > 0);
     }
 
-    /** Lắng nghe collection seats realtime */
+    private int calculateGridColumns(List<Seat> seats) {
+        Map<String, Integer> maxPerRow = new HashMap<>();
+
+        for (Seat s : seats) {
+            if (s == null) continue;
+            String row = s.getRow() == null ? "" : s.getRow();
+            int num = s.getNumber();
+
+            Integer cur = maxPerRow.get(row);
+            if (cur == null || num > cur) {
+                maxPerRow.put(row, num);
+            }
+        }
+
+        int cols = 0;
+        for (Integer v : maxPerRow.values()) {
+            if (v != null && v > cols) cols = v;
+        }
+
+        if (cols <= 0) cols = 10;
+        if (cols > 20) cols = 20;
+
+        return cols;
+    }
+
     private void listenSeatRealtime() {
         if (eventId == null) return;
 
@@ -312,8 +331,7 @@ public class SeatSelectionActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // SẮP XẾP GHẾ
-                    java.util.Collections.sort(seats, (s1, s2) -> {
+                    Collections.sort(seats, (s1, s2) -> {
                         String r1 = s1.getRow() == null ? "" : s1.getRow();
                         String r2 = s2.getRow() == null ? "" : s2.getRow();
                         int cmpRow = r1.compareTo(r2);
@@ -321,7 +339,10 @@ public class SeatSelectionActivity extends AppCompatActivity {
                         return Integer.compare(s1.getNumber(), s2.getNumber());
                     });
 
-                    adapter.setSeatList(seats); // render full map
+                    int cols = calculateGridColumns(seats);
+                    rvSeatMap.setLayoutManager(new GridLayoutManager(this, cols));
+
+                    adapter.setSeatList(seats);
                 });
     }
 

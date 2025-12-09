@@ -77,7 +77,6 @@ public class EventBroadcastListActivity extends AppCompatActivity {
                         EventBroadcast b = d.toObject(EventBroadcast.class);
                         if (b != null) {
                             b.setId(d.getId());
-                            // nếu chưa có eventTitle trong document thì fallback
                             if (b.getEventTitle() == null || b.getEventTitle().isEmpty()) {
                                 b.setEventTitle(eventTitle);
                             }

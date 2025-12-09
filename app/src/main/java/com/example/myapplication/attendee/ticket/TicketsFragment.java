@@ -18,10 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-/**
- * Tab "Vé của tôi" trong bottom nav.
- * Layout giống TicketBox: Tab luôn hiển thị, empty nằm trong từng tab.
- */
+
 public class TicketsFragment extends Fragment {
 
     private TabLayout tabLayout;
@@ -35,7 +32,6 @@ public class TicketsFragment extends Fragment {
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
 
-        // Dùng layout activity_my_tickets nhưng bỏ phần empty-all
         View root = inflater.inflate(R.layout.activity_my_tickets, container, false);
 
         MaterialToolbar toolbar = root.findViewById(R.id.toolbar);
@@ -45,7 +41,6 @@ public class TicketsFragment extends Fragment {
         tabLayout = root.findViewById(R.id.tabLayout);
         viewPager = root.findViewById(R.id.viewPager);
 
-        // ẨN empty-all fullscreen HOÀN TOÀN, để empty trong tab lo
         View emptyAll = root.findViewById(R.id.layoutEmptyAll);
         if (emptyAll != null) emptyAll.setVisibility(View.GONE);
 

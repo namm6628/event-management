@@ -10,6 +10,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,11 +20,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -40,26 +43,24 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
     private ProgressBar progress;
 
     private View btnExportCsv;
+    private View btnExportExcel;
+    private View btnImportDemo;
 
     private AttendeeOrderAdapter adapter;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     private String eventId;
 
-    private View btnExportExcel;
-
-    private View btnImportDemo;
-
-
-    // 🔹 giữ list hiện tại để export
     private final List<AttendeeOrder> currentList = new ArrayList<>();
+
+    private ActivityResultLauncher<String> pickCsvLauncher;
+    private FirebaseStorage storage;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_organizer_attendees);
 
-        // ----- Toolbar + back -----
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
@@ -68,44 +69,42 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
         }
 
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
-
-        
-
-
         if (eventId == null || eventId.isEmpty()) {
             Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        // ----- Ánh xạ view -----
+        storage = FirebaseStorage.getInstance();
+        setupPickCsvLauncher();
+
         recycler = findViewById(R.id.recyclerAttendees);
         tvEmpty = findViewById(R.id.tvEmpty);
         progress = findViewById(R.id.progress);
 
-// Nút export CSV
         btnExportCsv = findViewById(R.id.btnExportCsv);
         btnExportCsv.setOnClickListener(v -> exportCsv());
 
-// Nút export Excel (Cloud)
         btnExportExcel = findViewById(R.id.btnExportExcel);
         btnExportExcel.setOnClickListener(v -> exportExcelFromCloud());
 
-// Nút import demo người tham dự (Cloud Function)
         btnImportDemo = findViewById(R.id.btnImportDemo);
-        btnImportDemo.setOnClickListener(v -> importAttendeesDemo());
+        btnImportDemo.setOnClickListener(v -> {
+            if (eventId == null || eventId.isEmpty()) {
+                Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            pickCsvLauncher.launch("text/*");
+        });
 
         adapter = new AttendeeOrderAdapter();
         recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setAdapter(adapter);
 
         loadAttendees();
-
     }
 
-
     private void loadAttendees() {
-        // Nếu dùng rules cho phép organizer xem orders, nhớ đã đăng nhập
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             Toast.makeText(this, "Bạn cần đăng nhập", Toast.LENGTH_SHORT).show();
             finish();
@@ -130,7 +129,6 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
                         }
                     }
 
-                    // 🔹 cập nhật list hiện tại để export
                     currentList.clear();
                     currentList.addAll(list);
 
@@ -152,7 +150,6 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        // Nút back trên toolbar
         if (item.getItemId() == android.R.id.home) {
             onBackPressed();
             return true;
@@ -160,15 +157,11 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // ================== Model ==================
     public static class AttendeeOrder {
         private String userId;
         private String eventId;
-
         private Timestamp createdAt;
-
         private Integer totalTickets;
-
 
         public AttendeeOrder() {
         }
@@ -182,10 +175,8 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
             return eventId;
         }
 
-
-
         @Nullable
-        public Integer getTotalTickets() {   // ĐỔI getter
+        public Integer getTotalTickets() {
             return totalTickets;
         }
 
@@ -195,7 +186,6 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
         }
     }
 
-    // ================== Adapter ==================
     private static class AttendeeOrderAdapter extends RecyclerView.Adapter<AttendeeOrderAdapter.VH> {
 
         private final List<AttendeeOrder> data = new ArrayList<>();
@@ -229,7 +219,8 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
             if (o.getCreatedAt() != null) {
                 try {
                     timeText = sdf.format(o.getCreatedAt().toDate());
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
             h.tvTime.setText(timeText);
         }
@@ -251,7 +242,6 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
         }
     }
 
-    // ================== EXPORT CSV ==================
     private void exportCsv() {
         if (currentList.isEmpty()) {
             Toast.makeText(this,
@@ -261,7 +251,6 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
         }
 
         StringBuilder sb = new StringBuilder();
-        // Header
         sb.append("UserId,Số vé,Thời gian đặt\n");
 
         SimpleDateFormat sdf =
@@ -274,10 +263,10 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
             if (o.getCreatedAt() != null) {
                 try {
                     timeStr = sdf.format(o.getCreatedAt().toDate());
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
 
-            // Escape dấu phẩy đơn giản: nếu cần
             sb.append(userId.replace(",", " ")).append(",");
             sb.append(quantity).append(",");
             sb.append(timeStr.replace(",", " ")).append("\n");
@@ -285,10 +274,10 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
 
         String csvText = sb.toString();
 
-        // Share dưới dạng text (copy qua Excel / Google Sheets)
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "Danh sách người tham dự – Sự kiện " + eventId);
+        intent.putExtra(Intent.EXTRA_SUBJECT,
+                "Danh sách người tham dự – Sự kiện " + eventId);
         intent.putExtra(Intent.EXTRA_TEXT, csvText);
 
         startActivity(Intent.createChooser(intent, "Chia sẻ CSV"));
@@ -306,7 +295,7 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
         btnExportExcel.setEnabled(false);
 
         FirebaseFunctions.getInstance("asia-southeast1")
-                .getHttpsCallable("exportAttendees")
+                .getHttpsCallable("exportAttendeesExcel")
                 .call(data)
                 .addOnSuccessListener(result -> {
                     btnExportExcel.setEnabled(true);
@@ -315,7 +304,10 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
                     Map<String, Object> res = (Map<String, Object>) result.getData();
                     String url = (String) res.get("downloadUrl");
                     if (url == null) {
-                        Toast.makeText(this, "Không lấy được link file", Toast.LENGTH_SHORT).show();
+                        String msg = res.get("message") instanceof String
+                                ? (String) res.get("message")
+                                : "Không lấy được link file";
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -329,50 +321,59 @@ public class OrganizerAttendeesActivity extends AppCompatActivity {
                 });
     }
 
-    // ================== IMPORT ATTENDEES DEMO (Cloud) ==================
-    private void importAttendeesDemo() {
+    private void setupPickCsvLauncher() {
+        pickCsvLauncher =
+                registerForActivityResult(
+                        new ActivityResultContracts.GetContent(),
+                        uri -> {
+                            if (uri == null) {
+                                Toast.makeText(this,
+                                        "Chưa chọn file CSV",
+                                        Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            uploadCsvToStorage(uri);
+                        }
+                );
+    }
+
+    private void uploadCsvToStorage(@NonNull Uri fileUri) {
         if (eventId == null || eventId.isEmpty()) {
-            Toast.makeText(this, "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this,
+                    "Thiếu ID sự kiện để import.",
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Tạo danh sách attendee demo
-        List<Map<String, Object>> attendees = new ArrayList<>();
+        String fileName = String.format(
+                Locale.getDefault(),
+                "attendees-%d.csv",
+                System.currentTimeMillis()
+        );
 
-        Map<String, Object> a1 = new HashMap<>();
-        a1.put("name", "Nguyễn Văn A");
-        a1.put("email", "vana@example.com");
-        a1.put("phone", "0900123456");
-        // có thể truyền ticketTypeId nếu thích
-        attendees.add(a1);
+        StorageReference storageRef = storage.getReference()
+                .child("imports")
+                .child(eventId)
+                .child(fileName);
 
-        Map<String, Object> a2 = new HashMap<>();
-        a2.put("name", "Trần Thị B");
-        a2.put("email", "tranb@example.com");
-        a2.put("phone", "0900987654");
-        attendees.add(a2);
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("eventId", eventId);
-        data.put("attendees", attendees);
+        Toast.makeText(this,
+                "Đang upload CSV...",
+                Toast.LENGTH_SHORT).show();
 
         btnImportDemo.setEnabled(false);
 
-        FirebaseFunctions.getInstance("asia-southeast1")
-                .getHttpsCallable("importAttendeesFromApp")
-                .call(data)
-                .addOnSuccessListener(result -> {
+        storageRef.putFile(fileUri)
+                .addOnSuccessListener(taskSnapshot -> {
                     btnImportDemo.setEnabled(true);
-                    Toast.makeText(this, "Import demo thành công!", Toast.LENGTH_SHORT).show();
-                    // Nếu sau này bạn có màn xem attendees riêng, có thể reload ở đây
+                    Toast.makeText(this,
+                            "Upload CSV thành công. Server đang xử lý import.",
+                            Toast.LENGTH_LONG).show();
                 })
                 .addOnFailureListener(e -> {
                     btnImportDemo.setEnabled(true);
                     Toast.makeText(this,
-                            "Lỗi import: " + e.getMessage(),
+                            "Upload CSV thất bại: " + e.getMessage(),
                             Toast.LENGTH_LONG).show();
                 });
     }
-
-
 }

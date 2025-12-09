@@ -75,7 +75,6 @@ public class OrganizerStatsFragment extends Fragment {
         loadEventStats();
     }
 
-    /** giống loadStats() bên OrganizerHomeFragment */
     private void loadStats() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -191,7 +190,6 @@ public class OrganizerStatsFragment extends Fragment {
                 ).show());
     }
 
-    /** giống phần thống kê events trong loadAllEvents() */
     private void loadEventStats() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {

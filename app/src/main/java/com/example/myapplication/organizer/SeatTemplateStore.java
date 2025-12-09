@@ -38,11 +38,11 @@ public class SeatTemplateStore {
                 seats.add(label);
 
                 String zone;
-                if (r <= 1) {          // A,B
+                if (r <= 1) {
                     zone = "VIP";
-                } else if (r <= 3) {   // C,D
+                } else if (r <= 3) {
                     zone = "STANDARD";
-                } else {               // E
+                } else {
                     zone = "ECONOMY";
                 }
                 zones.put(label, zone);
@@ -59,12 +59,11 @@ public class SeatTemplateStore {
         );
     }
 
-    // Sân khấu vừa: A..H, 1..12, bỏ cột 7 làm lối đi (8x11≈88 ghế)
-    // A-B: VIP, C-F: Standard, G-H: Economy
+
     private static SeatTemplate buildMediumTemplate() {
         int rows = 8;
         int cols = 12;
-        int aisleCol = 7; // cột làm lối đi
+        int aisleCol = 7;
 
         Set<String> seats = new LinkedHashSet<>();
         Map<String, String> zones = new HashMap<>();
@@ -73,7 +72,6 @@ public class SeatTemplateStore {
             char rowChar = (char) ('A' + r);
             for (int c = 1; c <= cols; c++) {
                 if (c == aisleCol) {
-                    // bỏ hẳn cột 7 -> tạo lối đi
                     continue;
                 }
                 String label = rowChar + String.valueOf(c);
@@ -81,11 +79,11 @@ public class SeatTemplateStore {
                 seats.add(label);
 
                 String zone;
-                if (r <= 1) {          // A,B
+                if (r <= 1) {
                     zone = "VIP";
-                } else if (r <= 5) {   // C..F
+                } else if (r <= 5) {
                     zone = "STANDARD";
-                } else {               // G,H
+                } else {
                     zone = "ECONOMY";
                 }
                 zones.put(label, zone);
@@ -102,9 +100,6 @@ public class SeatTemplateStore {
         );
     }
 
-    // Sân khấu lớn: A..L (12 hàng), 1..18 (18 cột)
-    // bỏ cột 7 & 12 làm 2 lối đi → mỗi hàng còn 16 ghế → 12*16 = 192 ghế
-    // A-C: VIP, D-H: Standard, I-L: Economy
     private static SeatTemplate buildLargeTemplate() {
         int rows = 12;
         int cols = 18;
@@ -124,11 +119,11 @@ public class SeatTemplateStore {
                 seats.add(label);
 
                 String zone;
-                if (r <= 2) {          // A..C
+                if (r <= 2) {
                     zone = "VIP";
-                } else if (r <= 7) {   // D..H
+                } else if (r <= 7) {
                     zone = "STANDARD";
-                } else {               // I..L
+                } else {
                     zone = "ECONOMY";
                 }
                 zones.put(label, zone);
@@ -150,7 +145,6 @@ public class SeatTemplateStore {
         return TEMPLATES.get(id);
     }
 
-    /** Chọn template nhỏ nhất có sức chứa >= totalSeats */
     public static SeatTemplate pickTemplateForCapacity(int totalSeats) {
         if (totalSeats <= 0) {
             return TEMPLATE_SMALL;

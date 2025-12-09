@@ -13,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,8 +34,10 @@ import androidx.transition.TransitionManager;
 
 import com.bumptech.glide.Glide;
 import com.example.myapplication.R;
-import com.example.myapplication.organizer.checkin.StaffCheckinEventListActivity;
+import com.example.myapplication.admin.AdminDashboardActivity;
+import com.example.myapplication.attendee.detail.EventDetailActivity;
 import com.example.myapplication.auth.AuthManager;
+import com.example.myapplication.organizer.checkin.StaffCheckinEventListActivity;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
@@ -42,39 +45,57 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.shape.RelativeCornerSize;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-
-import com.example.myapplication.attendee.detail.EventDetailActivity;
-
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class ProfileFragment extends Fragment {
 
-    // --- Pick ảnh / chụp ảnh & xin quyền ---
-    private ActivityResultLauncher<String> pickImage;          // chọn từ thư viện
-    private ActivityResultLauncher<Uri> takePhoto;             // chụp ảnh mới
-    private ActivityResultLauncher<String> requestReadPerm;    // READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE
-    private ActivityResultLauncher<String> requestCameraPerm;  // CAMERA
-    private Uri cameraUri;                                     // nơi lưu ảnh vừa chụp
+    private static final long TIER_MEMBER_MIN = 1_000;
+    private static final long TIER_VIP_MIN = 10_000;
+    private static final long TIER_ELITE_MIN = 100_000;
+
+    private ActivityResultLauncher<String> pickImage;
+    private ActivityResultLauncher<Uri> takePhoto;
+    private ActivityResultLauncher<String> requestReadPerm;
+    private ActivityResultLauncher<String> requestCameraPerm;
+    private Uri cameraUri;
 
     private MaterialSwitch switchDarkMode;
+    private MaterialSwitch switchNotifications;
+
     private MaterialButton btnStaffCheckin;
+    private MaterialButton btnRequestMember;
+    private MaterialButton btnUpgradeVip;
+    private MaterialButton btnAdminPanel;
 
     private AuthManager authManager;
     private View btnGoOrg;
     private View btnRequestOrg;
 
-    // --- Firestore: Sự kiện yêu thích ---
+    // Loyalty UI
+    private TextView tvMembershipBadge;
+    private TextView tvLoyaltyPoints;
+    private TextView tvTierLabel;
+    private TextView tvNextTierHint;
+    private ProgressBar progressNextTier;
+    private TextView tvLifetimePoints;
+
     private FirebaseFirestore db;
     private View containerFavoriteEventsView;
     private View btnToggleFavoriteEventsView;
@@ -82,6 +103,14 @@ public class ProfileFragment extends Fragment {
     private boolean favoritesExpanded = false;
     private final List<FavoriteEvent> favoriteEvents = new ArrayList<>();
     private static final int FAVORITES_COLLAPSED_LIMIT = 2;
+
+    private TextInputEditText edtProfileName;
+    private TextInputEditText edtProfileEmail;
+    private TextInputEditText edtProfilePhone;
+    private MaterialButton btnEditInfo;
+    private boolean isEditingInfo = false;
+
+    private TextView tvPrimaryCard;
 
     private static class FavoriteEvent {
         String id;
@@ -95,13 +124,18 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    private static class NextTierInfo {
+        String nextTierLabel;
+        long remainingPoints;
+        int progressPercent;
+    }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         db = FirebaseFirestore.getInstance();
 
-        // Chọn ảnh từ thư viện
         pickImage = registerForActivityResult(new ActivityResultContracts.GetContent(), src -> {
             if (!isAdded()) return;
             View root = getView();
@@ -121,7 +155,7 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        // Chụp ảnh mới (FileProvider)
+
         takePhoto = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
             if (!isAdded()) return;
             View root = getView();
@@ -134,7 +168,6 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        // Xin quyền đọc ảnh
         requestReadPerm = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 granted -> {
@@ -144,7 +177,6 @@ public class ProfileFragment extends Fragment {
                 }
         );
 
-        // Xin quyền camera
         requestCameraPerm = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 granted -> {
@@ -171,7 +203,60 @@ public class ProfileFragment extends Fragment {
         btnGoOrg = v.findViewById(R.id.btnGoOrganizer);
         btnRequestOrg = v.findViewById(R.id.btnRequestOrganizer);
         btnStaffCheckin = v.findViewById(R.id.btnStaffCheckin);
+        btnAdminPanel = v.findViewById(R.id.btnAdminPanel);
+        btnRequestMember = v.findViewById(R.id.btnRequestMember);
+        btnUpgradeVip = v.findViewById(R.id.btnUpgradeVip);
+
         switchDarkMode = v.findViewById(R.id.switchDarkMode);
+        switchNotifications = v.findViewById(R.id.switchNotifications);
+
+        tvMembershipBadge = v.findViewById(R.id.tvMembershipBadge);
+        tvLoyaltyPoints = v.findViewById(R.id.tvLoyaltyPoints);
+        tvLifetimePoints = v.findViewById(R.id.tvLifetimePoints);
+        tvTierLabel = v.findViewById(R.id.tvTierLabel);
+        tvNextTierHint = v.findViewById(R.id.tvNextTierHint);
+        progressNextTier = v.findViewById(R.id.progressNextTier);
+
+        edtProfileName = v.findViewById(R.id.edtName);
+        edtProfileEmail = v.findViewById(R.id.edtEmail);
+        edtProfilePhone = v.findViewById(R.id.edtPhone);
+        btnEditInfo = v.findViewById(R.id.btnEditInfo);
+
+        if (btnEditInfo != null) {
+            btnEditInfo.setOnClickListener(view -> onEditInfoClick());
+        }
+
+        tvPrimaryCard = v.findViewById(R.id.tvPrimaryCard);
+
+        if (tvPrimaryCard != null) {
+            tvPrimaryCard.setText("Chưa có thẻ nào được lưu");
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null && tvPrimaryCard != null) {
+            String uid = user.getUid();
+            FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(uid)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (!isAdded()) return;
+                        if (doc != null && doc.exists()) {
+                            String cardMask = doc.getString("primaryCardMask");
+                            if (cardMask != null && !cardMask.isEmpty()) {
+                                tvPrimaryCard.setText("• " + cardMask);
+                            } else {
+                                tvPrimaryCard.setText("Chưa có thẻ nào được lưu");
+                            }
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (!isAdded()) return;
+                        toast("Không tải được thẻ thanh toán");
+                    });
+        }
+
+        View btnAddCard = v.findViewById(R.id.btnAddCard);
 
         if (btnGoOrg != null) {
             btnGoOrg.setOnClickListener(x ->
@@ -187,8 +272,8 @@ public class ProfileFragment extends Fragment {
             );
         }
 
-        // 🔹 setup nút staff check-in
         setupStaffCheckinButton();
+        setupAdminButton();
 
         SharedPreferences prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
 
@@ -214,6 +299,37 @@ public class ProfileFragment extends Fragment {
             });
         }
 
+
+        if (switchNotifications != null) {
+            boolean notificationsEnabled = prefs.getBoolean("notifications_enabled", true);
+            switchNotifications.setOnCheckedChangeListener(null);
+            switchNotifications.setChecked(notificationsEnabled);
+
+            switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                prefs.edit().putBoolean("notifications_enabled", isChecked).apply();
+                if (isChecked) {
+                    toast("Đã bật thông báo sự kiện");
+                    // TODO: nếu dùng FCM -> subscribe topic ở đây
+                } else {
+                    toast("Đã tắt thông báo sự kiện. Bạn sẽ không nhận thông báo mới.");
+                    // TODO: nếu dùng FCM -> unsubscribe topic ở đây
+                }
+            });
+        }
+
+        if (tvPrimaryCard != null) {
+            String cardMask = prefs.getString("primary_card_mask", null);
+            if (cardMask == null || cardMask.isEmpty()) {
+                tvPrimaryCard.setText("Chưa có thẻ nào được lưu");
+            } else {
+                tvPrimaryCard.setText("• " + cardMask);
+            }
+        }
+
+        if (btnAddCard != null && tvPrimaryCard != null) {
+            btnAddCard.setOnClickListener(view -> showAddCardDialog(tvPrimaryCard));
+        }
+
         ShapeableImageView av = v.findViewById(R.id.imgAvatar);
         if (av != null) {
             av.setShapeAppearanceModel(
@@ -224,11 +340,6 @@ public class ProfileFragment extends Fragment {
         }
 
         View btnHeader = v.findViewById(R.id.btnEditProfile);
-        if (btnHeader != null) {
-            btnHeader.setOnClickListener(view ->
-                    NavHostFragment.findNavController(this).navigate(R.id.loginFragment)
-            );
-        }
 
         View btnLogin = v.findViewById(R.id.btnLogin);
         if (btnLogin != null) {
@@ -264,7 +375,9 @@ public class ProfileFragment extends Fragment {
         }
 
         updateUi(v);
+        loadBasicUserInfoIntoPanel(v);
         refreshFavoriteEvents(v);
+        loadUserProfileAndLoyalty();
     }
 
     @Override
@@ -273,7 +386,9 @@ public class ProfileFragment extends Fragment {
         View v = getView();
         if (v != null) {
             updateUi(v);
+            loadBasicUserInfoIntoPanel(v);
             refreshFavoriteEvents(v);
+            loadUserProfileAndLoyalty();
         }
 
         if (btnGoOrg != null) {
@@ -294,47 +409,49 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        // cập nhật lại nút staff khi quay lại / đổi tài khoản
         setupStaffCheckinButton();
+        setupAdminButton();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // tránh giữ reference tới view sau khi bị destroy
         containerFavoriteEventsView = null;
         btnToggleFavoriteEventsView = null;
         tvEmptyFavoriteEvents = null;
+
+        edtProfileName = null;
+        edtProfileEmail = null;
+        edtProfilePhone = null;
+        btnEditInfo = null;
+        tvPrimaryCard = null;
+        switchNotifications = null;
+        switchDarkMode = null;
     }
 
-    /* -------------------------- STAFF CHECK-IN BUTTON -------------------------- */
 
     private void setupStaffCheckinButton() {
         if (btnStaffCheckin == null) return;
 
-        // Ẩn mặc định, tránh nháy nút
         btnStaffCheckin.setVisibility(View.GONE);
         btnStaffCheckin.setOnClickListener(null);
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || user.getEmail() == null || user.getEmail().isEmpty()) {
-            // Chưa login / không có email → ẩn
             return;
         }
 
         String email = user.getEmail();
 
-        // Check xem email này có được gán role "checkin" ở bất kỳ event nào không
         db.collectionGroup("collaborators")
                 .whereEqualTo("email", email)
                 .whereEqualTo("role", "checkin")
-                .limit(1) // chỉ cần biết có hay không
+                .limit(1)
                 .get()
                 .addOnSuccessListener(snap -> {
                     if (!isAdded()) return;
 
                     if (snap != null && !snap.isEmpty()) {
-                        // ✅ Có ít nhất 1 event gán role checkin → hiện nút
                         btnStaffCheckin.setVisibility(View.VISIBLE);
                         btnStaffCheckin.setOnClickListener(v -> {
                             Context ctx = requireContext();
@@ -342,22 +459,260 @@ public class ProfileFragment extends Fragment {
                             ctx.startActivity(i);
                         });
                     } else {
-                        // ❌ Không được phân công → ẩn nút
                         btnStaffCheckin.setVisibility(View.GONE);
                         btnStaffCheckin.setOnClickListener(null);
                     }
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    // Lỗi thì cứ ẩn cho an toàn
                     btnStaffCheckin.setVisibility(View.GONE);
                     btnStaffCheckin.setOnClickListener(null);
                 });
     }
 
+    private void setupAdminButton() {
+        if (btnAdminPanel == null) return;
+
+        btnAdminPanel.setVisibility(View.GONE);
+        btnAdminPanel.setOnClickListener(null);
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        String uid = user.getUid();
+
+        db.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+                    if (doc != null && doc.exists()) {
+                        Boolean isAdmin = doc.getBoolean("isAdmin");
+                        if (Boolean.TRUE.equals(isAdmin)) {
+                            btnAdminPanel.setVisibility(View.VISIBLE);
+                            btnAdminPanel.setOnClickListener(v -> {
+                                Intent i = new Intent(requireContext(), AdminDashboardActivity.class);
+                                startActivity(i);
+                            });
+                        } else {
+                            btnAdminPanel.setVisibility(View.GONE);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    btnAdminPanel.setVisibility(View.GONE);
+                });
+    }
 
 
-    /* -------------------------- UI logic -------------------------- */
+    private String getLoyaltyRankLabel(long lifetimePoints) {
+        if (lifetimePoints >= TIER_ELITE_MIN) return "Elite";
+        if (lifetimePoints >= TIER_VIP_MIN)   return "VIP";
+        if (lifetimePoints >= TIER_MEMBER_MIN) return "Member";
+        return "Thường";
+    }
+
+    private NextTierInfo computeNextTier(long lifetimePoints) {
+        NextTierInfo info = new NextTierInfo();
+
+        long currentMin;
+        long nextMin;
+        String nextLabel;
+
+        if (lifetimePoints < TIER_MEMBER_MIN) {
+            currentMin = 0;
+            nextMin = TIER_MEMBER_MIN;
+            nextLabel = "Member";
+        } else if (lifetimePoints < TIER_VIP_MIN) {
+            currentMin = TIER_MEMBER_MIN;
+            nextMin = TIER_VIP_MIN;
+            nextLabel = "VIP";
+        } else if (lifetimePoints < TIER_ELITE_MIN) {
+            currentMin = TIER_VIP_MIN;
+            nextMin = TIER_ELITE_MIN;
+            nextLabel = "Elite";
+        } else {
+            info.nextTierLabel = null;
+            info.remainingPoints = 0;
+            info.progressPercent = 100;
+            return info;
+        }
+
+        long remaining = nextMin - lifetimePoints;
+        if (remaining < 0) remaining = 0;
+
+        long range = nextMin - currentMin;
+        long progressed = lifetimePoints - currentMin;
+        if (progressed < 0) progressed = 0;
+
+        int percent = range == 0 ? 100 : (int) (progressed * 100 / range);
+        if (percent < 0) percent = 0;
+        if (percent > 100) percent = 100;
+
+        info.nextTierLabel = nextLabel;
+        info.remainingPoints = remaining;
+        info.progressPercent = percent;
+        return info;
+    }
+
+    private void loadUserProfileAndLoyalty() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            if (tvLoyaltyPoints != null) tvLoyaltyPoints.setText("0");
+            if (tvLifetimePoints != null) tvLifetimePoints.setText("0");
+            if (tvTierLabel != null) tvTierLabel.setText("Hạng: Thường");
+            if (tvNextTierHint != null) tvNextTierHint.setText("Đăng nhập để tích điểm và nhận ưu đãi.");
+            if (progressNextTier != null) progressNextTier.setProgress(0);
+            if (tvMembershipBadge != null) tvMembershipBadge.setVisibility(View.GONE);
+            if (btnRequestMember != null) btnRequestMember.setVisibility(View.GONE);
+            if (btnUpgradeVip != null) btnUpgradeVip.setVisibility(View.GONE);
+            return;
+        }
+
+        String uid = user.getUid();
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+                    if (doc == null || !doc.exists()) return;
+
+                    Long loyalty = doc.getLong("loyaltyPoints");
+                    Long lifetime = doc.getLong("lifetimePoints");
+                    String membershipTier = doc.getString("membershipTier");
+
+                    if (loyalty == null) loyalty = 0L;
+                    if (lifetime == null) lifetime = 0L;
+                    if (membershipTier == null) membershipTier = "none";
+
+                    NumberFormat nf = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
+                    if (tvLoyaltyPoints != null) {
+                        tvLoyaltyPoints.setText(nf.format(loyalty));
+                    }
+                    if (tvLifetimePoints != null) {
+                        tvLifetimePoints.setText(nf.format(lifetime));
+                    }
+
+                    String loyaltyRankLabel = getLoyaltyRankLabel(lifetime);
+                    if (tvTierLabel != null) {
+                        tvTierLabel.setText("Hạng: " + loyaltyRankLabel);
+                    }
+
+                    if (tvMembershipBadge != null) {
+                        if ("member".equalsIgnoreCase(membershipTier)
+                                || "vip".equalsIgnoreCase(membershipTier)
+                                || "elite".equalsIgnoreCase(membershipTier)) {
+
+                            tvMembershipBadge.setVisibility(View.VISIBLE);
+
+                            if ("vip".equalsIgnoreCase(membershipTier)
+                                    || "elite".equalsIgnoreCase(membershipTier)) {
+                                tvMembershipBadge.setText("VIP");
+                                tvMembershipBadge.setBackground(
+                                        ContextCompat.getDrawable(requireContext(), R.drawable.bg_vip_badge)
+                                );
+                            } else {
+                                tvMembershipBadge.setText("MEMBER");
+                                tvMembershipBadge.setBackground(
+                                        ContextCompat.getDrawable(requireContext(), R.drawable.bg_member_badge)
+                                );
+                            }
+                        } else {
+                            tvMembershipBadge.setVisibility(View.GONE);
+                        }
+                    }
+
+                    NextTierInfo info = computeNextTier(lifetime);
+
+                    if (info.nextTierLabel == null) {
+                        if (tvNextTierHint != null) {
+                            tvNextTierHint.setText("Bạn đang ở hạng cao nhất. Cảm ơn đã ủng hộ!");
+                        }
+                        if (progressNextTier != null) {
+                            progressNextTier.setProgress(100);
+                        }
+                    } else {
+                        if (tvNextTierHint != null) {
+                            tvNextTierHint.setText(
+                                    "Còn " + info.remainingPoints + " điểm nữa để lên " + info.nextTierLabel
+                            );
+                        }
+                        if (progressNextTier != null) {
+                            progressNextTier.setProgress(info.progressPercent);
+                        }
+                    }
+
+                    setupMemberButtonsWithTier(uid, membershipTier.toLowerCase(Locale.ROOT));
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                });
+    }
+
+    private void setupMemberButtonsWithTier(String uid, String tier) {
+        if (btnRequestMember == null || btnUpgradeVip == null) return;
+
+        boolean isMember = "member".equalsIgnoreCase(tier);
+        boolean isVipOrElite = "vip".equalsIgnoreCase(tier) || "elite".equalsIgnoreCase(tier);
+
+        if (!isMember && !isVipOrElite) {
+            btnRequestMember.setVisibility(View.VISIBLE);
+            btnRequestMember.setOnClickListener(v -> {
+                new MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Đăng ký thành viên?")
+                        .setMessage("Bạn muốn gửi yêu cầu đăng ký làm thành viên không?")
+                        .setPositiveButton("Có", (dialog, which) -> {
+                            sendMemberRequest(uid, "member");
+                        })
+                        .setNegativeButton("Không", null)
+                        .show();
+            });
+        } else {
+            btnRequestMember.setVisibility(View.GONE);
+        }
+
+        if (isMember && !isVipOrElite) {
+            btnUpgradeVip.setVisibility(View.VISIBLE);
+            btnUpgradeVip.setOnClickListener(v -> {
+                new MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Nâng cấp VIP?")
+                        .setMessage("Bạn muốn gửi yêu cầu nâng cấp lên hạng VIP không?")
+                        .setPositiveButton("Có", (dialog, which) -> {
+                            sendMemberRequest(uid, "vip");
+                        })
+                        .setNegativeButton("Không", null)
+                        .show();
+            });
+        } else {
+            btnUpgradeVip.setVisibility(View.GONE);
+        }
+    }
+
+    private void sendMemberRequest(String uid, String desiredTier) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("uid", uid);
+        data.put("desiredTier", desiredTier);
+        data.put("status", "pending");
+        data.put("createdAt", Timestamp.now());
+
+        db.collection("memberRequests")
+                .document(uid)
+                .set(data)
+                .addOnSuccessListener(aVoid -> {
+                    String msg = "member".equals(desiredTier)
+                            ? "Đã gửi yêu cầu làm thành viên!"
+                            : "Đã gửi yêu cầu nâng cấp VIP!";
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(requireContext(),
+                            "Gửi yêu cầu thất bại: " + e.getMessage(),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                });
+    }
 
     private void updateUi(@NonNull View root) {
         boolean logged = AuthManager.isLoggedIn(requireContext());
@@ -431,6 +786,15 @@ public class ProfileFragment extends Fragment {
                 btnToggleFavoriteEventsView.setVisibility(View.GONE);
             }
             renderFavoriteEventsUi();
+
+            if (tvLoyaltyPoints != null) tvLoyaltyPoints.setText("0");
+            if (tvLifetimePoints != null) tvLifetimePoints.setText("0");
+            if (tvTierLabel != null) tvTierLabel.setText("Hạng: Thường");
+            if (tvNextTierHint != null) tvNextTierHint.setText("Đăng nhập để tích điểm và nhận ưu đãi.");
+            if (progressNextTier != null) progressNextTier.setProgress(0);
+            if (tvMembershipBadge != null) tvMembershipBadge.setVisibility(View.GONE);
+            if (btnRequestMember != null) btnRequestMember.setVisibility(View.GONE);
+            if (btnUpgradeVip != null) btnUpgradeVip.setVisibility(View.GONE);
         }
     }
 
@@ -571,8 +935,6 @@ public class ProfileFragment extends Fragment {
         }
     }
 
-    /* --------- Sự kiện yêu thích: Firestore + UI --------- */
-
     private void refreshFavoriteEvents(@NonNull View root) {
         if (!AuthManager.isLoggedIn(requireContext())) return;
 
@@ -585,7 +947,6 @@ public class ProfileFragment extends Fragment {
                 .collection("favoriteEvents")
                 .get()
                 .addOnSuccessListener(snap -> {
-                    // 🔐 fragment đã detach thì thôi, không render nữa
                     if (!isAdded() || getView() == null) return;
 
                     favoriteEvents.clear();
@@ -636,7 +997,6 @@ public class ProfileFragment extends Fragment {
     }
 
     private void renderFavoriteEventsUi() {
-        // 🔐 tránh crash khi fragment không còn attach
         if (!isAdded()) return;
         if (containerFavoriteEventsView == null) return;
         if (!(containerFavoriteEventsView instanceof ViewGroup)) return;
@@ -644,7 +1004,6 @@ public class ProfileFragment extends Fragment {
         ViewGroup container = (ViewGroup) containerFavoriteEventsView;
         container.removeAllViews();
 
-        // dùng context từ chính ViewGroup, không cần requireContext()
         LayoutInflater inflater = LayoutInflater.from(container.getContext());
 
         if (favoriteEvents.isEmpty()) {
@@ -695,12 +1054,10 @@ public class ProfileFragment extends Fragment {
                 ctx.startActivity(intent);
             });
 
-
             container.addView(row);
         }
     }
 
-    /* --------- Menu avatar --------- */
 
     private void showAvatarMenu() {
         final int titleColor = MaterialColors.getColor(
@@ -877,7 +1234,6 @@ public class ProfileFragment extends Fragment {
                 .show();
     }
 
-    // ---------------- helpers ----------------
     private void toast(String m) {
         Context c = getContext();
         if (c != null) Toast.makeText(c, m, Toast.LENGTH_SHORT).show();
@@ -925,4 +1281,178 @@ public class ProfileFragment extends Fragment {
             try { if (out != null) out.close(); } catch (Exception ignore) {}
         }
     }
+
+    private void loadBasicUserInfoIntoPanel(@NonNull View root) {
+        if (!AuthManager.isLoggedIn(requireContext())) {
+            if (edtProfileName != null)  edtProfileName.setText("");
+            if (edtProfileEmail != null) edtProfileEmail.setText("");
+            if (edtProfilePhone != null) edtProfilePhone.setText("");
+            setProfileFieldsEditable(false);
+            isEditingInfo = false;
+            if (btnEditInfo != null) btnEditInfo.setText("Chỉnh sửa thông tin");
+            return;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        String uid = user.getUid();
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+
+                    String name  = doc.getString("name");
+                    String email = doc.getString("email");
+                    String phone = doc.getString("phone");
+
+                    if (edtProfileName != null)  edtProfileName.setText(name != null ? name : "");
+                    if (edtProfileEmail != null) edtProfileEmail.setText(email != null ? email : "");
+                    if (edtProfilePhone != null) edtProfilePhone.setText(phone != null ? phone : "");
+
+                    // Email luôn khóa
+                    if (edtProfileEmail != null) {
+                        edtProfileEmail.setEnabled(false);
+                    }
+
+                    // Mặc định ở trạng thái xem, chưa edit
+                    isEditingInfo = false;
+                    setProfileFieldsEditable(false);
+                    if (btnEditInfo != null) btnEditInfo.setText("Chỉnh sửa thông tin");
+                });
+    }
+
+    private void onEditInfoClick() {
+        if (!AuthManager.isLoggedIn(requireContext())) {
+            NavHostFragment.findNavController(this).navigate(R.id.loginFragment);
+            return;
+        }
+
+        if (!isEditingInfo) {
+            isEditingInfo = true;
+            setProfileFieldsEditable(true);
+            if (btnEditInfo != null) btnEditInfo.setText("Lưu thông tin");
+        } else {
+            String name = edtProfileName != null && edtProfileName.getText() != null
+                    ? edtProfileName.getText().toString().trim()
+                    : "";
+            String phone = edtProfilePhone != null && edtProfilePhone.getText() != null
+                    ? edtProfilePhone.getText().toString().trim()
+                    : "";
+
+            if (name.isEmpty()) {
+                toast("Tên không được để trống");
+                return;
+            }
+            if (phone.isEmpty() || phone.length() < 9) {
+                toast("Số điện thoại không hợp lệ");
+                return;
+            }
+
+            updateBasicInfoInFirestore(name, phone);
+        }
+    }
+
+    private void setProfileFieldsEditable(boolean editable) {
+        // Chỉ cho sửa tên + phone, email luôn khóa
+        if (edtProfileName != null)  edtProfileName.setEnabled(editable);
+        if (edtProfilePhone != null) edtProfilePhone.setEnabled(editable);
+
+        if (edtProfileEmail != null) edtProfileEmail.setEnabled(false);
+    }
+
+    private void updateBasicInfoInFirestore(String name, String phone) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        String uid = user.getUid();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", name);
+        data.put("phone", phone);
+
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .update(data)
+                .addOnSuccessListener(unused -> {
+                    // update local cache (name)
+                    String emailCache = AuthManager.getEmail(requireContext());
+                    AuthManager.login(requireContext(), name, emailCache != null ? emailCache : "");
+
+                    toast("Cập nhật thông tin thành công!");
+
+                    isEditingInfo = false;
+                    setProfileFieldsEditable(false);
+                    if (btnEditInfo != null) btnEditInfo.setText("Chỉnh sửa thông tin");
+
+                    View root = getView();
+                    if (root != null) {
+                        updateUi(root);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    toast("Lỗi cập nhật: " + e.getMessage());
+                });
+    }
+
+    private void showAddCardDialog(@NonNull TextView tvPrimaryCard) {
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        View view = inflater.inflate(R.layout.dialog_add_card, null);
+
+        TextInputEditText edtHolder = view.findViewById(R.id.edtCardHolder);
+        TextInputEditText edtNumber = view.findViewById(R.id.edtCardNumber);
+        TextInputEditText edtExpiry = view.findViewById(R.id.edtCardExpiry);
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Thêm thẻ thanh toán")
+                .setView(view)
+                .setPositiveButton("Lưu", (dialog, which) -> {
+                    String holder = edtHolder.getText() != null
+                            ? edtHolder.getText().toString().trim() : "";
+                    String number = edtNumber.getText() != null
+                            ? edtNumber.getText().toString().trim() : "";
+                    String expiry = edtExpiry.getText() != null
+                            ? edtExpiry.getText().toString().trim() : "";
+
+                    if (number.length() < 4) {
+                        toast("Số thẻ không hợp lệ");
+                        return;
+                    }
+
+                    String last4 = number.substring(number.length() - 4);
+                    String mask = "**** **** **** " + last4;
+
+                    if (!holder.isEmpty()) {
+                        mask = holder + " - " + mask;
+                    }
+                    if (!expiry.isEmpty()) {
+                        mask = mask + " (" + expiry + ")";
+                    }
+
+                    SharedPreferences prefs = requireContext()
+                            .getSharedPreferences("app_prefs", Context.MODE_PRIVATE);
+                    prefs.edit().putString("primary_card_mask", mask).apply();
+
+                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                    if (user != null) {
+                        String uid = user.getUid();
+                        FirebaseFirestore.getInstance()
+                                .collection("users")
+                                .document(uid)
+                                .update("primaryCardMask", mask)
+                                .addOnFailureListener(e -> {
+                                    toast("Lưu thẻ lên server thất bại: " + e.getMessage());
+                                });
+                    }
+
+                    tvPrimaryCard.setText("• " + mask);
+                    toast("Đã lưu thẻ");
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
 }

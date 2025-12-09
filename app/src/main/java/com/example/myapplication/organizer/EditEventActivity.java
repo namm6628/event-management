@@ -57,7 +57,7 @@ public class EditEventActivity extends AppCompatActivity {
     private Timestamp selectedStartTime;
     private Uri selectedImageUri;
     private String currentThumbnailUrl;
-    private String ownerId; // từ doc event
+    private String ownerId;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -73,13 +73,11 @@ public class EditEventActivity extends AppCompatActivity {
             return;
         }
 
-        // Toolbar
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Chỉnh sửa sự kiện");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // Ánh xạ view
         edtTitle         = findViewById(R.id.edtTitle);
         edtArtist        = findViewById(R.id.edtArtist);
         edtCategory      = findViewById(R.id.edtCategory);
@@ -116,7 +114,6 @@ public class EditEventActivity extends AppCompatActivity {
             launcher.launch("image/*");
         });
 
-        // 🔒 KHÔNG CHO THÊM LOẠI VÉ MỚI KHI EDIT (nếu vẫn muốn cho thêm thì giữ lại)
         btnAddTicketType.setOnClickListener(v -> {
             Toast.makeText(this,
                     "Không thể thêm / sửa sơ đồ ghế khi chỉnh sửa sự kiện",
@@ -126,10 +123,6 @@ public class EditEventActivity extends AppCompatActivity {
         // Lưu
         btnSave.setOnClickListener(v -> saveChanges());
 
-        // ❌ BỎ clearSeatsForEvent, để nguyên ghế cũ
-        // SeatLayoutConfigActivity.clearSeatsForEvent(eventId);
-
-        // Load dữ liệu event + ticketTypes
         loadEventAndTickets();
     }
 
@@ -139,7 +132,6 @@ public class EditEventActivity extends AppCompatActivity {
         return true;
     }
 
-    // Không cần sync TEMP_SEATS nữa vì không cho sửa ghế
     @Override
     protected void onResume() {
         super.onResume();
@@ -188,7 +180,6 @@ public class EditEventActivity extends AppCompatActivity {
                                 .into(ivPreview);
                     }
 
-                    // Load ticketTypes + seatCodes
                     loadTicketTypes();
                 })
                 .addOnFailureListener(e -> {
@@ -308,14 +299,11 @@ public class EditEventActivity extends AppCompatActivity {
         if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
         if (quota != null) edtQuota.setText(String.valueOf(quota.intValue()));
 
-        // 🔒 KHÔNG CHO SỬA GHẾ KHI EDIT
         btnSetupSeats.setEnabled(false);
         btnSetupSeats.setAlpha(0.4f);
         btnSetupSeats.setText("Không sửa ghế");
-        // nếu muốn ẩn hẳn:
-        // btnSetupSeats.setVisibility(View.GONE);
 
-        // cũng nên khóa quota để không lệch với số ghế
+
         edtQuota.setEnabled(false);
 
         TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, tvSeatInfo, rowView);
@@ -327,7 +315,6 @@ public class EditEventActivity extends AppCompatActivity {
 
         ticketRows.add(row);
 
-        // cho phép xoá cả loại vé nếu muốn
         btnRemove.setOnClickListener(v -> {
             layoutTicketContainer.removeView(rowView);
             ticketRows.remove(row);
@@ -395,7 +382,6 @@ public class EditEventActivity extends AppCompatActivity {
             return;
         }
 
-        // LẤY DANH SÁCH LOẠI VÉ (ghế giữ nguyên, quota đã khóa)
         List<Map<String, Object>> ticketTypes = new ArrayList<>();
         int totalSeatsFromTickets = 0;
         double minPriceFromTickets = Double.MAX_VALUE;
@@ -438,7 +424,6 @@ public class EditEventActivity extends AppCompatActivity {
                 return;
             }
 
-            // Vẫn check consistency (ghế cũ không đổi)
             if (row.seatCodes.size() != quota) {
                 Toast.makeText(this,
                         "Loại vé \"" + name + "\" có số ghế và quota không khớp. Kiểm tra lại trong DB.",
@@ -459,8 +444,7 @@ public class EditEventActivity extends AppCompatActivity {
             ticket.put("name", name);
             ticket.put("price", price);
             ticket.put("quota", quota);
-            // ❗ KHÔNG reset sold về 0, giữ nguyên
-            // (nếu muốn, bạn có thể đọc "sold" từ snapshot, ở đây tạm để 0)
+
             ticket.put("sold", 0);
             ticket.put("seats", new ArrayList<>(row.seatCodes));
 
@@ -494,7 +478,6 @@ public class EditEventActivity extends AppCompatActivity {
 
         btnSave.setEnabled(false);
 
-        // Nếu có ảnh mới → upload rồi update
         if (selectedImageUri != null && ownerId != null) {
             StorageReference ref = FirebaseStorage.getInstance()
                     .getReference("event_covers/" + ownerId + "/" + eventId + ".jpg");
@@ -514,7 +497,6 @@ public class EditEventActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                     });
         } else {
-            // giữ nguyên thumbnail cũ
             updateEventInFirestore(title, artist, cat, place, addrDtl, desc,
                     selectedStartTime, price, totalSeats, currentThumbnailUrl, ticketTypes);
         }
@@ -542,8 +524,6 @@ public class EditEventActivity extends AppCompatActivity {
         data.put("startTime", startTime);
         data.put("price", price);
         data.put("totalSeats", totalSeats);
-        // ❗ KHÔNG reset availableSeats nếu muốn giữ số ghế còn lại
-        // data.put("availableSeats", totalSeats);
         data.put("updatedAt", FieldValue.serverTimestamp());
         if (!TextUtils.isEmpty(thumbnailUrl)) {
             data.put("thumbnail", thumbnailUrl);
@@ -553,7 +533,6 @@ public class EditEventActivity extends AppCompatActivity {
                 .document(eventId)
                 .update(data)
                 .addOnSuccessListener(unused -> {
-                    // Cập nhật ticketTypes: xoá cũ, thêm mới (ghế giữ nguyên như trên)
                     db.collection("events").document(eventId)
                             .collection("ticketTypes")
                             .get()

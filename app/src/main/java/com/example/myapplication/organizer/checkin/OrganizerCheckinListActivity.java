@@ -70,7 +70,6 @@ public class OrganizerCheckinListActivity extends AppCompatActivity {
     }
 
     private void listenCheckins(String eventId) {
-        // Lắng nghe realtime tất cả orders đã check-in của event này
         Query q = db.collection("orders")
                 .whereEqualTo("eventId", eventId)
                 .whereEqualTo("checkedIn", true)

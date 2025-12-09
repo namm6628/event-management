@@ -19,10 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Adapter hiển thị danh sách đánh giá (Review).
- * Sử dụng ItemReviewBinding (layout: res/layout/item_review.xml).
- */
 public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
 
     private final List<EventDetailActivity.Review> items = new ArrayList<>();
@@ -78,19 +74,16 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
         EventDetailActivity.Review r = items.get(position);
         if (r == null) return;
 
-        // 1. Tên người review
         h.b.tvReviewerName.setText(
                 (r.author == null || r.author.trim().isEmpty())
                         ? "Ẩn danh"
                         : r.author
         );
 
-        // 2. Nội dung
         h.b.tvReviewContent.setText(
                 r.content == null ? "" : r.content
         );
 
-        // 3. Số sao
         if (r.rating != null) {
             try {
                 h.b.ratingBar.setRating(r.rating.floatValue());
@@ -101,7 +94,6 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
             h.b.ratingBar.setRating(0f);
         }
 
-        // 4. Thời gian tạo review (createdAt)
         if (r.createdAt != null) {
             SimpleDateFormat sdf =
                     new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
@@ -110,10 +102,8 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
             h.b.tvReviewTime.setText("Vừa xong");
         }
 
-        // 5. Media (ảnh / video)
         bindMedia(h, r);
 
-        // 6. Nút Sửa / Xóa (chỉ hiện nếu là review của user hiện tại)
         boolean isMine = (currentUserId != null
                 && r.userId != null
                 && currentUserId.equals(r.userId));
@@ -156,7 +146,6 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
                 || lower.contains("video");
 
         if (isVideo) {
-            // hiện icon video
             h.b.imgReviewMedia.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
             h.b.imgReviewMedia.setImageResource(R.drawable.ic_video_placeholder);
 
@@ -167,11 +156,9 @@ public class ReviewAdapter extends RecyclerView.Adapter<ReviewAdapter.VH> {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     v.getContext().startActivity(intent);
                 } catch (Exception e) {
-                    // Nếu không mở được video thì thôi, không crash
                 }
             });
         } else {
-            // là ảnh → load bằng Glide
             h.b.imgReviewMedia.setOnClickListener(null);
             h.b.imgReviewMedia.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
             Glide.with(h.b.imgReviewMedia.getContext())

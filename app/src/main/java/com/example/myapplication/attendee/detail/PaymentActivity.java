@@ -15,7 +15,6 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -38,16 +37,27 @@ import java.util.Map;
 
 public class PaymentActivity extends AppCompatActivity {
 
-    private TextView tvEventName, tvQuantity, tvTotalPrice, tvTotalPriceInfo, tvTicketType;
+    private static final long LOYALTY_VND_PER_POINT = 100L;
+
+    private TextView tvEventName, tvQuantity, tvTotalPrice, tvTicketType;
+    private TextView tvSubtotal, tvDiscount, tvTotalPriceInfo;
     private RadioGroup rgPaymentMethods;
     private MaterialButton btnConfirmPayment;
 
     private String eventId, eventTitle, userId, ticketNames, ticketType;
     private int quantity;
     private double totalPrice;
+
+    // Giảm giá
+    private double discountPromo = 0;
+    private double discountPoints = 0;
     private double discountAmount = 0;
     private double finalAmount = 0;
     private String appliedPromoCode = null;
+
+    // Loyalty
+    private long currentLoyaltyPoints = 0;
+    private long pointsUsed = 0;
 
     private ArrayList<HashMap<String, Object>> selectedTickets;
     private ArrayList<String> selectedSeatIds;
@@ -61,6 +71,12 @@ public class PaymentActivity extends AppCompatActivity {
     private EditText edtPromoCode;
     private MaterialButton btnApplyPromo;
     private TextView tvPromoInfo;
+
+    // Loyalty views
+    private TextView tvPointsSummary;
+    private EditText edtUsePoints;
+    private MaterialButton btnApplyPoints;
+    private TextView tvPointsInfo;
 
     private final NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
 
@@ -83,8 +99,11 @@ public class PaymentActivity extends AppCompatActivity {
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         tvTotalPrice = findViewById(R.id.tvTotalPrice);
-        tvTotalPriceInfo = findViewById(R.id.tvTotalPriceInfo);
         tvTicketType = findViewById(R.id.tvTicketType);
+        tvSubtotal = findViewById(R.id.tvSubtotal);
+        tvDiscount = findViewById(R.id.tvDiscount);
+        tvTotalPriceInfo = findViewById(R.id.tvTotalPriceInfo);
+
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
@@ -95,6 +114,11 @@ public class PaymentActivity extends AppCompatActivity {
         edtPromoCode = findViewById(R.id.edtPromoCode);
         btnApplyPromo = findViewById(R.id.btnApplyPromo);
         tvPromoInfo = findViewById(R.id.tvPromoInfo);
+
+        tvPointsSummary = findViewById(R.id.tvPointsSummary);
+        edtUsePoints = findViewById(R.id.edtUsePoints);
+        btnApplyPoints = findViewById(R.id.btnApplyPoints);
+        tvPointsInfo = findViewById(R.id.tvPointsInfo);
 
         tvEventName = findViewById(R.id.tvEventName);
         tvQuantity = findViewById(R.id.tvQuantity);
@@ -112,28 +136,45 @@ public class PaymentActivity extends AppCompatActivity {
             tvTicketType.setText("Vé tham dự");
         }
 
-        discountAmount = 0;
-        finalAmount = totalPrice;
+        discountPromo = 0;
+        discountPoints = 0;
         updatePriceViews();
 
         setupSplitBill();
 
         btnApplyPromo.setOnClickListener(v -> applyPromoCode());
-
+        btnApplyPoints.setOnClickListener(v -> applyLoyaltyPoints());
         btnConfirmPayment.setOnClickListener(v -> processPayment());
+
+        loadUserLoyaltyPoints();
     }
 
     private void updatePriceViews() {
-        String baseStr = (totalPrice <= 0) ? "Miễn phí" : nf.format(totalPrice) + " ₫";
-        String discountStr = (discountAmount <= 0) ? "0 ₫" : "- " + nf.format(discountAmount) + " ₫";
-        String finalStr = (finalAmount <= 0) ? "Miễn phí" : nf.format(finalAmount) + " ₫";
+        discountAmount = discountPromo + discountPoints;
+        if (discountAmount > totalPrice) discountAmount = totalPrice;
 
-        tvTotalPrice.setText(finalStr);
-        tvTotalPriceInfo.setText(
-                "Tạm tính: " + baseStr +
-                        "\nGiảm: " + discountStr +
-                        "\nCần thanh toán: " + finalStr
-        );
+        finalAmount = totalPrice - discountAmount;
+        if (finalAmount < 0) finalAmount = 0;
+
+        String subtotalStr = totalPrice <= 0 ? "Miễn phí" : nf.format(totalPrice) + " đ";
+        String discountStr = discountAmount <= 0 ? "0 đ" : "- " + nf.format(discountAmount) + " đ";
+        String finalStr = finalAmount <= 0 ? "Miễn phí" : nf.format(finalAmount) + " đ";
+
+        if (tvSubtotal != null) tvSubtotal.setText(subtotalStr);
+
+        if (tvDiscount != null) {
+            if (discountAmount <= 0) {
+                tvDiscount.setText("0 đ");
+            } else if (discountPoints > 0 && pointsUsed > 0) {
+                tvDiscount.setText(nf.format(discountAmount) + " đ"
+                        + " (" + nf.format(discountPoints) + " đ từ " + pointsUsed + " điểm)");
+            } else {
+                tvDiscount.setText(nf.format(discountAmount) + " đ");
+            }
+        }
+
+        if (tvTotalPriceInfo != null) tvTotalPriceInfo.setText(finalStr);
+        if (tvTotalPrice != null) tvTotalPrice.setText(finalStr); // bottom bar
     }
 
     private void setupSplitBill() {
@@ -153,12 +194,12 @@ public class PaymentActivity extends AppCompatActivity {
                     if (detail.length() > 0) detail.append("\n");
                     detail.append("• ").append(type);
                     if (!label.isEmpty()) detail.append(" – ghế ").append(label);
-                    if (price > 0) detail.append(": ").append(nf.format(price)).append(" ₫");
+                    if (price > 0) detail.append(": ").append(nf.format(price)).append(" đ");
                 }
             }
 
             if (detail.length() == 0) {
-                detail.append("Tổng tiền: ").append(nf.format(totalPrice)).append(" ₫");
+                detail.append("Tổng tiền: ").append(nf.format(totalPrice)).append(" đ");
             }
 
             tvSplitInfo.setText("Tổng: " + quantity + " vé\n" + detail);
@@ -177,17 +218,17 @@ public class PaymentActivity extends AppCompatActivity {
                         if (msgDetail.length() > 0) msgDetail.append("\n");
                         msgDetail.append("- ").append(type);
                         if (!label.isEmpty()) msgDetail.append(" (").append(label).append(")");
-                        if (price > 0) msgDetail.append(": ").append(nf.format(price)).append(" ₫");
+                        if (price > 0) msgDetail.append(": ").append(nf.format(price)).append(" đ");
                     }
                 } else {
                     msgDetail.append("- Tổng ").append(quantity)
-                            .append(" vé: ").append(nf.format(totalPrice)).append(" ₫");
+                            .append(" vé: ").append(nf.format(totalPrice)).append(" đ");
                 }
 
                 String msg = "Alo mọi người ơi! \n"
                         + "Mình đang đặt vé đi sự kiện: " + eventTitle + "\n"
                         + "Tổng: " + quantity + " vé, tổng tiền: "
-                        + nf.format(totalPrice) + " ₫\n"
+                        + nf.format(totalPrice) + " đ\n"
                         + "Chi tiết:\n"
                         + msgDetail
                         + "\n\nMọi người chuyển khoản cho mình nhé ";
@@ -212,7 +253,99 @@ public class PaymentActivity extends AppCompatActivity {
         return o == null ? "" : String.valueOf(o);
     }
 
-    // ----------------- APPLY PROMO CODE -------------------
+    private void loadUserLoyaltyPoints() {
+        if (userId == null) return;
+
+        db.collection("users")
+                .document(userId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) return;
+                    Long pts = doc.getLong("loyaltyPoints");
+                    currentLoyaltyPoints = pts != null ? pts : 0L;
+
+                    if (tvPointsSummary != null) {
+                        tvPointsSummary.setText("Điểm hiện tại: " + currentLoyaltyPoints);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                });
+    }
+
+    private void applyLoyaltyPoints() {
+        if (totalPrice <= 0) {
+            Toast.makeText(this, "Đơn miễn phí không dùng điểm được", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (currentLoyaltyPoints <= 0) {
+            Toast.makeText(this, "Bạn chưa có điểm tích lũy", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String raw = edtUsePoints.getText().toString().trim();
+        long req;
+        try {
+            req = Long.parseLong(raw.isEmpty() ? "0" : raw);
+        } catch (NumberFormatException ex) {
+            Toast.makeText(this, "Số điểm không hợp lệ", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (req <= 0) {
+            pointsUsed = 0;
+            discountPoints = 0;
+            if (tvPointsInfo != null) {
+                tvPointsInfo.setText("Không sử dụng điểm cho đơn này.");
+            }
+            updatePriceViews();
+            return;
+        }
+
+        if (req > currentLoyaltyPoints) {
+            Toast.makeText(this,
+                    "Bạn chỉ có " + currentLoyaltyPoints + " điểm.",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        double remainingAfterPromo = totalPrice - discountPromo;
+        if (remainingAfterPromo <= 0) {
+            Toast.makeText(this, "Đơn đã được giảm hết bằng mã khuyến mãi", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long maxByAmount = (long) (remainingAfterPromo / LOYALTY_VND_PER_POINT);
+        if (maxByAmount <= 0) {
+            Toast.makeText(this, "Số tiền còn lại quá nhỏ để dùng điểm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long maxUsable = Math.min(currentLoyaltyPoints, maxByAmount);
+        if (maxUsable <= 0) {
+            Toast.makeText(this, "Không thể dùng điểm cho đơn này", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long use = req;
+        if (req > maxUsable) {
+            use = maxUsable;
+            Toast.makeText(this,
+                    "Đơn này chỉ dùng tối đa " + maxUsable + " điểm. Đã áp dụng " + maxUsable + " điểm.",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        pointsUsed = use;
+        discountPoints = pointsUsed * LOYALTY_VND_PER_POINT;
+
+        if (tvPointsInfo != null) {
+            tvPointsInfo.setText(
+                    "Đã dùng " + pointsUsed + " điểm, giảm "
+                            + nf.format(discountPoints) + " đ."
+            );
+        }
+
+        updatePriceViews();
+    }
 
     private void applyPromoCode() {
         if (totalPrice <= 0) {
@@ -238,8 +371,7 @@ public class PaymentActivity extends AppCompatActivity {
 
                     if (!doc.exists()) {
                         appliedPromoCode = null;
-                        discountAmount = 0;
-                        finalAmount = totalPrice;
+                        discountPromo = 0;
                         tvPromoInfo.setText("Mã không hợp lệ.");
                         updatePriceViews();
                         return;
@@ -248,8 +380,7 @@ public class PaymentActivity extends AppCompatActivity {
                     Boolean active = doc.getBoolean("active");
                     if (active != null && !active) {
                         appliedPromoCode = null;
-                        discountAmount = 0;
-                        finalAmount = totalPrice;
+                        discountPromo = 0;
                         tvPromoInfo.setText("Mã đã bị khoá.");
                         updatePriceViews();
                         return;
@@ -258,19 +389,20 @@ public class PaymentActivity extends AppCompatActivity {
                     Timestamp expiry = doc.getTimestamp("expiry");
                     if (expiry != null && expiry.toDate().before(new Date())) {
                         appliedPromoCode = null;
-                        discountAmount = 0;
-                        finalAmount = totalPrice;
+                        discountPromo = 0;
                         tvPromoInfo.setText("Mã đã hết hạn.");
                         updatePriceViews();
                         return;
                     }
 
-                    // Các điều kiện khác...
                     Double value = getDoubleField(doc, "value");
                     String type = doc.getString("type");
 
                     if (value == null || value <= 0) {
+                        appliedPromoCode = null;
+                        discountPromo = 0;
                         tvPromoInfo.setText("Mã không hợp lệ.");
+                        updatePriceViews();
                         return;
                     }
 
@@ -281,9 +413,7 @@ public class PaymentActivity extends AppCompatActivity {
                         discount = value;
                     }
 
-                    discountAmount = Math.min(discount, totalPrice);
-                    finalAmount = totalPrice - discountAmount;
-
+                    discountPromo = Math.min(discount, totalPrice);
                     appliedPromoCode = code;
                     tvPromoInfo.setText("Đã áp dụng mã " + code);
                     updatePriceViews();
@@ -301,8 +431,6 @@ public class PaymentActivity extends AppCompatActivity {
         return null;
     }
 
-    // ----------------- PAYMENT PROCESS -------------------
-
     private void processPayment() {
         int selectedId = rgPaymentMethods.getCheckedRadioButtonId();
         if (selectedId == -1) {
@@ -316,13 +444,11 @@ public class PaymentActivity extends AppCompatActivity {
         btnConfirmPayment.setText("Đang xử lý...");
         btnConfirmPayment.setEnabled(false);
 
-
         rgPaymentMethods.setEnabled(false);
         for (int i = 0; i < rgPaymentMethods.getChildCount(); i++) {
             View child = rgPaymentMethods.getChildAt(i);
             child.setEnabled(false);
         }
-
 
         new Handler().postDelayed(() -> saveOrderToFirestore(method), 1500);
     }
@@ -333,6 +459,17 @@ public class PaymentActivity extends AppCompatActivity {
             resetPaymentUi();
             return;
         }
+
+        double payable = finalAmount;
+        if (payable <= 0 && totalPrice > 0 && discountAmount <= 0) {
+            payable = totalPrice;
+        }
+        final double finalPayable = payable;
+
+        final long earnedPoints =
+                (finalPayable <= 0 || LOYALTY_VND_PER_POINT <= 0)
+                        ? 0
+                        : (long) ((finalPayable * 0.1d) / LOYALTY_VND_PER_POINT);
 
         final DocumentReference eventRef = db.collection("events").document(eventId);
         final DocumentReference ordersRef = db.collection("orders").document();
@@ -355,27 +492,23 @@ public class PaymentActivity extends AppCompatActivity {
                     Map<String, Object> order = new HashMap<>();
                     order.put("eventId", eventId);
                     order.put("userId", userId);
-
                     if (ownerId != null) order.put("ownerId", ownerId);
 
-                    // TRƯỚC transaction.set(ordersRef, order):
-
-                    double payable = finalAmount;
-
-// Nếu vì lý do gì finalAmount chưa set, fallback sang totalPrice
-                    if (payable <= 0 && totalPrice > 0 && discountAmount <= 0) {
-                        payable = totalPrice;
-                    }
-
                     order.put("totalTickets", quantity);
-                    order.put("totalAmount", payable);
+                    order.put("totalAmount", finalPayable);
                     order.put("createdAt", FieldValue.serverTimestamp());
                     order.put("status", "PAID");
 
                     order.put("originalAmount", totalPrice);
                     order.put("discountAmount", discountAmount);
-                    if (appliedPromoCode != null) {
-                        order.put("promoCode", appliedPromoCode);
+                    if (appliedPromoCode != null) order.put("promoCode", appliedPromoCode);
+
+                    if (pointsUsed > 0) {
+                        order.put("pointsUsed", pointsUsed);
+                        order.put("pointsDiscountAmount", discountPoints);
+                    }
+                    if (earnedPoints > 0) {
+                        order.put("earnedPoints", earnedPoints);
                     }
 
                     order.put("checkedIn", false);
@@ -396,12 +529,11 @@ public class PaymentActivity extends AppCompatActivity {
                 })
                 .addOnSuccessListener(unused -> {
 
-                    // ⚡ Cập nhật trạng thái ghế (nếu có)
+                    updateUserLoyalty(pointsUsed, earnedPoints);
+
                     if (selectedSeatIds != null && !selectedSeatIds.isEmpty()) {
                         updateSeatStatusAfterPayment(eventId, selectedSeatIds);
                     }
-
-                    // ⚡ Cập nhật sold từng loại vé
                     if (selectedTickets != null && !selectedTickets.isEmpty()) {
                         updateTicketSoldAfterPayment(eventId, selectedTickets);
                     }
@@ -414,15 +546,37 @@ public class PaymentActivity extends AppCompatActivity {
                 });
     }
 
+    private void updateUserLoyalty(long used, long earned) {
+        if (userId == null) return;
+
+        Map<String, Object> updates = new HashMap<>();
+        long net = earned - used;
+
+        if (net != 0) {
+            updates.put("loyaltyPoints", FieldValue.increment(net));
+        }
+        if (earned > 0) {
+            updates.put("lifetimePoints", FieldValue.increment(earned));
+        }
+
+        if (updates.isEmpty()) return;
+
+        db.collection("users")
+                .document(userId)
+                .update(updates)
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Không cập nhật được điểm tích lũy", Toast.LENGTH_SHORT).show()
+                );
+    }
+
     private void resetPaymentUi() {
-        btnConfirmPayment.setText("Thanh toán ngay");
+        btnConfirmPayment.setText("Thanh toán");
         btnConfirmPayment.setEnabled(true);
         rgPaymentMethods.setEnabled(true);
         for (int i = 0; i < rgPaymentMethods.getChildCount(); i++) {
             View child = rgPaymentMethods.getChildAt(i);
             child.setEnabled(true);
         }
-
     }
 
     private void updateSeatStatusAfterPayment(String eventId, ArrayList<String> seatIds) {
@@ -439,8 +593,6 @@ public class PaymentActivity extends AppCompatActivity {
 
         batch.commit();
     }
-
-    // ----------------- NEW: UPDATE SOLD -------------------
 
     private void updateTicketSoldAfterPayment(String eventId,
                                               ArrayList<HashMap<String, Object>> tickets) {
@@ -473,8 +625,6 @@ public class PaymentActivity extends AppCompatActivity {
                         ).show()
                 );
     }
-
-    // ----------------- SUCCESS SCREEN -------------------
 
     private void showSuccessDialog(String orderId) {
         Intent intent = new Intent(this, OrderSuccessActivity.class);

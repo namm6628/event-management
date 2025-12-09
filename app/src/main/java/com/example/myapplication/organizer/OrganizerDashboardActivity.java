@@ -107,7 +107,6 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
             // TODO: mở màn AttendeeListActivity
         });
 
-        // ✅ Cài đặt organizer → mở OrganizerProfileActivity
         binding.cardSettings.setOnClickListener(v -> {
             startActivity(new Intent(
                     OrganizerDashboardActivity.this,
@@ -143,7 +142,6 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
         showLoading(true);
         showEmpty(false);
 
-        // ⚠️ Collection "events", lọc theo ownerId đúng với model Event bạn gửi
         eventListener = db.collection("events")
                 .whereEqualTo("ownerId", user.getUid())
                 .orderBy("startTime", Query.Direction.DESCENDING)
@@ -166,7 +164,7 @@ public class OrganizerDashboardActivity extends AppCompatActivity {
                     for (var doc : value.getDocuments()) {
                         Event e = doc.toObject(Event.class);
                         if (e == null) continue;
-                        e.setId(doc.getId()); // dùng cho EventDetailActivity
+                        e.setId(doc.getId());
                         list.add(e);
                     }
 

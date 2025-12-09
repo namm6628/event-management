@@ -13,7 +13,7 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorSurface"
         android:theme="@style/ThemeOverlay.MaterialComponents.ActionBar"
-        app:title="Duyệt Member" />
+        app:title="Duyệt thành viên " />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerRequests"

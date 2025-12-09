@@ -100,7 +100,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="6dp" />
 
-        <!-- Hàng nút chức năng -->
+        <!-- Hàng nút chức năng trên -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -141,47 +141,75 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- Nút quét QR check-in -->
-        <Button
-            android:id="@+id/btnScanQr"
+        <!-- Hàng: Quét QR + Danh sách check-in -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="4dp"
-            android:layout_marginHorizontal="12dp"
-            android:minHeight="0dp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
-            android:text="Quét mã QR check-in"
-            android:textAllCaps="false"
-            android:textSize="13sp" />
+            android:layout_marginHorizontal="12dp">
 
-        <!-- Nút danh sách check-in -->
-        <Button
-            android:id="@+id/btnCheckinList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginHorizontal="12dp"
-            android:minHeight="0dp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
-            android:text="Danh sách check-in"
-            android:textAllCaps="false"
-            android:textSize="13sp" />
+            <Button
+                android:id="@+id/btnScanQr"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:text="Quét mã QR check-in"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
 
-        <!-- Nút quản lý nhân viên / CTV -->
-        <Button
-            android:id="@+id/btnManageStaff"
+            <Button
+                android:id="@+id/btnCheckinList"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:text="Danh sách check-in"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Hàng: Nhân viên / CTV + Ưu đãi vé -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="4dp"
-            android:layout_marginHorizontal="12dp"
-            android:minHeight="0dp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
-            android:text="Nhân viên / CTV"
-            android:textAllCaps="false"
-            android:textSize="13sp" />
+            android:layout_marginHorizontal="12dp">
+
+            <Button
+                android:id="@+id/btnManageStaff"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:text="Nhân viên / CTV"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnTicketPromo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:text="Ưu đãi vé"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+        </LinearLayout>
 
     </LinearLayout>
 

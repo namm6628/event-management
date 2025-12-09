@@ -32,11 +32,9 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
     public static final String EXTRA_MAX_SEATS         = "maxSeats";
     public static final String EXTRA_TOTAL_EVENT_SEATS = "totalEventSeats";
 
-    // rows / cols hiện tại (dùng thêm ở chỗ khác nếu cần)
     public static int ROWS = 8;
     public static int COLS = 12;
 
-    // GHẾ TẠM TRONG RAM: key = eventId + "|" + ticketName
     private static final Map<String, List<String>> TEMP_SEATS = new HashMap<>();
 
     private static String buildKey(String eventId, String ticketName) {
@@ -71,16 +69,14 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
     private String eventId;
     private String ticketName;
     private int maxSeats;
-    private int totalEventSeats;   // tổng ghế của event
+    private int totalEventSeats;
 
     private final List<SeatItem> seatItems = new ArrayList<>();
     private SeatConfigAdapter adapter;
 
-    // Zoom
     private ScaleGestureDetector scaleDetector;
     private float scaleFactor = 1.0f;
 
-    // Drag select
     private boolean isDraggingSelect = false;
     private final HashSet<Integer> draggedPositions = new HashSet<>();
 
@@ -104,13 +100,10 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         if (eventId == null) eventId = "";
         if (ticketName == null) ticketName = "";
 
-        // fallback: nếu không truyền tổng số ghế event thì dùng quota của loại vé
         if (totalEventSeats <= 0) totalEventSeats = maxSeats;
-        // để tránh map quá khủng – bạn muốn lớn hơn thì chỉnh
         if (totalEventSeats > 500) totalEventSeats = 500;
 
-        // ===== TÍNH rows / cols ĐỘNG =====
-        int maxCols = 12; // nhiều hơn thì nút bé xíu
+        int maxCols = 12;
         int cols = (int) Math.ceil(Math.sqrt(totalEventSeats));
         if (cols < 4) cols = 4;
         if (cols > maxCols) cols = maxCols;
@@ -126,10 +119,8 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             );
         }
 
-        // Ghế đã chọn trước của loại vé này
         List<String> preSelected = getSeatsForTicket(eventId, ticketName);
 
-        // Ghế bị khoá do loại vé khác
         Set<String> lockedByOthers = new HashSet<>();
         String myKey = buildKey(eventId, ticketName);
         for (Map.Entry<String, List<String>> entry : TEMP_SEATS.entrySet()) {
@@ -145,7 +136,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new GridLayoutManager(this, cols));
         recyclerView.setAdapter(adapter);
 
-        // ===== ZOOM 2 NGÓN =====
         scaleDetector = new ScaleGestureDetector(
                 this,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -167,12 +157,10 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             return false;
         });
 
-        // ===== DRAG SELECT =====
         recyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
             @Override
             public boolean onInterceptTouchEvent(@NonNull RecyclerView rv,
                                                  @NonNull MotionEvent e) {
-                // vẫn feed event cho zoom
                 scaleDetector.onTouchEvent(e);
 
                 switch (e.getActionMasked()) {
@@ -188,9 +176,8 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
                                 if (!seat.isPlaceholder && !seat.locked) {
                                     isDraggingSelect = true;
                                     draggedPositions.add(idx);
-                                    // bắt đầu bằng toggle giống click
                                     onSeatClicked(seat);
-                                    return true; // mình xử lý các move tiếp theo
+                                    return true;
                                 }
                             }
                         }
@@ -240,7 +227,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         btnSaveSeats.setOnClickListener(v -> onSaveClicked());
     }
 
-    /** Build grid động: tạo đúng totalSeats ghế, phần dư là placeholder (ẩn). */
     private void buildSeatGrid(int rows,
                                int cols,
                                int totalSeats,
@@ -256,7 +242,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
             for (int c = 1; c <= cols; c++) {
 
                 if (createdSeats >= totalSeats) {
-                    // placeholder giữ form grid
                     SeatItem placeholder = new SeatItem("", false, false, true, null);
                     placeholder.position = index++;
                     seatItems.add(placeholder);
@@ -269,7 +254,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
                 boolean selected = preSelected.contains(label);
                 boolean locked   = lockedByOthers.contains(label);
 
-                // zone đơn giản cho đẹp – không dùng logic gì đặc biệt
                 String zone;
                 if (r < 2) {
                     zone = "VIP";
@@ -294,7 +278,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         return selectedCount;
     }
 
-    /** Chọn thêm ghế trong lúc drag (chỉ bật, không toggle tắt). */
     private void selectSeatDuringDrag(SeatItem seat) {
         if (seat.selected) return;
 
@@ -311,7 +294,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         adapter.notifyItemChanged(seat.position);
     }
 
-    /** Click bình thường (toggle) – dùng cho cả tap và bắt đầu drag. */
     private void onSeatClicked(SeatItem seat) {
         if (seat.isPlaceholder) return;
 
@@ -470,7 +452,6 @@ public class SeatLayoutConfigActivity extends AppCompatActivity {
         }
     }
 
-    // Cho phép màn khác (Edit / Create) set ghế từ Firestore vào cache tạm
     public static void setSeatsForTicket(String eventId, String ticketName, List<String> seats) {
         if (eventId == null || ticketName == null || seats == null) return;
         String key = buildKey(eventId, ticketName);

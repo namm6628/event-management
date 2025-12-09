@@ -13,7 +13,6 @@
         android:layout_marginTop="5dp"
         android:orientation="vertical">
 
-        <!-- Header -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardHeader"
             android:layout_width="match_parent"
@@ -26,7 +25,6 @@
             app:strokeColor="@color/border_light"
             app:strokeWidth="1dp">
 
-            <!-- Nền đẹp đặt ở inner container để có gradient -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -35,7 +33,6 @@
                 android:orientation="horizontal"
                 android:padding="16dp">
 
-                <!-- Avatar: bấm để mở menu -->
                 <RelativeLayout
                     android:id="@+id/avatarContainer"
                     android:layout_width="72dp"
@@ -78,9 +75,25 @@
                         android:paddingTop="2dp"
                         android:text="Đăng nhập để sử dụng toàn bộ các dịch vụ bạn nhé!"
                         android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:id="@+id/tvMembershipBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:paddingLeft="10dp"
+                        android:paddingRight="10dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="MEMBER"
+                        android:textAllCaps="true"
+                        android:textColor="@android:color/white"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_member_badge"
+                        android:visibility="gone" />
+
                 </LinearLayout>
 
-                <!-- Nút header: nền xanh chữ trắng -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnEditProfile"
                     style="?attr/materialButtonStyle"
@@ -92,7 +105,133 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Section: Tài khoản -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLoyalty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="18dp"
+            app:cardUseCompatPadding="true"
+            android:backgroundTint="@android:color/transparent"
+            app:strokeColor="@color/border_light"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="@drawable/bg_loyalty_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Điểm thành viên"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_loyalty_star"
+                        app:tint="@android:color/white" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Điểm hiện tại"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/white" />
+
+                        <TextView
+                            android:id="@+id/tvLoyaltyPoints"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="0"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@android:color/white" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="end">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tổng điểm tích lũy"
+                            android:textSize="12sp"
+                            android:textColor="@android:color/white" />
+
+                        <TextView
+                            android:id="@+id/tvLifetimePoints"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="0"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@android:color/white" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvTierLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Hạng: Thường"
+                    android:textSize="13sp"
+                    android:textColor="@android:color/white" />
+
+                <ProgressBar
+                    android:id="@+id/progressNextTier"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="10dp"
+                    android:progress="40"
+                    android:max="100"
+                    android:progressDrawable="@drawable/bg_loyalty_progress" />
+
+                <TextView
+                    android:id="@+id/tvNextTierHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Còn 260 điểm nữa để lên VIP"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/white" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -115,7 +254,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Row: Thông tin cá nhân -->
                 <LinearLayout
                     android:id="@+id/rowProfile"
                     android:layout_width="match_parent"
@@ -142,7 +280,6 @@
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
-                <!-- Panel ẩn: Thông tin cá nhân -->
                 <LinearLayout
                     android:id="@+id/panelProfile"
                     android:layout_width="match_parent"
@@ -151,51 +288,38 @@
                     android:padding="16dp"
                     android:visibility="gone">
 
-                    <!-- Họ và tên -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Họ và tên">
+
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edtName"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Ngày sinh -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Ngày sinh">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/edtDob"
-                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:focusable="false"
-                            android:clickable="true"
-                            android:inputType="date" />
+                            android:inputType="textPersonName" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Email -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="Email">
+
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edtEmail"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textEmailAddress" />
+                            android:inputType="textEmailAddress"
+                            android:enabled="false" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Số điện thoại -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="Số điện thoại">
+
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edtPhone"
                             android:layout_width="match_parent"
@@ -203,22 +327,6 @@
                             android:inputType="phone" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Địa chỉ -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Địa chỉ">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/edtAddress"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPostalAddress"
-                            android:minLines="2"
-                            android:maxLines="4" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Nút chỉnh sửa / lưu: nền xanh chữ trắng -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnEditInfo"
                         style="?attr/materialButtonStyle"
@@ -228,13 +336,13 @@
                         android:text="Chỉnh sửa thông tin"
                         android:textColor="@android:color/white"
                         app:backgroundTint="?attr/colorPrimary" />
+
                 </LinearLayout>
 
                 <com.google.android.material.divider.MaterialDivider
                     android:layout_width="match_parent"
                     android:layout_height="1dp" />
 
-                <!-- Row: Phương thức thanh toán -->
                 <LinearLayout
                     android:id="@+id/rowPaymentMethods"
                     android:layout_width="match_parent"
@@ -261,7 +369,6 @@
                         app:tint="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
-                <!-- Panel ẩn: Thanh toán -->
                 <LinearLayout
                     android:id="@+id/panelPayment"
                     android:layout_width="match_parent"
@@ -271,27 +378,30 @@
                     android:visibility="gone">
 
                     <TextView
+                        android:id="@+id/tvLinkedCardsLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Thẻ đã liên kết: (ví dụ)"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="• Visa **** 1234"
+                        android:text="Thẻ đã liên kết:"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
-                    <!-- Nút thêm thẻ -->
+                    <TextView
+                        android:id="@+id/tvPrimaryCard"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Chưa có thẻ nào được lưu"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAddCard"
                         style="?attr/materialButtonStyle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Thêm thẻ mới"
+                        android:text="Thêm "
                         android:textColor="@android:color/white"
                         app:backgroundTint="?attr/colorPrimary" />
                 </LinearLayout>
+
 
                 <com.google.android.material.divider.MaterialDivider
                     android:layout_width="match_parent"
@@ -326,7 +436,6 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <!-- Header row: tiêu đề + nút Xem thêm -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -356,7 +465,6 @@
                         android:focusable="true" />
                 </LinearLayout>
 
-                <!-- Container: list sự kiện (sẽ add view bằng code) -->
                 <LinearLayout
                     android:id="@+id/containerFavoriteEvents"
                     android:layout_width="match_parent"
@@ -364,7 +472,6 @@
                     android:layout_marginTop="8dp"
                     android:orientation="vertical">
 
-                    <!-- Placeholder khi chưa có data -->
                     <TextView
                         android:id="@+id/tvEmptyFavoriteEvents"
                         android:layout_width="wrap_content"
@@ -375,9 +482,7 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <!-- ========== END FAVORITE EVENTS ========== -->
 
-        <!-- Section: Cài đặt -->
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -443,7 +548,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Login (ẩn/hiện trong code) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogin"
             style="?attr/materialButtonStyle"
@@ -469,12 +573,42 @@
             android:text="Đăng ký tổ chức sự kiện"
             android:layout_marginTop="8dp" />
 
-        <!-- 🔹 NÚT MỚI: Dành cho nhân viên check-in -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRequestMember"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đăng ký thành viên (Member)"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:textColor="@android:color/white"
+            app:backgroundTint="?attr/colorPrimary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUpgradeVip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nâng cấp VIP"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/md_primary" />
+
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStaffCheckin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Dành cho nhân viên check-in"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:textColor="@android:color/white"
+            app:backgroundTint="?attr/colorPrimary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAdminPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quản lý admin"
             android:layout_marginTop="8dp"
             android:visibility="gone"
             android:textColor="@android:color/white"

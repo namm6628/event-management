@@ -25,19 +25,16 @@ public class OrderSuccessActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_order_success);
 
-        // 1. Nhận dữ liệu
         String orderId = getIntent().getStringExtra(EXTRA_ORDER_ID);
         int quantity   = getIntent().getIntExtra(EXTRA_TOTAL_QTY, 0);
         double price   = getIntent().getDoubleExtra(EXTRA_TOTAL_PRICE, 0);
 
-        // 2. View
         TextView tvOrderId    = findViewById(R.id.tvOrderId);
         TextView tvTotalQty   = findViewById(R.id.tvTotalQty);
         TextView tvTotalPrice = findViewById(R.id.tvTotalPrice);
         MaterialButton btnBackHome    = findViewById(R.id.btnBackHome);
         MaterialButton btnViewTickets = findViewById(R.id.btnViewTickets);
 
-        // 3. Hiển thị
         tvOrderId.setText(orderId != null ? orderId : "---");
         tvTotalQty.setText(String.format(Locale.getDefault(), "%02d", quantity));
 
@@ -47,9 +44,7 @@ public class OrderSuccessActivity extends AppCompatActivity {
         if (price == 0) priceStr = "Miễn phí";
         tvTotalPrice.setText(priceStr);
 
-        // 4. Điều hướng
 
-        // 👉 Nút "Về trang chủ"
         btnBackHome.setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -58,7 +53,6 @@ public class OrderSuccessActivity extends AppCompatActivity {
             finish();
         });
 
-        // 👉 Nút "Vé của tôi"
         btnViewTickets.setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);

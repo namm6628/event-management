@@ -38,10 +38,9 @@ public class ExploreFragment extends Fragment {
     private FragmentExploreBinding binding;
     private EventAdapter adapter;
 
-    // State filter
     private String fSearch = null;
-    private String fCategory = null; // null = tất cả (chip ngang)
-    private String fCity = null;     // thực chất là 'location' trong DB
+    private String fCategory = null;
+    private String fCity = null;
     private Long fFrom = null, fTo = null;
     private Integer fMinPrice = null, fMaxPrice = null;
     private boolean fOnlyFree = false, fHasTicket = false;
@@ -60,12 +59,11 @@ public class ExploreFragment extends Fragment {
 
                     fSearch = (q == null || q.trim().isEmpty()) ? null : q.trim();
                     if (filters != null) {
-                        fCity = decodeCity(filters.cityCode);            // -> "Hà Nội"/"TP.HCM"/...
+                        fCity = decodeCity(filters.cityCode);
                         fOnlyFree = filters.onlyFree;
                         fCategory = decodeCategory(filters.categoryCode);
                         fFrom = filters.fromUtcMs;
                         fTo = filters.toUtcMs;
-                        // nếu có min/max price trong filters, gán vào fMinPrice/fMaxPrice tương tự
                     }
                     if (binding != null) {
                         binding.tvSearchHint.setText(
@@ -86,7 +84,6 @@ public class ExploreFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle b) {
         super.onViewCreated(v, b);
 
-        // CLICK ITEM → mở chi tiết bằng eventId (KHÔNG pass nguyên Event)
         adapter = new EventAdapter(event -> {
             if (event.getId() == null || event.getId().isEmpty()) {
                 Toast.makeText(requireContext(), "Thiếu ID sự kiện", Toast.LENGTH_SHORT).show();
@@ -103,7 +100,6 @@ public class ExploreFragment extends Fragment {
 
         binding.recyclerEvents.setAdapter(adapter);
 
-        // Thanh tìm kiếm (CardView) -> mở SearchActivity
         binding.searchBar.setOnClickListener(view -> {
             Intent i = new Intent(requireContext(), SearchActivity.class);
             if (fSearch != null) i.putExtra(SearchActivity.EXTRA_QUERY, fSearch);
@@ -111,7 +107,6 @@ public class ExploreFragment extends Fragment {
         });
         binding.tvSearchHint.setText(getString(R.string.search_hint));
 
-        // Chip categories
         View.OnClickListener chipClick = vv -> {
             Chip c = (Chip) vv;
             if (c == binding.chipAll)        fCategory = null;
@@ -148,7 +143,6 @@ public class ExploreFragment extends Fragment {
         if (fFrom != null) q = q.whereGreaterThanOrEqualTo("startTime", new Timestamp(fFrom / 1000, 0));
         if (fTo   != null) q = q.whereLessThanOrEqualTo("startTime",  new Timestamp(fTo   / 1000, 0));
 
-        // 🔧 PRICE: Firestore 'price' đang là Double → so sánh bằng Double để không lệch kiểu
         if (fOnlyFree)  q = q.whereEqualTo("price", 0d);
         if (fHasTicket) q = q.whereGreaterThan("availableSeats", 0);
 
@@ -165,7 +159,6 @@ public class ExploreFragment extends Fragment {
                 Event e = d.toObject(Event.class);
                 if (e == null) continue;
 
-                // đảm bảo có id
                 if (e.getId() == null || e.getId().isEmpty()) {
                     try { e.setId(d.getId()); } catch (Exception ignored) {}
                 }
@@ -175,7 +168,6 @@ public class ExploreFragment extends Fragment {
                     if (!title.toLowerCase(Locale.ROOT).contains(search)) continue;
                 }
 
-                // 🔧 PRICE: so sánh Double với biên Integer
                 if (fMinPrice != null && e.getPrice() != null && e.getPrice() < fMinPrice.doubleValue()) continue;
                 if (fMaxPrice != null && e.getPrice() != null && e.getPrice() > fMaxPrice.doubleValue()) continue;
 

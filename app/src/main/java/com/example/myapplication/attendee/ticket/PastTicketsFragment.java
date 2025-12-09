@@ -32,11 +32,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Vé ĐÃ KẾT THÚC:
- * - Có vé: list vé
- * - Không vé: empty + "Có thể bạn cũng thích"
- */
 public class PastTicketsFragment extends Fragment {
 
     private RecyclerView rvTickets;
@@ -57,7 +52,6 @@ public class PastTicketsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        // Reuse layout giống Upcoming
         View v = inflater.inflate(R.layout.fragment_upcoming_tickets, container, false);
 
         rvTickets = v.findViewById(R.id.rvTickets);
@@ -114,7 +108,7 @@ public class PastTicketsFragment extends Fragment {
 
         db.collection("orders")
                 .whereEqualTo("userId", uid)
-                .whereEqualTo("status", "PAID") // khớp với Firestore
+                .whereEqualTo("status", "PAID")
                 .get()
                 .addOnSuccessListener(orderSnap -> {
                     if (orderSnap.isEmpty()) {
@@ -149,14 +143,11 @@ public class PastTicketsFragment extends Fragment {
                                     ? endTs.toDate().getTime()
                                     : start + 2 * 60 * 60 * 1000;
 
-                            // CHỈ LẤY EVENT ĐÃ KẾT THÚC
                             if (end > nowMillis) return;
 
-                            // ===== Map tickets từ order =====
                             List<?> ticketsArr = (List<?>) orderDoc.get("tickets");
 
                             if (ticketsArr == null || ticketsArr.isEmpty()) {
-                                // Fallback: 1 dòng / order
                                 TicketAdapter.TicketItem item = new TicketAdapter.TicketItem();
                                 item.orderId = orderDoc.getId();
                                 item.eventId = eventId;
@@ -169,7 +160,6 @@ public class PastTicketsFragment extends Fragment {
                                 item.venue = e.getLocation();
                                 item.addressDetail = e.getAddressDetail();
 
-                                // Dùng tổng số vé / tổng tiền nếu có
                                 Number totalTicketsNum = (Number) orderDoc.get("totalTickets");
                                 Number totalAmountNum = (Number) orderDoc.get("totalAmount");
 
@@ -184,7 +174,6 @@ public class PastTicketsFragment extends Fragment {
                                 String ticketType = orderDoc.getString("ticketType");
                                 item.ticketTypeName = ticketType;
 
-                                // không có list tickets riêng => thường không có ghế
                                 item.seatSummary = null;
 
                                 Double price = e.getPrice();
@@ -192,7 +181,6 @@ public class PastTicketsFragment extends Fragment {
 
                                 result.add(item);
                             } else {
-                                // 1 dòng / vé trong tickets array
                                 for (Object obj : ticketsArr) {
                                     if (!(obj instanceof Map)) continue;
                                     Map<?, ?> tk = (Map<?, ?>) obj;
@@ -216,7 +204,6 @@ public class PastTicketsFragment extends Fragment {
                                     item.ticketQuantity = 1L;
                                     item.ticketPrice = pNum != null ? pNum.longValue() : 0L;
 
-                                    // ✅ Dùng đúng field trong Firestore: label / seatId
                                     String seatLabel = null;
 
                                     Object labelObj = tk.get("label");
@@ -230,7 +217,6 @@ public class PastTicketsFragment extends Fragment {
                                     }
 
                                     item.seatSummary = seatLabel;  // có thể là "A5", "B1" hoặc null
-
 
                                     Double price = e.getPrice();
                                     item.minPrice = price != null ? price.longValue() : 0L;
@@ -248,7 +234,6 @@ public class PastTicketsFragment extends Fragment {
                                     showEmptyBig();
                                     loadSuggestions();
                                 } else {
-                                    // Đã kết thúc: sort mới nhất -> cũ nhất
                                     Collections.sort(result,
                                             (a, b) -> Long.compare(b.endTimeMillis, a.endTimeMillis));
                                     ticketAdapter.submitList(result);

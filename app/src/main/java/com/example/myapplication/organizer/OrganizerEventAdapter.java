@@ -68,7 +68,7 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
     static class VH extends RecyclerView.ViewHolder {
         final TextView tvTitle, tvTime, tvVenue, tvTicketInfo, tvTicketTypesDetail;
         final Button btnEdit, btnViewAttendees, btnBroadcast, btnScanQr, btnCheckinList;
-        final Button btnManageStaff;
+        final Button btnManageStaff, btnTicketPromo;
 
         private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
@@ -86,21 +86,19 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
             btnScanQr = itemView.findViewById(R.id.btnScanQr);
             btnCheckinList = itemView.findViewById(R.id.btnCheckinList);
             btnManageStaff = itemView.findViewById(R.id.btnManageStaff);
+            btnTicketPromo = itemView.findViewById(R.id.btnTicketPromo);
         }
 
         void bind(Event e, Listener listener) {
 
-            // ===== TITLE =====
             tvTitle.setText(e.getTitle() == null ? "(Không tên)" : e.getTitle());
 
-            // ===== LOCATION =====
             tvVenue.setText(
                     e.getLocation() == null
                             ? "Chưa cập nhật địa điểm"
                             : e.getLocation()
             );
 
-            // ===== TIME (START - END) =====
             String timeText = "Chưa đặt thời gian";
 
             Timestamp start = e.getStartTime();
@@ -122,17 +120,11 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
 
             tvTime.setText(timeText);
 
-            // ===== BASIC TICKET INFO =====
             Integer total = e.getTotalSeats();
             Integer avail = e.getAvailableSeats();
             Double price = e.getPrice();
 
             int sold = (total != null && avail != null) ? (total - avail) : 0;
-
-            String priceStr = (price != null && price > 0)
-                    ? NumberFormat.getNumberInstance(new Locale("vi", "VN"))
-                    .format(price) + "₫"
-                    : "Miễn phí";
 
             String statusLabel;
             long now = System.currentTimeMillis();
@@ -151,10 +143,8 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
                             + " | " + statusLabel
             );
 
-            // ===== LOAD TICKET TYPES SUBCOLLECTION =====
             loadTicketTypes(e, tvTicketTypesDetail);
 
-            // ===== BUTTONS =====
             btnEdit.setOnClickListener(v -> {
                 if (listener != null) listener.onEdit(e);
             });
@@ -167,14 +157,12 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
                 if (listener != null) listener.onBroadcast(e);
             });
 
-            // 👉 Quét QR check-in
             btnScanQr.setOnClickListener(v -> {
                 Intent i = new Intent(v.getContext(), ScanQrActivity.class);
                 i.putExtra("EVENT_ID", e.getId());
                 v.getContext().startActivity(i);
             });
 
-            // 👉 Danh sách check-in
             btnCheckinList.setOnClickListener(v -> {
                 Intent i = new Intent(v.getContext(), OrganizerCheckinListActivity.class);
                 i.putExtra(OrganizerCheckinListActivity.EXTRA_EVENT_ID, e.getId());
@@ -188,13 +176,16 @@ public class OrganizerEventAdapter extends RecyclerView.Adapter<OrganizerEventAd
                 v.getContext().startActivity(i);
             });
 
-            // card click = edit
+            btnTicketPromo.setOnClickListener(v -> {
+                Intent i = new Intent(v.getContext(), TicketPromoConfigActivity.class);
+                i.putExtra(TicketPromoConfigActivity.EXTRA_EVENT_ID, e.getId());
+                v.getContext().startActivity(i);
+            });
+
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onEdit(e);
             });
         }
-
-        /** kiểm tra sự kiện đã kết thúc chưa (dùng cho trạng thái loại vé) */
         private boolean isEventFinished(@NonNull Event event) {
             Timestamp startTs = event.getStartTime();
             Timestamp endTs   = event.getEndTime();

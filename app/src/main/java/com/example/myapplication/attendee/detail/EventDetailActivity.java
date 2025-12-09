@@ -77,7 +77,6 @@ public class EventDetailActivity extends AppCompatActivity {
     private TicketTypeAdapter ticketTypeAdapter;
     private Double minTicketPrice = null;
 
-    // Trạng thái loại vé / sơ đồ ghế
     private boolean hasSeatLayoutForEvent = false;
     private boolean ticketTypesLoaded = false;
 
@@ -100,20 +99,16 @@ public class EventDetailActivity extends AppCompatActivity {
     private Review currentUserReview = null;
     private String currentUserReviewDocId = null;
 
-    // Recommended events
     private final List<RecommendedEvent> recommendedList = new ArrayList<>();
     private RecommendedAdapter recommendedAdapter;
 
-    // Favorite state
     private boolean isFavorite = false;
 
-    // Media chọn trong dialog review
     @Nullable
     private Uri pickedReviewMediaUri = null;
     @Nullable
     private ImageView dialogMediaPreview = null;
 
-    // Member flag
     private boolean isMember = false;
 
     @Override
@@ -125,7 +120,6 @@ public class EventDetailActivity extends AppCompatActivity {
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) currentUserId = currentUser.getUid();
 
-        // 🔹 load trạng thái member/vip của user
         loadCurrentUserMembership();
 
         volleyQueue = Volley.newRequestQueue(this);
@@ -136,7 +130,6 @@ public class EventDetailActivity extends AppCompatActivity {
         ivWeatherIcon = binding.ivWeatherIcon;
         tvWeather = binding.tvWeather;
 
-        // Mô tả thu gọn
         binding.tvDescription.setMaxLines(4);
         binding.tvDescription.setEllipsize(android.text.TextUtils.TruncateAt.END);
         binding.tvDescriptionToggle.setOnClickListener(v -> {
@@ -152,10 +145,8 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-        // Viết đánh giá
         binding.btnWriteReview.setOnClickListener(v -> onWriteReviewClicked());
 
-        // Ticket types
         ticketTypeAdapter = new TicketTypeAdapter();
         binding.recyclerTicketTypes.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
@@ -173,10 +164,8 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-        // Lấy eventId
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
 
-        // Toolbar
         setSupportActionBar(binding.toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -190,7 +179,6 @@ public class EventDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // UI mặc định
         binding.tvTitle.setText("");
         binding.tvArtist.setText(getString(R.string.artist_unknown));
         binding.tvVenue.setText("");
@@ -205,7 +193,6 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.tvAverageRating.setText("0.0/5");
         binding.btnMoreReviews.setVisibility(View.GONE);
 
-        // Share
         binding.btnShare.setOnClickListener(v -> {
             String share = getString(
                     R.string.share_template,
@@ -218,11 +205,9 @@ public class EventDetailActivity extends AppCompatActivity {
             startActivity(Intent.createChooser(intent, getString(R.string.share_event)));
         });
 
-        // Follow
         binding.btnFollow.setOnClickListener(v -> toggleFavorite());
         updateFollowButtonUi();
 
-        // Map
         binding.btnOpenMap.setOnClickListener(v -> {
             String q = null;
             if (event != null) {
@@ -241,13 +226,11 @@ public class EventDetailActivity extends AppCompatActivity {
             }
         });
 
-        // Reviews adapter
         reviewAdapter = new ReviewAdapter();
-        reviewAdapter.setCurrentUserId(currentUserId); // ⭐ cho adapter biết user hiện tại
-        reviewAdapter.setActionListener(new ReviewAdapter.ReviewActionListener() { // ⭐ handle Sửa/Xoá
+        reviewAdapter.setCurrentUserId(currentUserId);
+        reviewAdapter.setActionListener(new ReviewAdapter.ReviewActionListener() {
             @Override
             public void onEdit(@NonNull Review r) {
-                // Gán review hiện tại rồi mở dialog sửa
                 currentUserReview = r;
                 currentUserReviewDocId = r.id;
                 showRateDialog();
@@ -296,30 +279,24 @@ public class EventDetailActivity extends AppCompatActivity {
         binding.recyclerReviews.setLayoutManager(new LinearLayoutManager(this));
         binding.recyclerReviews.setAdapter(reviewAdapter);
 
-        // Xem thêm review
         binding.btnMoreReviews.setOnClickListener(v -> {
             reviewsExpanded = !reviewsExpanded;
             renderReviewsUi();
         });
 
-        // Recommended
         recommendedAdapter = new RecommendedAdapter();
         binding.recyclerRecommendedEvents.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         );
         binding.recyclerRecommendedEvents.setAdapter(recommendedAdapter);
 
-        // Đặt vé: nếu có sơ đồ ghế → chọn ghế, nếu không → chọn loại vé
         binding.btnBuyTicket.setOnClickListener(v -> {
-            // check điều kiện trước
             if (!validateBeforeBuy()) return;
 
-            // mở dialog chống bot
             showRotateVerifyDialog(this::performBuyTicket);
         });
     }
 
-    // ===================== ORGANIZER HELPER =====================
 
     public void addTicketType(String eventId,
                               String ticketTypeName,
@@ -361,7 +338,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 .update(data);
     }
 
-    // ================== REALTIME EVENT + REVIEWS ====================
 
     @Override
     protected void onStart() {
@@ -494,14 +470,29 @@ public class EventDetailActivity extends AppCompatActivity {
                     if (snap == null) return;
 
                     List<TicketTypeAdapter.TicketType> list = new ArrayList<>();
-                    boolean detectedSeatLayout = false;   // <== check có field seats hay không
+                    boolean detectedSeatLayout = false;
+
+                    double minEffective = Double.MAX_VALUE;
+                    boolean hasPaidTicket = false;
 
                     for (DocumentSnapshot d : snap.getDocuments()) {
-                        TicketTypeAdapter.TicketType t =
+                        TicketTypeAdapter.TicketType tSimple =
                                 d.toObject(TicketTypeAdapter.TicketType.class);
-                        if (t != null) list.add(t);
+                        if (tSimple != null) {
+                            list.add(tSimple);
+                        }
 
-                        // kiểm tra xem ticket type này có cấu hình ghế không
+                        com.example.myapplication.common.model.TicketType tFull =
+                                d.toObject(com.example.myapplication.common.model.TicketType.class);
+                        if (tFull != null) {
+                            tFull.setId(d.getId());
+                            double eff = tFull.getEffectivePrice(isMember);
+                            if (eff > 0) {
+                                hasPaidTicket = true;
+                                if (eff < minEffective) minEffective = eff;
+                            }
+                        }
+
                         java.util.List<String> seats =
                                 (java.util.List<String>) d.get("seats");
                         if (seats != null && !seats.isEmpty()) {
@@ -511,7 +502,6 @@ public class EventDetailActivity extends AppCompatActivity {
 
                     ticketTypesLoaded = true;
                     hasSeatLayoutForEvent = detectedSeatLayout;
-
                     ticketTypeAdapter.submit(list);
 
                     if (list.isEmpty()) {
@@ -525,22 +515,12 @@ public class EventDetailActivity extends AppCompatActivity {
                         binding.tvBottomPrice.setText(priceText);
                         minTicketPrice = p;
                     } else {
-                        double min = Double.MAX_VALUE;
-                        boolean hasPaidTicket = false;
-
-                        for (TicketTypeAdapter.TicketType t : list) {
-                            if (t.price != null && t.price > 0) {
-                                hasPaidTicket = true;
-                                if (t.price < min) min = t.price;
-                            }
-                        }
-
                         if (!hasPaidTicket) {
                             binding.tvPrice.setText(getString(R.string.free));
                             binding.tvBottomPrice.setText(getString(R.string.free));
                             minTicketPrice = 0d;
                         } else {
-                            minTicketPrice = min;
+                            minTicketPrice = minEffective;
                             String formatted = NumberFormat
                                     .getNumberInstance(new Locale("vi", "VN"))
                                     .format(minTicketPrice) + " ₫";
@@ -551,8 +531,6 @@ public class EventDetailActivity extends AppCompatActivity {
                     }
                 });
     }
-
-    // ======= FOLLOW =======
 
     private void updateFollowButtonUi() {
         if (binding == null) return;
@@ -669,8 +647,6 @@ public class EventDetailActivity extends AppCompatActivity {
                             Toast.LENGTH_SHORT).show());
         }
     }
-
-    // =============== WEATHER HELPERS ===============
 
     private void showWeatherLoading() {
         if (layoutWeatherContainer != null) {
@@ -819,7 +795,6 @@ public class EventDetailActivity extends AppCompatActivity {
         return "Ho Chi Minh City";
     }
 
-    // ================== REVIEWS ==================
 
     private void loadReviews() {
         if (event == null || event.getId() == null) return;
@@ -827,7 +802,6 @@ public class EventDetailActivity extends AppCompatActivity {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String uid = user != null ? user.getUid() : null;
 
-        // ⭐ cập nhật lại currentUserId cho adapter phòng trường hợp login/logout
         currentUserId = uid;
         reviewAdapter.setCurrentUserId(uid);
 
@@ -908,7 +882,6 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    // CLICK "VIẾT ĐÁNH GIÁ"
     private void onWriteReviewClicked() {
         if (event == null || event.getId() == null) {
             Toast.makeText(this, "Chưa có thông tin sự kiện", Toast.LENGTH_SHORT).show();
@@ -983,11 +956,9 @@ public class EventDetailActivity extends AppCompatActivity {
         android.widget.Button btnPickMedia = dialogView.findViewById(R.id.btnPickMedia);
         ImageView imgMediaPreview = dialogView.findViewById(R.id.imgMediaPreview);
 
-        // Cho onActivityResult biết ImageView nào dùng để preview
         dialogMediaPreview = imgMediaPreview;
         pickedReviewMediaUri = null; // reset
 
-        // fill dữ liệu cũ nếu đã có review
         if (currentUserReview != null) {
             if (currentUserReview.rating != null) {
                 rb.setRating(currentUserReview.rating.floatValue());
@@ -1010,7 +981,6 @@ public class EventDetailActivity extends AppCompatActivity {
             imgMediaPreview.setVisibility(View.GONE);
         }
 
-        // Chọn media từ album
         btnPickMedia.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_PICK);
             intent.setType("*/*");
@@ -1154,7 +1124,6 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    // Nhận kết quả pick media từ album
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -1181,7 +1150,6 @@ public class EventDetailActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // Model review
     public static class Review {
         public String id;
         public String author;
@@ -1194,7 +1162,6 @@ public class EventDetailActivity extends AppCompatActivity {
         public Review() {}
     }
 
-    // Model sự kiện gợi ý
     private static class RecommendedEvent {
         String id;
         String title;
@@ -1202,7 +1169,6 @@ public class EventDetailActivity extends AppCompatActivity {
         String thumbnail;
     }
 
-    // ================== ADAPTER LOẠI VÉ ==================
     private static class TicketTypeAdapter extends
             RecyclerView.Adapter<TicketTypeAdapter.VH> {
 
@@ -1293,7 +1259,6 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    // ================== ADAPTER SỰ KIỆN GỢI Ý ==================
     private class RecommendedAdapter extends RecyclerView.Adapter<RecommendedAdapter.VH> {
 
         @NonNull
@@ -1345,7 +1310,6 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    // ============ Helper ============
 
     private boolean isEventEnded(@Nullable Event e) {
         return e != null && e.isEnded();
@@ -1374,7 +1338,6 @@ public class EventDetailActivity extends AppCompatActivity {
         }
     }
 
-    /** Mở màn chọn ghế */
     private void openSeatSelection(String eventId,
                                    String eventTitle,
                                    int quantity,
@@ -1386,23 +1349,19 @@ public class EventDetailActivity extends AppCompatActivity {
         intent.putExtra("eventId", eventId);
         intent.putExtra("eventTitle", eventTitle);
 
-        // base quantity / price (chủ yếu dùng fallback nếu không có sơ đồ ghế)
         intent.putExtra("quantity", quantity);
         intent.putExtra("totalPrice", totalPrice);
 
         intent.putExtra("ticketType", ticketType);
         intent.putExtra("ticketNames", ticketNames);
 
-        // member flag cho seat-pricing
         intent.putExtra("isMember", isMember);
 
-        // giới hạn tối đa ghế
         intent.putExtra("maxSeats", 10);
 
         startActivity(intent);
     }
 
-    /** Mở màn chọn loại vé / số lượng (event KHÔNG có sơ đồ)**/
     private void openTicketQuantitySelection() {
         Intent i = new Intent(this, SelectTicketQuantityActivity.class);
         i.putExtra("eventId", eventId);
@@ -1411,7 +1370,6 @@ public class EventDetailActivity extends AppCompatActivity {
         startActivity(i);
     }
 
-    /** Check điều kiện cơ bản trước khi cho đặt vé */
     private boolean validateBeforeBuy() {
         if (event == null) {
             Toast.makeText(this, "Chưa tải xong dữ liệu sự kiện", Toast.LENGTH_SHORT).show();
@@ -1445,7 +1403,6 @@ public class EventDetailActivity extends AppCompatActivity {
         return true;
     }
 
-    /** Sau khi xác minh xong mới cho user chọn vé / chọn chỗ */
     private void performBuyTicket() {
         if (hasSeatLayoutForEvent) {
             int quantity = 1;
@@ -1484,7 +1441,6 @@ public class EventDetailActivity extends AppCompatActivity {
         ImageView imgCat = dialog.findViewById(R.id.imgAvatar);
         SeekBar seekRotate = dialog.findViewById(R.id.seekRotate);
 
-        // Ảnh để xoay – cậu có thể đổi thành avatar của user nếu muốn
         String[] verifyImages = {
                 "https://firebasestorage.googleapis.com/v0/b/eventmanagement-8d9c4.firebasestorage.app/o/event1.jpg?alt=media&token=faeea74f-e925-4013-8ecc-3b0173bcf973",
                 "https://firebasestorage.googleapis.com/v0/b/eventmanagement-8d9c4.firebasestorage.app/o/event2.jpg?alt=media&token=a38e56de-5c40-4b11-bda8-e62634fd540c",
@@ -1497,7 +1453,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 .load(randomImg)
                 .into(imgCat);
 
-        // Góc xoay ban đầu ngẫu nhiên (tránh 0° để khỏi trùng)
         final int originalRotation = new Random().nextInt(4) * 90; // 0,90,180,270
         imgCat.setRotation(originalRotation);
 
@@ -1518,7 +1473,6 @@ public class EventDetailActivity extends AppCompatActivity {
                 float finalAngle = imgCat.getRotation() % 360;
                 if (finalAngle < 0) finalAngle += 360;
 
-                // Nếu góc gần 0° (±10°) thì coi như đứng thẳng
                 boolean ok = (finalAngle <= 10 || finalAngle >= 350);
 
                 if (ok) {
@@ -1529,7 +1483,7 @@ public class EventDetailActivity extends AppCompatActivity {
                     seekBar.setProgress(0);
                     imgCat.setRotation(originalRotation);
                     Toast.makeText(EventDetailActivity.this,
-                            "Xoay con mèo cho nó nhìn bạn rồi thả tay nhé!",
+                            "Xoay ảnh cho nó nhìn bạn rồi thả tay nhé!",
                             Toast.LENGTH_SHORT).show();
                 }
             }

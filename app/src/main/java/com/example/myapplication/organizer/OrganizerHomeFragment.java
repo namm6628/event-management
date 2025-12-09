@@ -36,7 +36,6 @@ public class OrganizerHomeFragment extends Fragment {
     private RecyclerView rv;
     private TextView tvEmpty;
 
-    // thống kê
     private TextView tvOrgName, tvTotalRevenue, tvTotalTickets, tvTotalOrders,
             tvTotalEvents, tvRevenueToday, tvRevenueMonth, tvEventsThisMonth,
             tvAvgFillRate, tvTopEvent, tvOrderStatus;
@@ -46,13 +45,12 @@ public class OrganizerHomeFragment extends Fragment {
 
     private MaterialButtonToggleGroup groupFilter;
 
-    // lưu toàn bộ sự kiện của BTC, lọc ở client
     private final List<Event> allEvents = new ArrayList<>();
 
     private enum FilterType {
-        UPCOMING,   // Sắp diễn ra: từ ngày mai trở đi
-        TODAY,      // Chuẩn bị diễn ra: trong ngày hôm nay
-        FINISHED    // Đã kết thúc: endTime < now
+        UPCOMING,
+        TODAY,
+        FINISHED
     }
 
     private FilterType currentFilter = FilterType.UPCOMING;
@@ -74,7 +72,6 @@ public class OrganizerHomeFragment extends Fragment {
         rv = v.findViewById(R.id.recyclerMyEvents);
         tvEmpty = v.findViewById(R.id.tvEmpty);
 
-        // view thống kê
         tvOrgName        = v.findViewById(R.id.tvOrgName);
         tvTotalRevenue   = v.findViewById(R.id.tvTotalRevenue);
         tvTotalTickets   = v.findViewById(R.id.tvTotalTickets);
@@ -87,10 +84,8 @@ public class OrganizerHomeFragment extends Fragment {
         tvTopEvent       = v.findViewById(R.id.tvTopEvent);
         tvOrderStatus    = v.findViewById(R.id.tvOrderStatus);
 
-        // Filter group
         groupFilter = v.findViewById(R.id.groupFilter);
 
-        // set tên BTC từ user
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) {
             String name = currentUser.getDisplayName();
@@ -140,7 +135,6 @@ public class OrganizerHomeFragment extends Fragment {
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         rv.setAdapter(adapter);
 
-        // 3 ô dashboard
         View cardCreate  = v.findViewById(R.id.btnCreateEvent);
         View cardProfile = v.findViewById(R.id.btnProfile);
         View cardStats   = v.findViewById(R.id.btnStats);
@@ -160,7 +154,6 @@ public class OrganizerHomeFragment extends Fragment {
                         .navigate(R.id.organizerStatsFragment)
         );
 
-        // Filter mặc định + listener
         if (groupFilter != null) {
             groupFilter.check(R.id.btnUpcoming);
             groupFilter.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
@@ -180,7 +173,6 @@ public class OrganizerHomeFragment extends Fragment {
         loadAllEvents();
     }
 
-    /** Animation nhỏ + run action sau khi click */
     private void setupCardClick(View card, Runnable action) {
         if (card == null) return;
         card.setOnClickListener(v -> {
@@ -201,7 +193,6 @@ public class OrganizerHomeFragment extends Fragment {
         });
     }
 
-    /** Load thống kê từ collection orders */
     private void loadStats() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -216,20 +207,16 @@ public class OrganizerHomeFragment extends Fragment {
 
         String uid = user.getUid();
 
-        // mốc thời gian
         Calendar cal = Calendar.getInstance();
-        // startOfToday
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         Date startOfToday = cal.getTime();
 
-        // startOfTomorrow
         cal.add(Calendar.DAY_OF_YEAR, 1);
         Date startOfTomorrow = cal.getTime();
 
-        // startOfMonth
         cal.setTime(new Date());
         cal.set(Calendar.DAY_OF_MONTH, 1);
         cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -238,7 +225,6 @@ public class OrganizerHomeFragment extends Fragment {
         cal.set(Calendar.MILLISECOND, 0);
         Date startOfMonth = cal.getTime();
 
-        // startOfNextMonth
         cal.add(Calendar.MONTH, 1);
         Date startOfNextMonth = cal.getTime();
 
@@ -261,7 +247,6 @@ public class OrganizerHomeFragment extends Fragment {
                         String status = d.getString("status");
                         if (status == null) status = "";
 
-                        // phân loại trạng thái đơn
                         if (status.equalsIgnoreCase("paid")) {
                             paidOrders++;
                         } else if (status.equalsIgnoreCase("pending")) {
@@ -278,7 +263,6 @@ public class OrganizerHomeFragment extends Fragment {
                         Timestamp createdTs = d.getTimestamp("createdAt");
                         Date createdDate = createdTs != null ? createdTs.toDate() : null;
 
-                        // chỉ tính thống kê doanh thu cho đơn đã thanh toán
                         if (!status.equalsIgnoreCase("paid")) {
                             continue;
                         }
@@ -289,12 +273,10 @@ public class OrganizerHomeFragment extends Fragment {
                             totalAmountPaid += amount;
 
                             if (createdDate != null) {
-                                // hôm nay
                                 if (!createdDate.before(startOfToday)
                                         && createdDate.before(startOfTomorrow)) {
                                     revenueToday += amount;
                                 }
-                                // trong tháng này
                                 if (!createdDate.before(startOfMonth)
                                         && createdDate.before(startOfNextMonth)) {
                                     revenueThisMonth += amount;
@@ -335,7 +317,6 @@ public class OrganizerHomeFragment extends Fragment {
                 });
     }
 
-    /** Lấy toàn bộ event của BTC, không filter ngày trong query */
     private void loadAllEvents() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -362,7 +343,6 @@ public class OrganizerHomeFragment extends Fragment {
                         }
                     }
 
-                    // === Thống kê trên events ===
                     int totalEvents = allEvents.size();
                     int eventsThisMonth = 0;
 
@@ -379,7 +359,6 @@ public class OrganizerHomeFragment extends Fragment {
                     for (Event e : allEvents) {
                         if (e == null) continue;
 
-                        // month của event
                         Timestamp startTs = e.getStartTime();
                         Date startDate = startTs != null ? startTs.toDate() : null;
                         if (startDate != null) {
@@ -392,7 +371,6 @@ public class OrganizerHomeFragment extends Fragment {
                             }
                         }
 
-                        // tính sold & total seats
                         Integer total = e.getTotalSeats();
                         Integer avail = e.getAvailableSeats();
                         if (total != null && total > 0) {
@@ -413,7 +391,6 @@ public class OrganizerHomeFragment extends Fragment {
                         }
                     }
 
-                    // set UI
                     tvTotalEvents.setText("Tổng số sự kiện đã tạo: " + totalEvents);
                     tvEventsThisMonth.setText("Sự kiện diễn ra trong tháng này: " + eventsThisMonth);
 
@@ -450,22 +427,18 @@ public class OrganizerHomeFragment extends Fragment {
                 });
     }
 
-    /** Lọc list theo 3 tab: Sắp diễn ra / Hôm nay / Đã kết thúc */
     private void applyFilter(FilterType filter) {
         List<Event> filtered = new ArrayList<>();
 
-        // mốc thời gian
         Calendar cal = Calendar.getInstance();
         Date now = cal.getTime();
 
-        // đầu hôm nay
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         Date startOfToday = cal.getTime();
 
-        // đầu ngày mai
         cal.add(Calendar.DAY_OF_YEAR, 1);
         Date startOfTomorrow = cal.getTime();
 
@@ -480,14 +453,12 @@ public class OrganizerHomeFragment extends Fragment {
 
             switch (filter) {
                 case UPCOMING:
-                    // từ ngày mai trở đi
                     if (startDate != null && !startDate.before(startOfTomorrow)) {
                         filtered.add(e);
                     }
                     break;
 
                 case TODAY:
-                    // trong hôm nay: start ∈ [startOfToday, startOfTomorrow)
                     if (startDate != null &&
                             !startDate.before(startOfToday) &&
                             startDate.before(startOfTomorrow)) {
@@ -496,7 +467,6 @@ public class OrganizerHomeFragment extends Fragment {
                     break;
 
                 case FINISHED:
-                    // đã kết thúc: endTime < now (nếu không có end thì dùng start)
                     Date compareEnd = endDate != null ? endDate : startDate;
                     if (compareEnd != null && compareEnd.before(now)) {
                         filtered.add(e);

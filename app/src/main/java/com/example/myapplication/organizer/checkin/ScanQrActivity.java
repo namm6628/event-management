@@ -30,7 +30,7 @@ public class ScanQrActivity extends AppCompatActivity {
     private DecoratedBarcodeView barcodeView;
     private FirebaseFirestore db;
 
-    private String expectedEventId;   // EVENT_ID truyền từ organizer
+    private String expectedEventId;
     private boolean isProcessing = false;
     private boolean useFrontCamera = false;
 
@@ -73,14 +73,12 @@ public class ScanQrActivity extends AppCompatActivity {
         String email = user.getEmail();
         String uid   = user.getUid();
 
-        // 🔐 kiểm tra quyền: owner hoặc collaborator(role = "checkin")
         remote.canUserCheckin(expectedEventId, email, uid)
                 .addOnSuccessListener(allowed -> {
                     if (!allowed) {
                         Toast.makeText(this, "Bạn không có quyền check-in sự kiện này", Toast.LENGTH_LONG).show();
                         finish();
                     } else {
-                        // ✅ Có quyền → khởi tạo scanner
                         initScanner();
                     }
                 })
@@ -90,7 +88,6 @@ public class ScanQrActivity extends AppCompatActivity {
                 });
     }
 
-    /** Chỉ gọi khi đã check quyền OK */
     private void initScanner() {
         applyCameraSettings();
 
@@ -108,7 +105,7 @@ public class ScanQrActivity extends AppCompatActivity {
 
     private void applyCameraSettings() {
         CameraSettings cs = barcodeView.getBarcodeView().getCameraSettings();
-        cs.setRequestedCameraId(useFrontCamera ? 1 : 0); // 0: sau, 1: trước
+        cs.setRequestedCameraId(useFrontCamera ? 1 : 0);
         barcodeView.getBarcodeView().setCameraSettings(cs);
         barcodeView.pause();
         barcodeView.resume();
@@ -126,7 +123,6 @@ public class ScanQrActivity extends AppCompatActivity {
     };
 
     private void handleQrContent(String content) {
-        // content dạng: eventId=...;orderId=...;userId=...
         Map<String, String> map = parseQr(content);
         String eventId = map.get("eventId");
         String orderId = map.get("orderId");
@@ -189,7 +185,6 @@ public class ScanQrActivity extends AppCompatActivity {
         }
 
         if (checkedIn != null && checkedIn) {
-            // ĐÃ CHECK-IN RỒI → vẫn show info vé + ghế
             String detail = buildTicketDetail(doc);
             setErrorStatus("Vé đã check-in", detail);
             resumeScan();
@@ -206,7 +201,6 @@ public class ScanQrActivity extends AppCompatActivity {
             return;
         }
 
-        // ✅ Tiến hành check-in
         Map<String, Object> updates = new HashMap<>();
         updates.put("checkedIn", true);
         updates.put("checkedInAt", Timestamp.now());
@@ -215,7 +209,6 @@ public class ScanQrActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     String detail = buildTicketDetail(doc);
                     setSuccessStatus("Vé hợp lệ – Check-in OK", detail);
-                    // quét người tiếp theo
                     resumeScan();
                 })
                 .addOnFailureListener(e -> {
@@ -224,11 +217,6 @@ public class ScanQrActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * Đọc ghế từ doc.orders:
-     *  - Nếu có field "seats" (array string) → hiển thị danh sách ghế
-     *  - Nếu có "tickets" (array map) → ghép type + seat label (nếu có)
-     */
     private String buildTicketDetail(DocumentSnapshot doc) {
         StringBuilder sb = new StringBuilder();
 
@@ -248,7 +236,6 @@ public class ScanQrActivity extends AppCompatActivity {
             sb.append("Tổng tiền: ").append(totalAmount.longValue()).append(" đ\n");
         }
 
-        // Ghế: từ field seats: [ "A1", "B1", ... ]
         Object seatsObj = doc.get("seats");
         if (seatsObj instanceof List) {
             List<?> seats = (List<?>) seatsObj;
@@ -265,7 +252,6 @@ public class ScanQrActivity extends AppCompatActivity {
             }
         }
 
-        // Nếu muốn chi tiết hơn theo tickets[]
         Object ticketsObj = doc.get("tickets");
         if (ticketsObj instanceof List) {
             List<?> tickets = (List<?>) ticketsObj;
@@ -312,13 +298,13 @@ public class ScanQrActivity extends AppCompatActivity {
     }
 
     private void setSuccessStatus(String title, String detail) {
-        layoutStatus.setBackgroundColor(0xFF1B5E20); // xanh đậm
+        layoutStatus.setBackgroundColor(0xFF1B5E20);
         tvStatusTitle.setText(title);
         tvStatusDetail.setText(detail);
     }
 
     private void setErrorStatus(String title, String detail) {
-        layoutStatus.setBackgroundColor(0xFFB71C1C); // đỏ đậm
+        layoutStatus.setBackgroundColor(0xFFB71C1C);
         tvStatusTitle.setText(title);
         tvStatusDetail.setText(detail);
     }

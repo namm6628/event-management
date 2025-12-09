@@ -6,7 +6,7 @@ public class MemberRequest {
 
     private String userId;
     private String reason;
-    private String status;     // pending / approved / rejected
+    private String status;
     private Timestamp createdAt;
     private Timestamp processedAt;
     private String processedBy;

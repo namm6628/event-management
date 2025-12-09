@@ -40,7 +40,6 @@
 
     <color name="rating_yellow">#FFC107</color>
 
-
     <color name="bottom_nav_active">@color/mint_primary</color>
     <color name="bottom_nav_inactive">#80FFFFFF</color>
     <color name="bottom_nav_bg">#171717</color>
@@ -55,12 +54,4 @@
     <color name="seat_vip">#FFD54F</color>
     <color name="seat_standard">#81C784</color>
     <color name="seat_economy">#90CAF9</color>
-
-
-
-
-
-
-
-
 </resources>

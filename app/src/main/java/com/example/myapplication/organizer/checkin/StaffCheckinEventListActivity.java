@@ -56,7 +56,6 @@ public class StaffCheckinEventListActivity extends AppCompatActivity {
 
         rvEvents.setLayoutManager(new LinearLayoutManager(this));
         adapter = new StaffEventAdapter(eventList, event -> {
-            // mở màn danh sách check-in
             Intent i = new Intent(this, OrganizerCheckinListActivity.class);
             i.putExtra(OrganizerCheckinListActivity.EXTRA_EVENT_ID, event.getId());
             i.putExtra(OrganizerCheckinListActivity.EXTRA_EVENT_TITLE, event.getTitle());
@@ -67,7 +66,6 @@ public class StaffCheckinEventListActivity extends AppCompatActivity {
         loadStaffEvents();
     }
 
-    /** ================= LOAD EVENTS ================= */
     private void loadStaffEvents() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || user.getEmail() == null) {
@@ -96,10 +94,9 @@ public class StaffCheckinEventListActivity extends AppCompatActivity {
 
                     for (DocumentSnapshot collabDoc : snap.getDocuments()) {
 
-                        // Lấy event cha của collaborator
                         DocumentReference eventRef = collabDoc.getReference()
-                                .getParent()   // /events/{eventId}/collaborators
-                                .getParent();  // /events/{eventId}
+                                .getParent()
+                                .getParent();
 
                         if (eventRef == null) continue;
 

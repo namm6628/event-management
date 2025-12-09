@@ -44,15 +44,12 @@ import java.util.Objects;
 
 public class HomeFragment extends Fragment {
 
-    // ViewModel
     private ExploreViewModel vm;
     private SearchView searchView;
     private ChipGroup chipGroup;
 
-    // Hero indicator (dot)
     private LinearLayout layoutHeroIndicator;
 
-    // Adapters & views
     private EventsAdapter specialAdapter;
     private EventsAdapter trendingAdapter;
     private EventsAdapter forYouAdapter;
@@ -63,7 +60,6 @@ public class HomeFragment extends Fragment {
     private RecyclerView rvSpecial;
     private LinearLayout dynamicCategoriesLayout;
 
-    // ==== HERO VIDEO SLIDER ====
     private ViewPager2      vpHeroVideos;
     private HeroVideoAdapter heroAdapter;
     private int currentHeroIndex = 0;
@@ -73,7 +69,6 @@ public class HomeFragment extends Fragment {
 
     private final List<EventsAdapter> dynamicAdapters = new ArrayList<>();
 
-    // ================== LIFECYCLE ==================
 
     @Nullable
     @Override
@@ -100,7 +95,6 @@ public class HomeFragment extends Fragment {
         ExploreVMFactory factory = new ExploreVMFactory(repo);
         vm = new ViewModelProvider(requireActivity(), factory).get(ExploreViewModel.class);
 
-        // searchView = v.findViewById(R.id.searchView); // nếu có trong layout
         chipGroup = v.findViewById(R.id.chipGroup);
 
         exploreCategoriesContainer = v.findViewById(R.id.exploreCategoriesContainer);
@@ -126,7 +120,6 @@ public class HomeFragment extends Fragment {
 
         // ===== Adapter & Recycler =====
 
-        // Sự kiện đặc biệt / danh sách chính
         rvSpecial.setLayoutManager(specialHorizontalManager);
         specialAdapter = new EventsAdapter(event -> {
             saveUserInterest(event);
@@ -167,14 +160,12 @@ public class HomeFragment extends Fragment {
         });
         rvWeekend.setAdapter(weekendAdapter);
 
-        // ===== Quan sát LiveData =====
         vm.getVisibleEvents().observe(getViewLifecycleOwner(), list -> specialAdapter.submitList(list));
         vm.getTrendingEvents().observe(getViewLifecycleOwner(), list -> trendingAdapter.submitList(list));
         vm.getForYouEvents().observe(getViewLifecycleOwner(), list -> forYouAdapter.submitList(list));
         vm.getWeekendEvents().observe(getViewLifecycleOwner(), list -> weekendAdapter.submitList(list));
         vm.getDynamicCategories().observe(getViewLifecycleOwner(), this::updateDynamicCategoriesUI);
 
-        // 🔥 HERO VIDEO SLIDER
         vm.getVideoEvents().observe(getViewLifecycleOwner(), list -> {
             if (list == null || list.isEmpty()) {
                 vpHeroVideos.setVisibility(View.GONE);
@@ -191,14 +182,11 @@ public class HomeFragment extends Fragment {
                 vpHeroVideos.setCurrentItem(currentHeroIndex, false);
                 updateHeroIndicator(currentHeroIndex);
 
-                // nếu bạn đã dùng HeroVideoAdapter mới có onPageSelected:
                 heroAdapter.onPageSelected(currentHeroIndex);
             }
         });
 
 
-
-        // ===== SearchView filter =====
         if (searchView != null) {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                 @Override public boolean onQueryTextSubmit(String query) {
@@ -215,7 +203,6 @@ public class HomeFragment extends Fragment {
             });
         }
 
-        // ===== Chip filter =====
         if (chipGroup != null) {
             chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
                 if (checkedIds == null || checkedIds.isEmpty()) {
@@ -243,7 +230,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    // callback đổi trang -> đổi dot + reset auto-scroll
     private final ViewPager2.OnPageChangeCallback heroPageChangeCallback =
             new ViewPager2.OnPageChangeCallback() {
                 @Override
@@ -251,7 +237,7 @@ public class HomeFragment extends Fragment {
                     super.onPageSelected(position);
                     currentHeroIndex = position;
                     updateHeroIndicator(position);
-                    heroAdapter.onPageSelected(position);   // báo adapter, adapter tự gắn player + play
+                    heroAdapter.onPageSelected(position);
                 }
             };
 
@@ -266,9 +252,8 @@ public class HomeFragment extends Fragment {
             String lastInterest = prefs.getString("LAST_INTEREST_CATEGORY", null);
             vm.refresh(lastInterest);
         }
-        // nếu đã có list video thì tiếp tục play slide hiện tại
         if (heroAdapter != null) {
-            heroAdapter.onPageSelected(currentHeroIndex);   // tiếp tục đúng video ở slide hiện tại
+            heroAdapter.onPageSelected(currentHeroIndex);
         }
 
     }
@@ -281,7 +266,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -289,12 +273,11 @@ public class HomeFragment extends Fragment {
             vpHeroVideos.unregisterOnPageChangeCallback(heroPageChangeCallback);
         }
         if (heroAdapter != null) {
-            heroAdapter.release();  // 🔥 giải phóng player khi fragment destroy
+            heroAdapter.release();
         }
 
     }
 
-    // ====== DOT INDICATOR ======
     private void setupHeroIndicators(int count) {
         layoutHeroIndicator.removeAllViews();
 
@@ -332,7 +315,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    // Map chip label → category
     private String mapChipLabelToCategory(String label) {
         if (label == null) return null;
         switch (label.trim()) {
@@ -345,7 +327,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    /** Đổi UI khi search */
     private void handleSearchUI(String query) {
         boolean isSearching = query != null && !query.isEmpty();
 
@@ -361,7 +342,6 @@ public class HomeFragment extends Fragment {
         );
     }
 
-    /** Scroll để load thêm */
     private void setupScrollListeners(View v) {
         NestedScrollView nestedScrollView = v.findViewById(R.id.nestedScrollView);
         nestedScrollView.setOnScrollChangeListener(
@@ -395,7 +375,6 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    /** Render các danh mục động (DynamicCategory) */
     private void updateDynamicCategoriesUI(List<DynamicCategory> categories) {
         dynamicCategoriesLayout.removeAllViews();
         dynamicAdapters.clear();
@@ -407,7 +386,6 @@ public class HomeFragment extends Fragment {
         int paddingEnd12dp   = (int) (12 * density);
 
         for (DynamicCategory category : categories) {
-            // Tiêu đề
             TextView titleView = new TextView(requireContext());
             titleView.setText(category.getCategoryName());
             titleView.setTextAppearance(android.R.style.TextAppearance_Material_Medium);
@@ -419,7 +397,6 @@ public class HomeFragment extends Fragment {
             titleParams.setMargins(0, 0, 0, marginBottom8dp);
             titleView.setLayoutParams(titleParams);
 
-            // RecyclerView
             RecyclerView rv = new RecyclerView(requireContext());
             rv.setLayoutManager(
                     new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
@@ -433,7 +410,6 @@ public class HomeFragment extends Fragment {
             rvParams.setMargins(0, 0, 0, marginBottom16dp);
             rv.setLayoutParams(rvParams);
 
-            // Adapter riêng cho mỗi category
             EventsAdapter dynamicAdapter = new EventsAdapter(event -> {
                 saveUserInterest(event);
                 openEventDetail(event);
@@ -447,7 +423,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    // ===== Helper mở chi tiết =====
     private void openEventDetail(Event event) {
         if (event.getId() == null || event.getId().isEmpty()) {
             android.widget.Toast.makeText(
@@ -462,7 +437,6 @@ public class HomeFragment extends Fragment {
         startActivity(it);
     }
 
-    // Lưu sở thích user
     private void saveUserInterest(Event event) {
         if (event.getCategory() != null) {
             SharedPreferences prefs =
@@ -473,7 +447,6 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    // ===== Adapter list sự kiện =====
 
     public interface OnEventClickListener {
         void onEventClick(Event event);
@@ -550,13 +523,11 @@ public class HomeFragment extends Fragment {
             Event e = getItem(position);
             if (e == null) return;
 
-            // ----- TITLE -----
             String rawTitle = (e.getTitle() == null || e.getTitle().isEmpty())
                     ? "(No title)"
                     : e.getTitle();
             h.title.setText(rawTitle);
 
-            // ----- ẢNH COVER FULL CARD -----
             if (e.getThumbnail() != null && !e.getThumbnail().isEmpty()) {
                 Glide.with(h.itemView.getContext())
                         .load(e.getThumbnail())
@@ -569,7 +540,6 @@ public class HomeFragment extends Fragment {
 
             h.bind(e, clickListener);
 
-            // ----- ANIM MŨI TÊN GỢI Ý LƯỚT -----
             if (h.moreHint != null) {
                 if (HINT_ANIM == null) {
                     HINT_ANIM = android.view.animation.AnimationUtils

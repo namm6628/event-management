@@ -85,7 +85,6 @@ public class OrganizerCreateEventFragment extends Fragment {
         thumbnailStr = null;
         selectedImageUri = null;
 
-        // eventId tạm dùng cho seat layout
         eventIdForSeats = db.collection("events").document().getId();
 
         pickImageLauncher = registerForActivityResult(
@@ -146,7 +145,6 @@ public class OrganizerCreateEventFragment extends Fragment {
         }
     }
 
-    // ===== REFRESH GHẾ KHI QUAY LẠI =====
     @Override
     public void onResume() {
         super.onResume();
@@ -261,14 +259,12 @@ public class OrganizerCreateEventFragment extends Fragment {
         if (price != null) edtPrice.setText(String.valueOf(price.intValue()));
         if (quota != null) edtQuota.setText(String.valueOf(quota.intValue()));
 
-        // ✅ set text mặc định
         tvSeatInfo.setVisibility(View.VISIBLE);
         tvSeatInfo.setText("Chưa chọn ghế");
 
         TicketRow row = new TicketRow(edtName, edtPrice, edtQuota, rowView, tvSeatInfo);
         ticketRows.add(row);
 
-        // Nếu đang edit / có sẵn tên → load ghế tạm
         if (name != null) {
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
@@ -280,7 +276,6 @@ public class OrganizerCreateEventFragment extends Fragment {
             layoutTicketContainer.removeView(rowView);
             ticketRows.remove(row);
 
-            // xóa luôn ghế tạm cho loại vé này
             String ticketName = getText(edtName);
             SeatLayoutConfigActivity.clearSeatsForTicket(eventIdForSeats, ticketName);
         });
@@ -460,14 +455,12 @@ public class OrganizerCreateEventFragment extends Fragment {
                 return;
             }
 
-            // Lấy ghế đã vẽ tạm & cập nhật text
             List<String> seats = SeatLayoutConfigActivity.getSeatsForTicket(eventIdForSeats, name);
             row.seatCodes.clear();
             row.seatCodes.addAll(seats);
             updateSeatInfoText(row);
 
             if (!seats.isEmpty()) {
-                // nếu có cấu hình sơ đồ ghế thì check chặt quota
                 if (seats.size() != quota) {
                     Toast.makeText(requireContext(),
                             "Loại vé \"" + name + "\" phải chọn đúng " + quota +
@@ -559,8 +552,6 @@ public class OrganizerCreateEventFragment extends Fragment {
                 ticketTypes
         );
     }
-
-    // ==== upload & save, saveSeatsForEvent giữ nguyên như cũ ====
 
     private void uploadImageThenSaveEvent(
             String ownerId,

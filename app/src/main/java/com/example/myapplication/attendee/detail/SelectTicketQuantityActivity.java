@@ -27,13 +27,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Chọn loại vé + số lượng cho event KHÔNG có sơ đồ ghế.
- */
+
 public class SelectTicketQuantityActivity extends AppCompatActivity {
 
-    // Truyền sang PaymentActivity
-    public static final String EXTRA_SELECTED_TICKETS = "selectedTickets"; // giữ cho rõ key
+    public static final String EXTRA_SELECTED_TICKETS = "selectedTickets";
     public static final String EXTRA_TOTAL_AMOUNT     = "totalPrice";
 
     private String eventId;
@@ -130,14 +127,12 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
             int qty = t.getSelectedQuantity();
             if (qty <= 0) continue;
 
-            // dùng cùng logic với Payment: đã tính early-bird + member
             double unitPrice = t.getEffectivePrice(isMember);
 
             if (unitPrice > 0) {
                 totalQty += qty;
                 totalAmount += unitPrice * qty;
             } else {
-                // vé miễn phí
                 totalQty += qty;
             }
         }
@@ -156,7 +151,6 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
         int totalQty = 0;
         double totalAmount = 0d;
 
-        // list đơn giản để PaymentActivity dùng cho card "chia tiền"
         ArrayList<HashMap<String, Object>> selectedForPayment = new ArrayList<>();
         StringBuilder ticketNamesBuilder = new StringBuilder();
 
@@ -164,24 +158,22 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
             int qty = t.getSelectedQuantity();
             if (qty <= 0) continue;
 
-            double unitPrice = t.getEffectivePrice(isMember); // dùng giá đã áp dụng (early-bird + member)
+            double unitPrice = t.getEffectivePrice(isMember);
 
             totalQty += qty;
             totalAmount += unitPrice * qty;
 
-            // build chuỗi "VIP x2 • Thường x1"
             if (ticketNamesBuilder.length() > 0) {
                 ticketNamesBuilder.append(" • ");
             }
             ticketNamesBuilder.append(t.getName() == null ? "Vé" : t.getName())
                     .append(" x").append(qty);
 
-            // map truyền sang PaymentActivity
             HashMap<String, Object> m = new HashMap<>();
             m.put("ticketTypeId", t.getId());
-            m.put("label", "");                 // không có ghế cụ thể
-            m.put("type", t.getName());         // tên loại vé
-            m.put("price", unitPrice);          // giá sau ưu đãi
+            m.put("label", "");
+            m.put("type", t.getName());
+            m.put("price", unitPrice);
             m.put("quantity", qty);
             selectedForPayment.add(m);
         }
@@ -196,10 +188,10 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
         Intent i = new Intent(this, PaymentActivity.class);
         i.putExtra("eventId", eventId);
         i.putExtra("eventTitle", eventTitle);
-        i.putExtra("quantity", totalQty);              // PaymentActivity đang đọc key này
-        i.putExtra("ticketNames", ticketNames);        // để hiển thị "VIP x2 • ..."
-        i.putExtra(EXTRA_TOTAL_AMOUNT, totalAmount);   // = "totalPrice"
-        i.putExtra(EXTRA_SELECTED_TICKETS, selectedForPayment); // = "selectedTickets"
+        i.putExtra("quantity", totalQty);
+        i.putExtra("ticketNames", ticketNames);
+        i.putExtra(EXTRA_TOTAL_AMOUNT, totalAmount);
+        i.putExtra(EXTRA_SELECTED_TICKETS, selectedForPayment);
         startActivity(i);
     }
 
@@ -264,16 +256,14 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
                 tvName.setText(t.getName() == null ? "Loại vé" : t.getName());
 
-                // 🔥 Giá đang áp dụng (early-bird + member nếu có)
                 double unitPrice = t.getEffectivePrice(isMember);
                 String priceStr = (unitPrice == 0d)
                         ? "Miễn phí"
                         : nf.format(unitPrice) + " ₫";
                 tvPrice.setText(priceStr);
 
-                // Badge "Ưu đãi đặt sớm" / "Giá thành viên"
                 TextView tvEarlyBird = itemView.findViewById(R.id.tvEarlyBird);
-                String promoLabel = t.getPromoLabel(isMember); // "Ưu đãi đặt sớm" / "Giá thành viên" / null
+                String promoLabel = t.getPromoLabel(isMember);
                 if (promoLabel != null) {
                     tvEarlyBird.setText(promoLabel);
                     tvEarlyBird.setVisibility(View.VISIBLE);
@@ -288,7 +278,6 @@ public class SelectTicketQuantityActivity extends AppCompatActivity {
 
                 tvQuantity.setText(String.valueOf(t.getSelectedQuantity()));
 
-                // ====== ƯU ĐÃI ĐẶT SỚM: CÒN X/limit VÉ ƯU ĐÃI ======
                 TextView tvPromo = itemView.findViewById(R.id.tvPromo);
                 if (tvPromo != null) {
                     Integer limit = t.getEarlyBirdLimit();
