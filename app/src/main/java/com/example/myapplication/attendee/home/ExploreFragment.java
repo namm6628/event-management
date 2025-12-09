@@ -137,7 +137,7 @@ public class ExploreFragment extends Fragment {
 
         Query q = eventsRef;
 
-        if (!TextUtils.isEmpty(fCity))     q = q.whereEqualTo("location", fCity); // DB dùng 'location'
+        if (!TextUtils.isEmpty(fCity))     q = q.whereEqualTo("location", fCity);
         if (!TextUtils.isEmpty(fCategory)) q = q.whereEqualTo("category", fCategory);
 
         if (fFrom != null) q = q.whereGreaterThanOrEqualTo("startTime", new Timestamp(fFrom / 1000, 0));
@@ -164,15 +164,24 @@ public class ExploreFragment extends Fragment {
                 }
 
                 if (!TextUtils.isEmpty(search)) {
-                    String title = e.getTitle() == null ? "" : e.getTitle();
-                    if (!title.toLowerCase(Locale.ROOT).contains(search)) continue;
+                    String title    = e.getTitle()         != null ? e.getTitle()         : "";
+                    String artist   = e.getArtist()        != null ? e.getArtist()        : "";
+                    String location = e.getLocation()      != null ? e.getLocation()      : "";
+                    String address  = e.getAddressDetail() != null ? e.getAddressDetail() : "";
+
+                    String combined = norm(title + " " + artist + " " + location + " " + address);
+
+                    if (!combined.contains(norm(search))) continue;
                 }
 
-                if (fMinPrice != null && e.getPrice() != null && e.getPrice() < fMinPrice.doubleValue()) continue;
-                if (fMaxPrice != null && e.getPrice() != null && e.getPrice() > fMaxPrice.doubleValue()) continue;
+                if (fMinPrice != null && e.getPrice() != null && e.getPrice() < fMinPrice.doubleValue())
+                    continue;
+                if (fMaxPrice != null && e.getPrice() != null && e.getPrice() > fMaxPrice.doubleValue())
+                    continue;
 
                 list.add(e);
             }
+
             if (binding != null) adapter.submitList(list);
         }).addOnFailureListener(err ->
                 Toast.makeText(requireContext(), "Lỗi tải sự kiện: " + err.getMessage(), Toast.LENGTH_SHORT).show()
@@ -199,4 +208,19 @@ public class ExploreFragment extends Fragment {
             default: return null;
         }
     }
+    private String norm(String s) {
+        if (s == null) return "";
+        String n = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        n = n.replaceAll("[^\\p{Alnum}]+", " ");
+        n = n.toLowerCase(Locale.ROOT).trim();
+        return n.replaceAll("\\s+", " ");
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        fetch();
+    }
+
 }

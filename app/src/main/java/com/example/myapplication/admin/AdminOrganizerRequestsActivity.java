@@ -58,6 +58,7 @@ public class AdminOrganizerRequestsActivity extends AppCompatActivity {
 
     private void loadRequests() {
         db.collection("organizerRequests")
+                .whereEqualTo("status", "pending")
                 .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(snap -> {
