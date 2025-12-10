@@ -265,7 +265,7 @@ function parseCsvAttendees(csvText) {
  * Trả về downloadUrl để app mở / tải về.
  */
 exports.exportAttendeesExcel = onCall(
-  {region: REGION},
+  { region: REGION },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError(
@@ -279,43 +279,42 @@ exports.exportAttendeesExcel = onCall(
       throw new HttpsError("invalid-argument", "Missing eventId");
     }
 
-    const attendeesSnap = await db.collection("events")
-      .doc(eventId)
-      .collection("attendees")
+    // 🔹 ĐỔI: lấy từ collection "orders" giống màn OrganizerAttendeesActivity
+    const ordersSnap = await db.collection("orders")
+      .where("eventId", "==", eventId)
       .get();
 
-    if (attendeesSnap.empty) {
+    if (ordersSnap.empty) {
       return {
         ok: true,
         downloadUrl: null,
-        message: "Không có attendee nào trong sự kiện.",
+        message: "Không có đơn đặt vé nào cho sự kiện này.",
       };
     }
 
     const rows = [];
     // header
-    rows.push("name,email,phone,ticketTypeId,status,createdAt");
+    rows.push("orderId,userId,totalTickets,totalAmount,createdAt");
 
-    attendeesSnap.forEach((doc) => {
-      const a = doc.data() || {};
-      const name = (a.name || "").replace(/,/g, " ");
-      const email = (a.email || "").replace(/,/g, " ");
-      const phone = (a.phone || "").replace(/,/g, " ");
-      const ticketTypeId = (a.ticketTypeId || "").replace(/,/g, " ");
-      const status = (a.status || "").replace(/,/g, " ");
-      const createdAt = a.createdAt && a.createdAt.toDate
-        ? a.createdAt.toDate().toISOString()
+    ordersSnap.forEach((doc) => {
+      const o = doc.data() || {};
+      const orderId = doc.id.replace(/,/g, " ");
+      const userId = (o.userId || "").toString().replace(/,/g, " ");
+      const totalTickets = o.totalTickets || 0;
+      const totalAmount = o.totalAmount || o.originalAmount || 0;
+      const createdAt = o.createdAt && o.createdAt.toDate
+        ? o.createdAt.toDate().toISOString()
         : "";
 
       rows.push(
-        `${name},${email},${phone},${ticketTypeId},${status},${createdAt}`,
+        `${orderId},${userId},${totalTickets},${totalAmount},${createdAt}`,
       );
     });
 
     const csvContent = rows.join("\n");
 
     const bucket = admin.storage().bucket();
-    const filePath = `exports/${eventId}/attendees-${Date.now()}.csv`;
+    const filePath = `exports/${eventId}/orders-${Date.now()}.csv`;
     const file = bucket.file(filePath);
 
     await file.save(csvContent, {
@@ -334,6 +333,7 @@ exports.exportAttendeesExcel = onCall(
     };
   },
 );
+
 
 /**
  * Stub export PDF – tạm thời chưa implement, nhưng giữ để app gọi không bị missing function.

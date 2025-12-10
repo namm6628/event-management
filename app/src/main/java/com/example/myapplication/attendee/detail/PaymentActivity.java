@@ -538,6 +538,8 @@ public class PaymentActivity extends AppCompatActivity {
                         updateTicketSoldAfterPayment(eventId, selectedTickets);
                     }
 
+                    createEventAttendee(orderId);
+
                     showSuccessDialog(orderId);
                 })
                 .addOnFailureListener(e -> {
@@ -625,6 +627,34 @@ public class PaymentActivity extends AppCompatActivity {
                         ).show()
                 );
     }
+
+    private void createEventAttendee(String orderId) {
+        if (userId == null || eventId == null) return;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("orderId", orderId);
+        data.put("userId", userId);
+        data.put("eventId", eventId);
+        data.put("quantity", quantity);
+        data.put("createdAt", FieldValue.serverTimestamp());
+        data.put("checkedIn", false);
+
+        data.put("eventTitle", eventTitle);
+        if (ticketNames != null) {
+            data.put("ticketNames", ticketNames);
+        } else if (ticketType != null) {
+            data.put("ticketType", ticketType);
+        }
+
+        FirebaseFirestore.getInstance()
+                .collection("eventAttendees")
+                .document(orderId)
+                .set(data)
+                .addOnFailureListener(e -> {
+                    e.printStackTrace();
+                });
+    }
+
 
     private void showSuccessDialog(String orderId) {
         Intent intent = new Intent(this, OrderSuccessActivity.class);
